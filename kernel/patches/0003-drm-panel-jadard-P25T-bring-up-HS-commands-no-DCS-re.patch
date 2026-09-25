@@ -1,0 +1,77 @@
+From 44d7b23b26195f83b158204ae4fd0f742d5b9deb Mon Sep 17 00:00:00 2001
+From: Jose <josemcaballeroguerrero@gmail.com>
+Date: Fri, 25 Sep 2026 13:33:05 +0200
+Subject: [PATCH 3/6] drm/panel: jadard: P25T bring-up: HS commands, no DCS
+ read-back
+
+Send the init sequence in high-speed mode (no MIPI_DSI_MODE_LPM) with a
+non-continuous clock lane, and drop the DCS reads: on this board a read
+never gets an answer and leaves data lane 0 turned around, which stops
+the video stream.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_0156c5MfQpFxaYWNNLMrcym9
+---
+ .../gpu/drm/panel/panel-jadard-jd9365da-h3.c  | 39 +++++++------------
+ 1 file changed, 13 insertions(+), 26 deletions(-)
+
+diff --git a/drivers/gpu/drm/panel/panel-jadard-jd9365da-h3.c b/drivers/gpu/drm/panel/panel-jadard-jd9365da-h3.c
+index b8b2c9e4b..b340c86cb 100644
+--- a/drivers/gpu/drm/panel/panel-jadard-jd9365da-h3.c
++++ b/drivers/gpu/drm/panel/panel-jadard-jd9365da-h3.c
+@@ -3481,32 +3481,12 @@ static int teclast_p25t_init_cmds(struct jadard *jadard)
+ 	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0x29);
+ 	mipi_dsi_msleep(&dsi_ctx, 100);
+ 
+-	/* P25T bring-up: ask the panel whether it heard us (results go to the kernel log). */
+-	{
+-		struct mipi_dsi_device *dsi = jadard->dsi;
+-		u8 mode = 0xff, buf[3] = { 0 }, b;
+-		int r, i;
+-		static const u8 id_regs[] = { 0xda, 0xdb, 0xdc };
+-
+-		r = mipi_dsi_dcs_get_power_mode(dsi, &mode);
+-		dev_info(&dsi->dev, "p25t: DCS 0x0A power mode = 0x%02x (ret %d)%s%s%s%s\n",
+-			 mode, r,
+-			 (mode & MIPI_DSI_DCS_POWER_MODE_DISPLAY) ? " display-on" : " display-OFF",
+-			 (mode & MIPI_DSI_DCS_POWER_MODE_SLEEP) ? " sleep-out" : " SLEEPING",
+-			 (mode & MIPI_DSI_DCS_POWER_MODE_NORMAL) ? " normal" : "",
+-			 (mode & MIPI_DSI_DCS_POWER_MODE_IDLE) ? " idle" : "");
+-		r = mipi_dsi_set_maximum_return_packet_size(dsi, 3);
+-		dev_info(&dsi->dev, "p25t: set max return size -> %d\n", r);
+-		r = mipi_dsi_dcs_read(dsi, 0x04, buf, 3);
+-		dev_info(&dsi->dev, "p25t: DCS 0x04 id = %02x %02x %02x (ret %d)\n",
+-			 buf[0], buf[1], buf[2], r);
+-		for (i = 0; i < 3; i++) {
+-			b = 0xff;
+-			r = mipi_dsi_dcs_read(dsi, id_regs[i], &b, 1);
+-			dev_info(&dsi->dev, "p25t: DCS 0x%02x = 0x%02x (ret %d)\n", id_regs[i], b, r);
+-		}
+-		mipi_dsi_set_maximum_return_packet_size(dsi, 1);
+-	}
++	/*
++	 * P25T bring-up: no DCS reads here. On this board a read never gets an
++	 * answer and leaves data lane 0 turned around, which stops the video.
++	 */
++	dev_info(&jadard->dsi->dev, "p25t: init sequence sent, mode_flags 0x%lx, result %d\n",
++		 jadard->dsi->mode_flags, dsi_ctx.accum_err);
+ 
+ 	return dsi_ctx.accum_err;
+ }
+@@ -3532,6 +3512,13 @@ static const struct jadard_panel_desc teclast_p25t_desc = {
+ 	.lanes = 4,
+ 	.format = MIPI_DSI_FMT_RGB888,
+ 	.init = teclast_p25t_init_cmds,
++	/*
++	 * Bring-up test: no MIPI_DSI_MODE_LPM, so the init commands go out in
++	 * high-speed mode instead of low-power escape mode; clock lane
++	 * non-continuous as on the Anbernic RG-DS (RK3568 + JD9365).
++	 */
++	.mode_flags = MIPI_DSI_MODE_VIDEO | MIPI_DSI_MODE_VIDEO_BURST |
++		      MIPI_DSI_MODE_NO_EOT_PACKET | MIPI_DSI_CLOCK_NON_CONTINUOUS,
+ };
+ 
+ static const struct of_device_id jadard_of_match[] = {
+-- 
+2.43.0
+

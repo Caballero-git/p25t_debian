@@ -1,0 +1,18 @@
+# Build outputs and large binaries stay out of the repository
+*.img
+*.img.xz
+*.itb
+*.cpio.gz
+*.tar.gz
+Image
+Image.*
+*.dtb
+*.dtb.*
+*.ko
+bl31_0x*.bin
+rootfs/
+# Personal data: backups, logs, Wi-Fi configs
+emmc/
+logs/
+*-log.txt
+wpa_supplicant*.conf

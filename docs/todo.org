@@ -1,0 +1,51 @@
+#+TITLE: P25T — to do
+#+DATE: 2026-09-25
+#+STARTUP: overview
+#+TODO: TODO OPEN | DONE
+
+* DONE Boot from the microSD (stock SPL → mainline U-Boot)
+* DONE Display, backlight, framebuffer console
+* DONE Debian 13 on the card, SSH over USB
+* DONE Internet via the PC, clock, locales, updates
+* DONE Wi-Fi (AIC8801, SDIO)
+* DONE Bluetooth keyboard (AIC8801, UART1)
+
+* TODO Battery and charger (RK817)
+  - Add the RK817 node with its real regulators, the charger and the
+    ~rk817_charger~ battery data (5300 mAh, sense 10 mΩ, OCV table from the
+    stock DT).
+  - Every RK817 write must be proposed and approved first. Mirror the stock
+    voltages exactly; never switch off a rail that is on.
+  - Also gives: power key, RTC (a real clock across reboots), clean poweroff.
+
+* TODO CPU frequency and GPU
+  - SYR837 (~silergy,syr827~) at i2c0 0x40 as vdd_cpu, then the cpufreq OPPs.
+  - vdd_gpu (RK817 DCDC) for Panfrost.
+
+* TODO Touchscreen (Silead GSL3673, i2c1 0x40, IRQ GPIO0_B0, reset GPIO0_C2)
+  - Mainline ~silead~ driver; the firmware blob must be extracted from the
+    Android vendor partition and converted to the ~silead~ format.
+
+* TODO Audio (RK817 codec)
+  - Needs LDO4 (vccio_acodec, 3.3 V) and the codec node + simple-audio-card.
+
+* TODO Accelerometer (SC7A20 0x19 or DA223 0x27 on i2c1, IRQ GPIO3_A2)
+  - Find out which chip answers; SC7A20 has a mainline driver (~st_accel~),
+    DA223 does not.
+
+* OPEN USB gadget is intermittent
+  - Works best with the cable plugged in before power-on. Compare DWC3
+    and PHY registers of a good and a bad boot; consider a role-switch /
+    VBUS detection (usb2phy extcon) instead of the fixed peripheral mode.
+
+* OPEN Only a blinking cursor on the panel after a cable-less boot
+  - getty on ~tty1~ did start (journal). Suspects: console on a different
+    VT, fbcon hand-over timing, or the panel/backlight state after the
+    initramfs. The ~p25t-bootlog~ reports of such a boot are the starting point.
+
+* TODO Repository
+  - Publish this folder as a git repository. A web search on 2026-09-25
+    found no Linux project for the P25T, only Android-modding threads
+    (XDA "Teclast P25T - Unofficial"), so this would be the first.
+  - Later: send the DT and panel support upstream (linux-rockchip, dri-devel)
+    once the DT describes the real regulators.

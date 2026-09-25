@@ -1,0 +1,96 @@
+#+TITLE: P25T — findings, lessons and dead ends
+#+DATE: 2026-09-25
+#+STARTUP: overview
+
+* Booting without unlocking
+  - ~fastboot flashing unlock~ was not needed. The stock SPL on the eMMC
+    scans the microSD first for a GPT partition named ~uboot~ and loads a
+    Rockchip-style FIT from it (copies at +0 and +4096 sectors). Putting
+    mainline U-Boot + BL31 there gives full control while the eMMC stays
+    untouched.
+  - The FIT must be built with external data, 512-byte alignment and a
+    4 KiB header area: ~mkimage -E -B 0x200 -p 0x1000~, with BL31 split into
+    its ELF load segments (~u-boot/split_bl31.py~).
+  - With no serial console, U-Boot writes an ~env export~ status note to a
+    raw sector (1331200) at each step. Reading it on the PC told us how far
+    each failed boot got. Keep that sector outside every partition.
+
+* Display: HS commands, not LPM (the key fix)
+  Symptom: backlight on, panel black; first DCS read times out (-110),
+  then "failed to write command FIFO".
+  - The stock DT asks for ~MIPI_DSI_MODE_LPM~ (flags 0xa03): commands in
+    low-power escape mode. On mainline ~dw-mipi-dsi~ the JD9365 never
+    reacts to LP commands.
+  - Sending the same 202 commands in high-speed mode
+    (flags 0x603: VIDEO | BURST | NO_EOT | CLOCK_NON_CONTINUOUS) works
+    at once: Tux, then the console.
+  - DCS reads never get an answer on this board. A failed read leaves data
+    lane 0 turned around (~PHY_STATUS 0x1FBB~) and the video stops.
+    *Never read from the panel.*
+  - The pixel clock was 24 MHz instead of 67 MHz until VPLL was preset to
+    1608 MHz in ~&cru~: ~dclk_vop1~ cannot change its parent's rate, and the
+    stock U-Boot that used to set VPLL is no longer in the path.
+
+* Display dead ends (so nobody repeats them)
+  - Power rails ("rails" experiment, the first approved RK817 writes):
+    LDO9 2.8 V, LDO8 1.8 V, LDO4 3.3 V switched on one by one with colour
+    tests in between. No effect on the panel. Nothing was ever switched off.
+  - vccio4/vccio6 1.8 V modes, GPIO4_A7, BOOST: irrelevant to the panel.
+  - "yyk enable_stbyb" in the stock kernel is an optional GPIO the P25T does
+    not define.
+  - Comparing D-PHY settings with the stock kernel: equal once the clock
+    was right; the difference was only LP vs HS.
+
+* USB gadget: DWC3 quirks and PHY tuning
+  Symptom: "failed to enable ep0out" on the tablet, ~-71~ (EPROTO) on the PC,
+  no enumeration.
+  - Without ~snps,dis-u2-freeclk-exists-quirk~ the controller expects a
+    free-running UTMI clock while the USB2 PHY is suspended (no cable).
+    There is none, so enabling ep0 times out. The stock DT has this quirk
+    plus ~dis_enblslpm~, ~dis-del-phy-power-chg~, ~dis-tx-ipgap-linecheck~.
+  - The stock kernel also tunes the USB2 PHY (pre-emphasis, eye height,
+    bvalid filter). Our initramfs applies the same values with ~devmem~.
+  - Result: enumeration works, but not every boot. Plugging the cable in
+    *before* power-on works best. Still open.
+
+* Wi-Fi
+  - The stock DT says ~rtl8723cs~; the chip is an *AIC8801*. The SDIO card
+    ID and Android's loaded modules gave it away.
+  - Needs: supply switch GPIO0_A0 (active low), WL_REG_ON GPIO0_C0,
+    vccio4 in 1.8 V mode, and the RK817 32 kHz clock (already on at reset,
+    register ~0xF2~ bit 7, so no PMIC write was needed).
+  - The radxa-pkg driver builds up to 7.2 with its Debian patches; kernel
+    7.3 changed four cfg80211 callbacks (see [[file:kernel.org][kernel]]).
+
+* Bluetooth
+  - Same AIC8801, plain H4 over UART1 at 1.5 Mbaud with RTS/CTS.
+    BT_REG_ON (GPIO0_C1) held high by a GPIO hog; ~btattach~ from user space.
+    No vendor driver needed.
+
+* Backup caveat
+  - The ~rkdeveloptool~ eMMC backup in loader mode only contains real data
+    below sector 65536 (32 MiB): loader, security, uboot_a/b, trust_a/b,
+    misc, dtbo_a. From dtbo_b onwards (vbmeta, boot_a/b, super, ...) it is
+    ~0xCC~ filler. Loader-mode reads beyond 32 MiB are silently not real.
+  - Recovery path for the eMMC is therefore the official ~Firmware.img~
+    (flash with RKDevTool), not that backup. Check any backup with
+    ~tools/verify_backup.py~.
+
+* Android probing
+  - Android refused to hand over the live DT (~/sys/firmware/fdt~); a
+    bugreport gave the bound drivers and I2C devices instead
+    (~tools/probe_android.sh~).
+  - Found that way: vdd_cpu is a SYR837 at i2c0 0x40 (other candidates
+    absent); touch GSL3673 at i2c1 0x40; both accelerometer drivers bound
+    (SC7A20 0x19 and DA223 0x27), real chip unconfirmed.
+
+* Practical lessons
+  - Everything that writes to a disk checks first that the target is a
+    removable/USB disk, and verifies by checksum afterwards
+    (~CARD-SHA256SUMS~ on ~P25TBOOT~).
+  - Keep the previous kernel/DT on the card (~*.stageN~): rollback is a
+    file copy on the PC.
+  - A boot-log on the card (initramfs snapshots and the Debian
+    ~p25t-bootlog~ timer) replaces the missing serial console.
+  - Two machines, two prompts: ~jose@hp240~ is the PC, ~jose@p25t~ the
+    tablet. Paths like ~~/p25t-backup~ exist only on the PC.

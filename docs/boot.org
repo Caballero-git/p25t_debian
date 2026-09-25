@@ -1,0 +1,132 @@
+#+TITLE: P25T — boot chain and SD card layout
+#+DATE: 2026-09-25
+#+STARTUP: overview
+
+* The chain
+  1. Boot ROM → stock *SPL on the eMMC* (the bootloader stays locked and
+     untouched).
+  2. The stock SPL tries the microSD first. It looks for a GPT partition
+     named ~uboot~ (then ~uboot_a~, ~uboot_b~) and loads a FIT image from
+     offset +0 or, if that copy is bad, from +4096 sectors.
+  3. The FIT holds *mainline U-Boot v2026.10-rc5* (~generic-rk3568~ based),
+     *BL31* (Rockchip ~rk3568_bl31_v1.46.elf~ from ~rkbin~, split into its 6
+     load segments) and U-Boot's own DT.
+  4. U-Boot's fixed ~bootcmd~ loads ~Image~, the DTB and ~initramfs.cpio.gz~
+     from the FAT partition ~P25TBOOT~ (partition 4) and runs ~booti~.
+  5. Linux starts ~/init~ of our initramfs (busybox), which logs to the
+     card, tunes the USB PHY and hands over to Debian on ~p25troot~.
+
+* SD card layout (512-byte sectors)
+  | Sectors            | GPT name / label    | Contents                                    |
+  |--------------------+---------------------+---------------------------------------------|
+  | 16384–24575        | ~uboot~             | FIT at +0 and +4096                         |
+  | 24576–32767        | ~uboot_a~           | same FIT                                    |
+  | 32768–40959        | ~uboot_b~           | same FIT                                    |
+  | 65536–589823       | ~P25TBOOT~ (FAT32)  | Image, DTB, initramfs, flags, logs          |
+  | 1331200 (+32)      | outside partitions  | U-Boot status note (~env export~ text)      |
+  | 2097152–end        | ~P25TROOT~ / ext4 label ~p25troot~ | Debian 13 root filesystem    |
+
+  Files on ~P25TBOOT~:
+  | File                          | Purpose                                                 |
+  |-------------------------------+---------------------------------------------------------|
+  | ~Image~                       | kernel (current)                                        |
+  | ~rk3566-teclast-p25t.dtb~     | device tree (current)                                   |
+  | ~initramfs.cpio.gz~           | stage-1 system                                          |
+  | ~*.stage4~, ~*.stage5~        | previous kernel/DTB, for rollback                       |
+  | ~CARD-SHA256SUMS~             | checksums of the files above                            |
+  | ~boot-debian~ (empty flag)    | present → hand over to Debian                           |
+  | ~no-usb-tuning~ (empty flag)  | present → skip the USB PHY tuning                       |
+  | ~autorun.sh~ (optional)       | run in background by stage 1 (experiments only)         |
+  | ~logs/~                       | ~bootcount~ and ~boot-N-*.txt~ from every boot          |
+
+* U-Boot
+** Build
+   Source: ~https://github.com/u-boot/u-boot.git~ tag ~v2026.10-rc5~.
+   #+begin_src sh
+   git clone --branch v2026.10-rc5 https://github.com/u-boot/u-boot.git
+   cd u-boot
+   cp ../p25t-linux/u-boot/p25t-u-boot.config .config
+   make olddefconfig
+   make CROSS_COMPILE=aarch64-linux-gnu- -j$(nproc)
+   #+end_src
+   Only ~u-boot.bin~ and ~u-boot.dtb~ are used; the FIT is made by our own
+   ~p25t.its~ (the stock SPL needs the legacy Rockchip FIT layout:
+   ~mkimage -E -B 0x200 -p 0x1000~).
+
+** Boot command (literal, from the config)
+   It writes a small status note to the card at every step, so a failed
+   boot can be diagnosed on the PC without a serial console:
+   #+begin_example
+   setenv stage bootcmd-reached; <save note>
+   setenv bootargs console=ttyS2,1500000n8 earlycon clk_ignore_unused loglevel=7 rdinit=/init panic=0
+   fatload mmc 1:4 ${kernel_addr_r}  Image
+   fatload mmc 1:4 ${fdt_addr_r}     rk3566-teclast-p25t.dtb
+   fatload mmc 1:4 ${ramdisk_addr_r} initramfs.cpio.gz
+   setenv stage linux-loaded; <save note>; booti ...
+   on failure: stage = booti-failed / load-failed; <save note>; fastboot usb 0
+   #+end_example
+   ~<save note>~ = ~mmc dev 1 && env export -t 0x11000000 && mmc write 0x11000000 0x145000 0x20~
+   (~0x145000~ = sector 1331200). In U-Boot, ~mmc 1~ is the microSD.
+
+   Read the note on the PC (~<CARD-DEVICE>~ is e.g. ~/dev/sdb~):
+   #+begin_example
+   sudo dd if=<CARD-DEVICE> bs=512 skip=1331200 count=32 status=none | tr -d '\0' | grep stage
+   #+end_example
+
+** FIT and the SD image
+   #+begin_src sh
+   bash u-boot/build_sd_image.sh ~/src/u-boot rkbin/bin/rk35/rk3568_bl31_v1.46.elf \
+        linux/arch/arm64/boot/Image \
+        linux/arch/arm64/boot/dts/rockchip/rk3566-teclast-p25t.dtb \
+        initramfs.cpio.gz p25t-sd.img
+   #+end_src
+   - ~split_bl31.py~ cuts the BL31 ELF into its load segments
+     (~bl31_0x...bin~) referenced by ~p25t.its~.
+   - The FIT must stay below 2 MiB (the partitions hold two copies).
+   - Output is reproducible except for the FIT timestamp (3 bytes).
+
+   Write the image with the checking writer (refuses non-removable disks,
+   asks for ~YES~, verifies afterwards):
+   #+begin_example
+   sudo bash tools/write_sdcard.sh p25t-sd.img <CARD-DEVICE>
+   #+end_example
+
+* Stage 1: the initramfs (~initramfs/init~)
+  In order:
+  1. Mounts ~proc~, ~sys~, ~devtmpfs~, ~configfs~; mounts ~P25TBOOT~ on ~/boot~.
+  2. Increments ~logs/bootcount~ → N, writes ~logs/boot-N-dmesg.txt~ and
+     ~boot-N-status.txt~.
+  3. USB2 PHY tuning (stock values, see [[file:hardware.org][hardware]]); before/after
+     in ~boot-N-usbphy.txt~. Skipped if ~/boot/no-usb-tuning~ exists.
+  4. *Hand-over to Debian* if ~/boot/boot-debian~ exists:
+     - reads SARADC channel 0; raw < 900 means a volume key is held →
+       stay in stage 1 (rescue);
+     - ~findfs LABEL=p25troot~, mount it read-only, check ~/sbin/init~;
+     - move ~/dev~, ~/proc~, ~/sys~ and ~exec switch_root /newroot /sbin/init~.
+     - Result in ~boot-N-handover.txt~.
+  5. If it stays: read-only PMIC and GPIO dumps, a hello on ~tty1~,
+     optional ~autorun.sh~, USB gadget (ACM serial + NCM network,
+     ~1d6b:0104~, retried up to 5 times), ~usb0~ = 192.168.7.2, ~telnetd~,
+     shell on ~/dev/ttyGS0~, periodic snapshots.
+
+  The cpio holds only a static arm64 *busybox 1.37.0* (~defconfig~ plus
+  ~CONFIG_STATIC=y~; ~devmem~, ~i2c*~, ~findfs~, ~switch_root~ are all
+  busybox applets) and our ~init~. Rebuild it:
+  #+begin_example
+  cd busybox && make defconfig && sed -i 's/^# CONFIG_STATIC is not set/CONFIG_STATIC=y/' .config
+  make CROSS_COMPILE=aarch64-linux-gnu- -j$(nproc)
+  make CROSS_COMPILE=aarch64-linux-gnu- CONFIG_PREFIX=<INITRAMFS-DIR> install
+  mkdir -p <INITRAMFS-DIR>/{boot,dev,etc,proc,sys,tmp}
+  install -m 755 p25t-linux/initramfs/init <INITRAMFS-DIR>/init
+  cd <INITRAMFS-DIR> && find . | cpio -o -H newc -R 0:0 | gzip -9 > ../initramfs.cpio.gz
+  #+end_example
+  The card currently carries the build with sha256 ~ac4f3d83e704…~; its
+  ~init~ is byte-identical to ~initramfs/init~ in this folder.
+
+* Rescue and rollback
+  | Situation                           | Action                                                              |
+  |-------------------------------------+---------------------------------------------------------------------|
+  | Debian does not come up             | hold a volume key while powering on → stage-1 shell over USB        |
+  | New kernel does not boot            | on the PC, copy ~Image.stage5~ over ~Image~ and the ~.dtb.stage5~ over the DTB |
+  | Want Android back                   | power off, remove the card                                          |
+  | Nothing boots at all                | read the status note (above) and ~logs/~ on the PC                  |

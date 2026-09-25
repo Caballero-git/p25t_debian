@@ -1,0 +1,13 @@
+[Unit]
+Description=P25T: attach the AIC8800 Bluetooth (H4 on ttyS1, 1.5 Mbaud, RTS/CTS)
+After=bluetooth.service
+Wants=bluetooth.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/btattach -B /dev/ttyS1 -P h4 -S 1500000
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

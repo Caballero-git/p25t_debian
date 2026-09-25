@@ -1,0 +1,123 @@
+#+TITLE: P25T — kernel, device tree and Wi-Fi driver
+#+DATE: 2026-09-25
+#+STARTUP: overview
+
+* Base and patches
+  - Base: mainline commit ~f2c53ea94~ ("Merge tag 'net-7.3-rc5'"), i.e.
+    between 7.3-rc4 and rc5. The kernel reports itself as ~7.3.0-rc4-p25t~.
+  - Patches in ~kernel/patches/~ (made with ~git format-patch~, apply in order):
+    | No.  | Subject                                                         |
+    |------+-----------------------------------------------------------------|
+    | 0001 | add Teclast P25T (P9A6) bring-up tree; jadard: add P25T panel   |
+    | 0002 | jadard: log DCS power mode and ID read-back (bring-up only)     |
+    | 0003 | jadard: HS commands, no DCS read-back (replaces 0002's reads)   |
+    | 0004 | DT: stock DWC3 quirks on the OTG controller                     |
+    | 0005 | DT: SDIO Wi-Fi (AIC8800) on sdmmc1                              |
+    | 0006 | DT: Bluetooth UART1 (AIC8800) and BT_REG_ON                     |
+  - ~kernel/rk3566-teclast-p25t.dts~ is the resulting DT (for reading;
+    it is identical to the file the patches create).
+  - ~kernel/p25t-panel-init.c.inc~ is the 202-command init table converted
+    from the stock DT (already inside patch 0001).
+
+* Get the source and apply
+  #+begin_src sh
+  git clone https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git
+  cd linux
+  git checkout -b p25t-bringup f2c53ea94
+  git am ../p25t-linux/kernel/patches/*.patch
+  cp ../p25t-linux/kernel/p25t-kernel.config .config
+  make ARCH=arm64 olddefconfig
+  #+end_src
+
+* Build
+  ~LOCALVERSION=~ (empty) on the command line keeps the release name exactly
+  ~7.3.0-rc4-p25t~ (the ~-p25t~ comes from ~CONFIG_LOCALVERSION~; the
+  ~+~ git suffix is suppressed). Module paths depend on it.
+  #+begin_src sh
+  make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- LOCALVERSION= -j$(nproc) Image dtbs modules
+  #+end_src
+  A full build takes longer than 10 minutes on a small machine; run it with
+  ~nohup~ if the session may time out.
+
+  Results:
+  | File                                                 | Goes to                          |
+  |------------------------------------------------------+----------------------------------|
+  | ~arch/arm64/boot/Image~                              | ~P25TBOOT/Image~                 |
+  | ~arch/arm64/boot/dts/rockchip/rk3566-teclast-p25t.dtb~ | ~P25TBOOT/rk3566-teclast-p25t.dtb~ |
+  | modules (~make modules_install INSTALL_MOD_PATH=<STAGING-DIR>~) | ~/usr/lib/modules/7.3.0-rc4-p25t/~ on ~p25troot~ |
+
+  Debian trixie has ~/lib~ → ~/usr/lib~, so package everything under ~usr/~.
+
+* Config highlights (~kernel/p25t-kernel.config~)
+  | Option                                   | Value | Why                                    |
+  |------------------------------------------+-------+----------------------------------------|
+  | ~LOCALVERSION~ / ~LOCALVERSION_AUTO~     | ~"-p25t"~ / off | stable release name          |
+  | ~MODULES~                                | y     | out-of-tree Wi-Fi driver               |
+  | ~DRM_ROCKCHIP~, ~ROCKCHIP_DW_MIPI_DSI~   | y     | display pipe                           |
+  | ~DRM_PANEL_JADARD_JD9365DA_H3~           | y     | panel                                  |
+  | ~USB_DWC3~, ~USB_CONFIGFS_ACM/NCM~       | y     | USB gadget console and network         |
+  | ~MMC_DW_ROCKCHIP~, ~PWRSEQ_SIMPLE~       | y     | SD card and SDIO Wi-Fi                 |
+  | ~CFG80211~                               | m     | the AIC8800 is a full-MAC chip         |
+  | ~BT~, ~BT_HCIUART~ (+ ~H4~, ~SERDEV~)    | m     | Bluetooth over UART1                   |
+  | ~BT_HIDP~, ~UHID~, ~BT_RFCOMM~           | m     | Bluetooth keyboards                    |
+  | ~ROCKCHIP_SARADC~, ~KEYBOARD_ADC~        | y     | volume keys                            |
+  | ~MFD_RK8XX_I2C~, ~CHARGER_RK817~         | y     | built, but no RK817 node in the DT yet |
+  | ~EXT4_FS~, ~VFAT_FS~                     | y     | root and boot partitions               |
+
+* Device tree notes
+  - Real rails are *not* described: dummy fixed regulators stand in, so
+    Linux never switches the RK817 or the SYR837 (see the safety rules).
+  - ~&cru~ presets VPLL to 1608 MHz for the 67 MHz pixel clock;
+    ~DCLK_VOP1~ is parented to VPLL.
+  - DSI panel node: ~compatible = "teclast,p25t-panel"~, reset GPIO3_C3,
+    ~vdd-supply = <&vcc_lcd>~ (fixed regulator on GPIO3_B1).
+  - ~&usb_host0_xhci~: ~dr_mode = "peripheral"~, ~maximum-speed = "high-speed"~,
+    PHY ~usb2phy0_otg~, plus the four stock quirks.
+  - ~&cru~ also presets RTC 32k, GPLL 1200 MHz and PPLL 200 MHz (stock values).
+  - Wi-Fi: ~vcc_wl~ (GPIO0_A0, active low, 100 ms start-up),
+    ~sdio_pwrseq~ (reset GPIO0_C0 active low, 50 ms post-power-on),
+    ~&sdmmc1~ 4-bit 50 MHz non-removable, ~&pmu_io_domains~ vccio4 = 1.8 V,
+    alias ~mmc2 = &sdmmc1~.
+  - Bluetooth: ~&uart1~ with ~uart1m0~ xfer/ctsn/rtsn and ~uart-has-rtscts~;
+    GPIO hog ~bt-reg-on-hog~ on GPIO0_C1 output-high.
+
+* Panel driver (~panel-jadard-jd9365da-h3.c~)
+  - New ~teclast_p25t_desc~: 800×1280, 67 MHz, 4 lanes, RGB888.
+  - ~mode_flags = MIPI_DSI_MODE_VIDEO | MIPI_DSI_MODE_VIDEO_BURST |
+    MIPI_DSI_MODE_NO_EOT_PACKET | MIPI_DSI_CLOCK_NON_CONTINUOUS~ (0x603).
+    *Do not add ~MIPI_DSI_MODE_LPM~* and never issue DCS reads
+    (see [[file:findings.org][findings]]).
+  - After the init table the driver only logs
+    ~p25t: init sequence sent...~.
+
+* AIC8800 Wi-Fi/Bluetooth driver (out of tree)
+  Source: [[https://github.com/radxa-pkg/aic8800][radxa-pkg/aic8800]], commit ~516e3b0~
+  ("fix aic8800 sdio firmware load issue").
+  #+begin_src sh
+  git clone https://github.com/radxa-pkg/aic8800.git
+  cd aic8800
+  git checkout 516e3b0
+  for p in $(cat debian/patches/series); do patch -p1 --forward -s < debian/patches/$p; done
+  patch -p1 < ../p25t-linux/kernel/aic8800-fix-linux-7.3-build.patch
+  cd src/SDIO/driver_fw/driver/aic8800
+  make -C ../../../../../../linux M=$PWD ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- LOCALVERSION= modules
+  #+end_src
+  - Two USB-only Debian patches (~fix-usb-firmware-path~,
+    ~fix-Lower-the-debugging-log-level~) fail to apply; they do not touch
+    the SDIO driver and can be ignored.
+  - The ~make -C~ path must point at the built kernel tree; adjust it to
+    your layout (~<KERNEL-DIR>~).
+  - Our 7.3 fix (only ~aic8800_fdrv/rwnx_main.c~):
+    - ~cfg80211_probe_status()~ gained a ~link_id~ argument → pass ~-1~;
+    - ~.probe_client~ became ~.probe_peer~, cookie passed by value;
+    - ~remain_on_channel~ and ~mgmt_tx~ take the cookie by value; the
+      wrappers use a local cookie.
+  - Modules: ~aic8800_bsp.ko~, ~aic8800_fdrv.ko~ (and ~aic8800_btlpm.ko~,
+    not needed for our UART Bluetooth) into
+    ~/usr/lib/modules/7.3.0-rc4-p25t/extra/~, then ~depmod~.
+  - Firmware: the package's ~aic8800_fw/SDIO/aic8800/~ folder into
+    ~/usr/lib/firmware/aic8800_fw/SDIO/aic8800/~.
+  - The install scripts (~install/wifi_install.sh~,
+    ~install/pc_install_stage5.sh~) expect this in a tarball
+    ~p25t-wifi.tar.gz~ with ~boot/~ (Image, DTB, ~SHA256SUMS~) and ~root/usr/~,
+    ~root/etc/~.

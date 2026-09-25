@@ -1,0 +1,310 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Teclast P25T (2023, model code P9A6) - RK3566 tablet.
+ *
+ * Stage 2 tree: SD card, USB-C (peripheral), ADC keys, display (VOP2 -> DSI0 ->
+ * JD9365 panel) and PWM backlight. I2C0 enabled WITHOUT child nodes, only for
+ * read-only register dumps of the RK817 PMIC from user space.
+ * Deliberately NO PMIC (RK817), NO vdd_cpu regulator (SYR837), NO eMMC:
+ * the kernel must not change any voltage or touch Android on the eMMC.
+ * All supplies are declared as dummy fixed regulators matching the values the
+ * stock bootloader already set up.
+ */
+
+/dts-v1/;
+
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/input/input.h>
+#include <dt-bindings/pinctrl/rockchip.h>
+#include <dt-bindings/soc/rockchip,vop2.h>
+#include "rk3566.dtsi"
+
+/ {
+	model = "Teclast P25T (P9A6)";
+	compatible = "teclast,p25t", "rockchip,rk3566";
+
+	aliases {
+		mmc1 = &sdmmc0;
+		mmc2 = &sdmmc1;
+	};
+
+	chosen {
+		stdout-path = "serial2:1500000n8";
+	};
+
+	/* Dummy fixed supplies: describe, never switch. */
+	vcc_sys_dummy: regulator-vcc-sys-dummy {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc_sys_dummy";
+		regulator-always-on;
+		regulator-boot-on;
+		regulator-min-microvolt = <3800000>;
+		regulator-max-microvolt = <3800000>;
+	};
+
+	vcc_3v3_dummy: regulator-vcc-3v3-dummy {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc_3v3_dummy";
+		regulator-always-on;
+		regulator-boot-on;
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		vin-supply = <&vcc_sys_dummy>;
+	};
+
+	vcc_1v8_dummy: regulator-vcc-1v8-dummy {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc_1v8_dummy";
+		regulator-always-on;
+		regulator-boot-on;
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+		vin-supply = <&vcc_sys_dummy>;
+	};
+
+	/* Panel power switch: GPIO3_B1 (stock "enable-gpios", active high). */
+	vcc_lcd: regulator-vcc-lcd {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc_lcd";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		gpio = <&gpio3 RK_PB1 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		startup-delay-us = <20000>;
+		vin-supply = <&vcc_3v3_dummy>;
+	};
+
+	backlight: backlight {
+		compatible = "pwm-backlight";
+		pwms = <&pwm14 0 25000 0>;
+		brightness-levels = <7 255>;
+		num-interpolated-steps = <248>;
+		default-brightness-level = <120>;
+		power-supply = <&vcc_sys_dummy>;
+	};
+
+	/*
+	 * Wi-Fi/BT module AIC8800 (SDIO on sdmmc1). From the stock DT and the
+	 * stock mmc-pwrseq driver: GPIO0_A0 switches the module's supply (low =
+	 * on), GPIO0_C0 is WL_REG_ON (high = running). The 32 kHz sleep clock
+	 * comes from RK817 CLK32KOUT2, which is already enabled at reset
+	 * (reg 0xF2 bit 7 = 1), so no PMIC write is needed.
+	 */
+	vcc_wl: regulator-vcc-wl {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc_wl";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		gpio = <&gpio0 RK_PA0 GPIO_ACTIVE_LOW>;
+		startup-delay-us = <100000>;
+		vin-supply = <&vcc_3v3_dummy>;
+	};
+
+	sdio_pwrseq: sdio-pwrseq {
+		compatible = "mmc-pwrseq-simple";
+		reset-gpios = <&gpio0 RK_PC0 GPIO_ACTIVE_LOW>;
+		post-power-on-delay-ms = <50>;
+		power-off-delay-us = <5000>;
+	};
+
+	/* Volume keys on SARADC channel 0 (thresholds from the stock DT). */
+	adc-keys {
+		compatible = "adc-keys";
+		io-channels = <&saradc 0>;
+		io-channel-names = "buttons";
+		keyup-threshold-microvolt = <1800000>;
+		poll-interval = <100>;
+
+		button-vol-up {
+			label = "volume up";
+			linux,code = <KEY_VOLUMEUP>;
+			press-threshold-microvolt = <1750>;
+		};
+
+		button-vol-down {
+			label = "volume down";
+			linux,code = <KEY_VOLUMEDOWN>;
+			press-threshold-microvolt = <1297500>;
+		};
+	};
+};
+
+&saradc {
+	vref-supply = <&vcc_1v8_dummy>;
+	status = "okay";
+};
+
+/* microSD slot: stays at 3.3 V signalling (no UHS), like the stock loader left it. */
+&sdmmc0 {
+	bus-width = <4>;
+	cap-sd-highspeed;
+	disable-wp;
+	no-1-8-v;
+	pinctrl-names = "default";
+	pinctrl-0 = <&sdmmc0_bus4 &sdmmc0_clk &sdmmc0_cmd &sdmmc0_det>;
+	vmmc-supply = <&vcc_3v3_dummy>;
+	vqmmc-supply = <&vcc_3v3_dummy>;
+	status = "okay";
+};
+
+/* SDIO Wi-Fi (AIC8800), 4-bit, 50 MHz like the stock kernel. */
+&sdmmc1 {
+	bus-width = <4>;
+	cap-sd-highspeed;
+	cap-sdio-irq;
+	keep-power-in-suspend;
+	max-frequency = <50000000>;
+	mmc-pwrseq = <&sdio_pwrseq>;
+	non-removable;
+	disable-wp;
+	pinctrl-names = "default";
+	pinctrl-0 = <&sdmmc1_bus4 &sdmmc1_cmd &sdmmc1_clk>;
+	vmmc-supply = <&vcc_wl>;
+	status = "okay";
+};
+
+/*
+ * IO domain vccio4 (SDIO pins) is fed by RK817 LDO1 = 1.8 V (reg 0xCC = 0x30).
+ * Only this one domain is declared, so only its voltage mode is set (1.8 V),
+ * as the stock kernel does.
+ */
+&pmu_io_domains {
+	vccio4-supply = <&vcc_1v8_dummy>;
+	status = "okay";
+};
+
+/*
+ * Bluetooth half of the AIC8800: H4 over UART1 (uart1m0 pins, RTS/CTS), 1.5 Mbaud,
+ * attached from user space with btattach. BT_REG_ON = GPIO0_C1, high = on
+ * (stock rfkill-bt: BT,reset_gpio GPIO0_C1 flags 0, driven high to power on).
+ */
+&uart1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart1m0_xfer &uart1m0_ctsn &uart1m0_rtsn>;
+	uart-has-rtscts;
+	status = "okay";
+};
+
+&gpio0 {
+	bt-reg-on-hog {
+		gpio-hog;
+		gpios = <RK_PC1 GPIO_ACTIVE_HIGH>;
+		output-high;
+		line-name = "bt_reg_on";
+	};
+};
+
+&uart2 {
+	status = "okay";
+};
+
+/* USB-C port as a USB device: gives the PC a serial console and network link. */
+&usb_host0_xhci {
+	dr_mode = "peripheral";
+	maximum-speed = "high-speed";
+	phys = <&usb2phy0_otg>;
+	phy-names = "usb2-phy";
+	/*
+	 * Same DWC3 quirks as the stock Android device tree. Without
+	 * dis-u2-freeclk-exists the controller expects a free-running UTMI
+	 * clock while the USB2 PHY is suspended (no cable); it has none, so
+	 * enabling ep0 times out ("failed to enable ep0out") and the PC then
+	 * gets no answer (-71).
+	 */
+	snps,dis_enblslpm_quirk;
+	snps,dis-u2-freeclk-exists-quirk;
+	snps,dis-del-phy-power-chg-quirk;
+	snps,dis-tx-ipgap-linecheck-quirk;
+	status = "okay";
+};
+
+&usb2phy0 {
+	status = "okay";
+};
+
+&usb2phy0_otg {
+	status = "okay";
+};
+
+/* ---------------- Clocks ----------------
+ * dclk_vop1 cannot change its parent PLL's rate (CLK_SET_RATE_NO_REPARENT, no
+ * SET_RATE_PARENT), and our boot path skips the stock U-Boot that used to set up
+ * VPLL. Without this VPLL stays in slow mode and the panel gets a 24 MHz pixel
+ * clock instead of 67 MHz (seen in clk_summary: dclk_vop1 = 24000000).
+ * 1608 MHz / 24 = 67.000 MHz exactly.
+ */
+&cru {
+	assigned-clocks = <&pmucru CLK_RTC_32K>, <&cru PLL_GPLL>,
+			  <&pmucru PLL_PPLL>, <&cru PLL_VPLL>;
+	assigned-clock-rates = <32768>, <1200000000>,
+			       <200000000>, <1608000000>;
+};
+
+/* ---------------- Display ---------------- */
+
+&vop {
+	assigned-clocks = <&cru DCLK_VOP0>, <&cru DCLK_VOP1>;
+	assigned-clock-parents = <&pmucru PLL_HPLL>, <&cru PLL_VPLL>;
+	status = "okay";
+};
+
+&vop_mmu {
+	status = "okay";
+};
+
+&vp1 {
+	vp1_out_dsi0: endpoint@ROCKCHIP_VOP2_EP_MIPI0 {
+		reg = <ROCKCHIP_VOP2_EP_MIPI0>;
+		remote-endpoint = <&dsi0_in_vp1>;
+	};
+};
+
+&dsi_dphy0 {
+	status = "okay";
+};
+
+&dsi0 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "okay";
+
+	panel@0 {
+		compatible = "teclast,p25t-panel";
+		reg = <0>;
+		backlight = <&backlight>;
+		reset-gpios = <&gpio3 RK_PC3 GPIO_ACTIVE_LOW>;
+		vdd-supply = <&vcc_lcd>;
+		vccio-supply = <&vcc_1v8_dummy>;
+
+		port {
+			mipi_in_panel: endpoint {
+				remote-endpoint = <&mipi_out_panel>;
+			};
+		};
+	};
+
+	ports {
+		dsi0_in: port@0 {
+			reg = <0>;
+			dsi0_in_vp1: endpoint {
+				remote-endpoint = <&vp1_out_dsi0>;
+			};
+		};
+
+		dsi0_out: port@1 {
+			reg = <1>;
+			mipi_out_panel: endpoint {
+				remote-endpoint = <&mipi_in_panel>;
+			};
+		};
+	};
+};
+
+&pwm14 {
+	status = "okay";
+};
+
+/* I2C0: RK817 PMIC @0x20, SYR837 @0x40. No child nodes on purpose (read-only probing). */
+&i2c0 {
+	status = "okay";
+};

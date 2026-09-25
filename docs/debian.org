@@ -1,0 +1,165 @@
+#+TITLE: P25T — running Debian 13 (trixie)
+#+DATE: 2026-09-25
+#+STARTUP: overview
+
+* Overview
+  | Item               | Value                                                      |
+  |--------------------+------------------------------------------------------------|
+  | Distribution       | Debian 13 "trixie", arm64, main contrib non-free non-free-firmware |
+  | Root filesystem    | SD partition 5, ext4 label ~p25troot~                      |
+  | Boot partition     | SD partition 4, FAT label ~P25TBOOT~, mounted on ~/boot/firmware~ |
+  | Hostname / user    | ~p25t~ / ~jose~ (set in the scripts, see below)            |
+  | Network            | Wi-Fi (DHCP, preferred) and USB ~usb0~ 192.168.7.2 (backup)|
+  | Console            | ~tty1~ on the panel (Terminus 16×32), ~ttyGS0~ over USB    |
+  | Kernel             | ~7.3.0-rc4-p25t~ (not from Debian; lives on ~P25TBOOT~)    |
+
+  The user name ~jose~ is written in ~debian/build_debian.sh~,
+  ~debian/install_debian.sh~ (~TABLET_USER=jose~) and in the log paths of
+  the ~install/*.sh~ scripts. Change it there for another user.
+
+* 1. Build the root filesystem (PC)
+  Needs ~mmdebstrap~, ~qemu-user-static~, ~binfmt-support~ (the script
+  installs them). Result: folder ~debian/rootfs~ next to the script.
+  #+begin_src sh
+  bash debian/build_debian.sh
+  #+end_src
+  It runs ~debian/p25t-setup.sh~ inside the new system (chroot):
+  - hostname, ~/etc/hosts~, ~/etc/fstab~ by label (~P25TBOOT~ with ~nofail~);
+  - apt sources (deb822), user with sudo, time zone copied from the PC;
+  - large console font; USB gadget service ~p25t-gadget~ (ACM + NCM);
+  - ~systemd-networkd~ for ~usb0~ (192.168.7.2/24 with a small DHCP server
+    so the PC gets an address automatically);
+  - ~p25t-bootlog.timer~: 1 min after boot and every 4 min, writes a status
+    report to ~/boot/firmware/logs/boot-N-debian.txt~ (useful when no USB
+    cable is connected);
+  - enables networkd, resolved, ssh, the gadget, the timer, gettys on
+    ~ttyGS0~ and ~tty1~.
+  It asks for the tablet user's password at the end.
+
+* 2. Put it on the card (PC)
+  Needs ~initramfs.cpio.gz~ and ~initramfs.cpio.gz.sha256~ next to the
+  script (the stage-1 build with the hand-over, see [[file:boot.org][boot]]).
+  #+begin_src sh
+  bash debian/install_debian.sh
+  #+end_src
+  It finds the card by its labels, refuses anything that is not a
+  removable/USB disk, moves the backup GPT to the end of the card, creates
+  partition 5 from 1 GiB to the end, formats it, copies and verifies every
+  file, and updates ~P25TBOOT~ (initramfs, ~boot-debian~ flag,
+  ~CARD-SHA256SUMS~).
+
+* 3. First boot and login
+  - Insert the card, power on. Debian's login prompt appears on the panel.
+  - USB: plug the cable in *before* powering on (see [[file:todo.org][todo]]). On the PC:
+    #+begin_src sh
+    ssh jose@192.168.7.2
+    #+end_src
+    The PC gets an address from the tablet (192.168.7.10 upwards).
+  - Wi-Fi (after step 5): ~ssh jose@<TABLET-WIFI-IP>~; on our network
+    ~192.168.1.122~ (fix it with a DHCP reservation on the router for MAC
+    ~8c:35:92:f2:b5:45~).
+
+* 4. Internet through the PC, locales, updates (stage 4)
+  Only needed before Wi-Fi works.
+  #+begin_src sh
+  bash install/pc_share_internet.sh on
+  #+end_src
+  (on the PC: adds 192.168.7.1 on the tablet link, IPv4 forwarding, NAT, a
+  ~ufw~ route rule if ~ufw~ is active; ~off~ undoes everything, ~status~
+  shows it). Then on the tablet:
+  #+begin_src sh
+  sudo bash tablet_stage4.sh
+  #+end_src
+  It sets the default route through the PC, syncs the clock (NTP, or the
+  HTTP date of ~deb.debian.org~), generates ~en_GB.UTF-8~, ~es_ES.UTF-8~,
+  ~en_US.UTF-8~, re-enables ~AcceptEnv~ in sshd and runs ~full-upgrade~.
+
+  The tablet has no battery-backed clock yet: the time is only right after
+  a network sync.
+
+* 5. Wi-Fi (stage 5)
+  Two ways, same result. The package ~p25t-wifi.tar.gz~ holds the kernel,
+  DT, modules, Wi-Fi driver and firmware (see [[file:kernel.org][kernel]]).
+  - From the PC, card in the PC (no USB link needed):
+    #+begin_src sh
+    bash install/pc_install_stage5.sh
+    #+end_src
+  - On the tablet, in the folder where the package was unpacked:
+    #+begin_src sh
+    sudo bash wifi_install.sh
+    #+end_src
+  Both ask for the SSID and password. The password is stored only as the
+  WPA hash (PSK) in ~/etc/wpa_supplicant/wpa_supplicant-wlan0.conf~, and
+  ~wpa_supplicant@wlan0~ is enabled. Country is ~ES~ (edit for yours).
+
+  Network files:
+  | File                                        | Content                                    |
+  |---------------------------------------------+--------------------------------------------|
+  | ~/etc/systemd/network/50-usb0.network~      | 192.168.7.2/24, DHCP server, gateway 192.168.7.1 at metric 2000 |
+  | ~/etc/systemd/network/60-wlan.network~      | DHCP, route metric 600 (preferred)         |
+
+  Check:
+  #+begin_src sh
+  networkctl status wlan0
+  #+end_src
+  Add another network later:
+  #+begin_example
+  wpa_passphrase '<SSID>' | sudo tee -a /etc/wpa_supplicant/wpa_supplicant-wlan0.conf
+  sudo systemctl restart wpa_supplicant@wlan0
+  #+end_example
+  (~wpa_passphrase~ reads the password from the keyboard; delete the
+  commented ~#psk=~ line with the plain password from the file afterwards.)
+
+* 6. Bluetooth
+  On the tablet, in the folder where ~p25t-bt.tar.gz~ was unpacked:
+  #+begin_src sh
+  sudo bash bt_install.sh
+  sudo reboot
+  #+end_src
+  It installs BlueZ, the kernel/DT with UART1 + BT_REG_ON, the modules
+  (HIDP, UHID, RFCOMM and the Wi-Fi driver rebuilt for this kernel) and the
+  service ~p25t-bluetooth~, which runs
+  ~btattach -B /dev/ttyS1 -P h4 -S 1500000~.
+
+  Pair a keyboard (put it in pairing mode first; ~<KEYBOARD-MAC>~ is shown
+  by ~scan on~):
+  #+begin_example
+  bluetoothctl
+  power on
+  agent on
+  default-agent
+  scan on
+  pair <KEYBOARD-MAC>
+  trust <KEYBOARD-MAC>
+  connect <KEYBOARD-MAC>
+  scan off
+  quit
+  #+end_example
+  Type the PIN shown on the keyboard followed by Enter. Once trusted, it
+  reconnects by itself after a reboot.
+
+  Keyboard layout for the text console (Spanish):
+  #+begin_src sh
+  sudo dpkg-reconfigure keyboard-configuration
+  sudo setupcon
+  #+end_src
+
+* Everyday use
+  | Task                              | Command                                             |
+  |-----------------------------------+-----------------------------------------------------|
+  | Updates                           | ~sudo apt update && sudo apt full-upgrade~          |
+  | Power off                         | ~sudo poweroff~, then hold the power key if needed  |
+  | Boot logs from the card (on PC)   | folder ~logs/~ on ~P25TBOOT~                        |
+  | Previous boot's journal           | ~journalctl -b -1~                                  |
+  | Failed units                      | ~systemctl --failed~                                |
+  | Battery voltage (no driver yet)   | see [[file:hardware.org][hardware]], "Battery reading"            |
+
+  Debian's own ~linux-image~ packages are not used and not needed: the
+  kernel lives on ~P25TBOOT~ and is replaced by copying files.
+
+* Rollback
+  - Kernel/DT: copy ~Image.stage5~ / ~.dtb.stage5~ (or ~.stage4~) over the
+    current ones on ~P25TBOOT~ (card in the PC).
+  - Network: ~50-usb0.network.stage4~ is the pre-Wi-Fi version.
+  - Stage 1 instead of Debian: hold a volume key at power-on, or delete the
+    ~boot-debian~ flag file on ~P25TBOOT~.

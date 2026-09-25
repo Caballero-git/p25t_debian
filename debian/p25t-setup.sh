@@ -1,0 +1,172 @@
+#!/bin/bash
+# Runs INSIDE the new Debian root filesystem (chroot), called by build_debian.sh.
+# Configures it for the Teclast P25T. Argument: the user name.
+set -euo pipefail
+U="$1"
+
+echo "--- hostname, hosts"
+echo p25t > /etc/hostname
+cat > /etc/hosts <<'EOF'
+127.0.0.1	localhost
+127.0.1.1	p25t
+::1		localhost ip6-localhost ip6-loopback
+EOF
+
+echo "--- fstab"
+mkdir -p /boot/firmware
+cat > /etc/fstab <<'EOF'
+# Teclast P25T - SD card
+LABEL=p25troot  /               ext4  defaults,noatime,errors=remount-ro  0 1
+LABEL=P25TBOOT  /boot/firmware  vfat  defaults,noatime,nofail,flush        0 2
+EOF
+
+echo "--- apt sources"
+rm -f /etc/apt/sources.list
+cat > /etc/apt/sources.list.d/debian.sources <<'EOF'
+Types: deb
+URIs: http://deb.debian.org/debian
+Suites: trixie trixie-updates
+Components: main contrib non-free non-free-firmware
+Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
+
+Types: deb
+URIs: http://security.debian.org/debian-security
+Suites: trixie-security
+Components: main contrib non-free non-free-firmware
+Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
+EOF
+
+echo "--- user $U"
+id "$U" >/dev/null 2>&1 || useradd -m -s /bin/bash -G sudo,adm,video,input,plugdev,dialout,audio "$U"
+passwd -l root >/dev/null
+
+echo "--- time zone"
+if [ -s /root/host-timezone ]; then
+    TZ_NAME=$(cat /root/host-timezone)
+    if [ -e "/usr/share/zoneinfo/$TZ_NAME" ]; then
+        ln -sf "/usr/share/zoneinfo/$TZ_NAME" /etc/localtime
+        echo "$TZ_NAME" > /etc/timezone
+        echo "time zone $TZ_NAME"
+    fi
+fi
+
+echo "--- console font (large, for the 800x1280 screen)"
+sed -i 's/^FONTFACE=.*/FONTFACE="Terminus"/; s/^FONTSIZE=.*/FONTSIZE="16x32"/' /etc/default/console-setup
+
+echo "--- USB gadget: serial console (ACM) + network (NCM)"
+cat > /usr/local/sbin/p25t-gadget <<'EOF'
+#!/bin/sh
+# Set up the USB-C port as a composite USB device: serial console + network.
+G=/sys/kernel/config/usb_gadget/p25t
+[ -d $G ] && exit 0
+mkdir -p $G
+echo 0x1d6b > $G/idVendor
+echo 0x0104 > $G/idProduct
+echo 0x0100 > $G/bcdDevice
+echo 0x0200 > $G/bcdUSB
+mkdir -p $G/strings/0x409
+echo "p25t0001"          > $G/strings/0x409/serialnumber
+echo "Teclast"           > $G/strings/0x409/manufacturer
+echo "P25T Debian"       > $G/strings/0x409/product
+mkdir -p $G/configs/c.1/strings/0x409
+echo "ACM+NCM" > $G/configs/c.1/strings/0x409/configuration
+echo 250 > $G/configs/c.1/MaxPower
+mkdir -p $G/functions/acm.usb0 $G/functions/ncm.usb0
+# fixed addresses, so the PC always sees the same network device
+echo 02:25:54:00:00:01 > $G/functions/ncm.usb0/dev_addr
+echo 02:25:54:00:00:02 > $G/functions/ncm.usb0/host_addr
+ln -s $G/functions/acm.usb0 $G/configs/c.1/
+ln -s $G/functions/ncm.usb0 $G/configs/c.1/
+UDC=""
+for i in $(seq 1 20); do
+    UDC=$(ls /sys/class/udc 2>/dev/null | head -n 1)
+    [ -n "$UDC" ] && break
+    sleep 1
+done
+[ -n "$UDC" ] || { echo "no UDC"; exit 1; }
+echo "$UDC" > $G/UDC
+echo "gadget bound to $UDC"
+EOF
+chmod 755 /usr/local/sbin/p25t-gadget
+cat > /etc/systemd/system/p25t-gadget.service <<'EOF'
+[Unit]
+Description=P25T USB gadget (serial console + network)
+After=sys-kernel-config.mount
+Requires=sys-kernel-config.mount
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/p25t-gadget
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+echo "--- network on usb0: 192.168.7.2, gives the PC an address by DHCP"
+mkdir -p /etc/systemd/network
+cat > /etc/systemd/network/50-usb0.network <<'EOF'
+[Match]
+Name=usb*
+
+[Network]
+Address=192.168.7.2/24
+DHCPServer=yes
+ConfigureWithoutCarrier=yes
+
+[DHCPServer]
+PoolOffset=10
+PoolSize=10
+EmitDNS=no
+EmitRouter=no
+EOF
+
+echo "--- boot log onto the card (for boots without a USB cable)"
+cat > /usr/local/sbin/p25t-bootlog <<'EOF'
+#!/bin/sh
+# Write a status report onto the card: /boot/firmware/logs/boot-N-debian.txt
+D=/boot/firmware/logs
+[ -d $D ] || exit 0
+N=$(cat $D/bootcount 2>/dev/null || echo 0)
+{
+    echo "=== $(date)  uptime $(cut -d' ' -f1 /proc/uptime) s"
+    echo "=== failed units"; systemctl --failed --no-legend
+    echo "=== gadget"; systemctl status --no-pager -n 20 p25t-gadget.service
+    for u in /sys/class/udc/*; do echo "$u state: $(cat $u/state)"; done
+    echo "=== network"; ip addr
+    echo "=== logins"; who
+    echo "=== warnings and errors this boot"; journalctl -b -p warning --no-pager
+    echo "=== dmesg"; dmesg
+} > $D/boot-$N-debian.txt 2>&1
+sync
+EOF
+chmod 755 /usr/local/sbin/p25t-bootlog
+cat > /etc/systemd/system/p25t-bootlog.service <<'EOF'
+[Unit]
+Description=P25T status report onto the SD card
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/p25t-bootlog
+EOF
+cat > /etc/systemd/system/p25t-bootlog.timer <<'EOF'
+[Unit]
+Description=P25T status report onto the SD card, 1 min after boot and every 4 min
+
+[Timer]
+OnBootSec=60
+OnUnitActiveSec=240
+
+[Install]
+WantedBy=timers.target
+EOF
+
+echo "--- enable services"
+systemctl enable systemd-networkd.service systemd-resolved.service \
+    ssh.service p25t-gadget.service p25t-bootlog.timer \
+    serial-getty@ttyGS0.service getty@tty1.service
+
+echo "--- clean up"
+apt-get clean
+rm -f /var/lib/apt/lists/*_Packages /var/lib/apt/lists/*_Release /var/lib/apt/lists/*_InRelease
+echo "setup done"

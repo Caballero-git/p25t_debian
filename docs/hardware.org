@@ -1,0 +1,136 @@
+#+TITLE: Teclast P25T (P9A6) — hardware
+#+DATE: 2026-09-25
+#+STARTUP: overview
+
+* Sources
+  - Stock firmware ~P25T(P9A6)_Android 12.0_ROW_V1.01_20230207~ → ~boot.img~
+    → device tree blob (unpacked with ~tools/rkunpack.py~, searched with
+    ~tools/dtbscan.py~ and ~tools/fdtgrep.py~).
+  - Stock DT: ~model = "Rockchip RK3566 RK817 TABLET LP4X Board"~,
+    ~compatible = "rockchip,rk3566-rk817-tablet", "rockchip,rk3566"~.
+    It is Rockchip's generic SDK tablet DT and lists alternative parts
+    (four vdd_cpu regulators, two accelerometers, twelve cameras, Wi-Fi
+    type "rtl8723cs"). Only the ones present probe.
+  - Runtime checks on Android (~tools/probe_android.sh~, a bugreport) and
+    read-only register dumps from our own initramfs.
+  - The Android ~dtbo.img~ overlay (559 bytes) only sets boot devices and
+    reboot-mode magic numbers.
+
+* GPIO naming
+  - Controllers: gpio0 ~fdd60000~, gpio1 ~fe740000~, gpio2 ~fe750000~,
+    gpio3 ~fe760000~, gpio4 ~fe770000~.
+  - Pin n of a bank → port letter ⌊n/8⌋ (A, B, C, D) and index n mod 8.
+    Example: gpio0 pin 18 → GPIO0_C2.
+  - Pad level register ~EXT_PORT~ at controller + ~0x70~. A pad whose IO
+    domain is unpowered reads 0 even if its output register says 1.
+
+* Hardware table
+  | Block             | Part / stock node                          | Wiring                                                        | Linux status                          |
+  |-------------------+--------------------------------------------+---------------------------------------------------------------+---------------------------------------|
+  | SoC               | RK3566, 4× Cortex-A55                      |                                                               | mainline                              |
+  | RAM               | 4 GB LPDDR4X                               |                                                               | works                                 |
+  | eMMC              | ~sdhci@fe310000~                           |                                                               | mainline; we never write it           |
+  | microSD           | ~dwmmc@fe2b0000~ (sdmmc0), 4-bit           | card detect on sdmmc0_det                                     | works (U-Boot ~mmc 1~, Linux mmc1)    |
+  | Wi-Fi SDIO bus    | ~dwmmc@fe2c0000~ (sdmmc1), non-removable   | supply switch GPIO0_A0 (act. low), WL_REG_ON GPIO0_C0, 32k from RK817 | works, 4-bit 50 MHz, Linux mmc2 |
+  | Wi-Fi chip        | stock DT says rtl8723cs; *real: AIC8801*   | host-wake GPIO0_C4 (unused so far)                            | out of tree ~aic8800_fdrv~            |
+  | Bluetooth         | same AIC8801, UART1 (uart1m0)              | BT_REG_ON GPIO0_C1 (high = on), wake GPIO0_C3, host-wake GPIO0_B7, RTS/CTS | works via ~btattach~ H4 1.5 Mbaud |
+  | PMIC              | RK817 @ i2c0 0x20                          | regulators, RTC, 32k clock, charger, fuel gauge, codec        | not in our DT yet (on purpose)        |
+  | vdd_cpu           | SYR837 @ i2c0 0x40 (~silergy,syr827~)      | vin = vccsys, 0.712–1.5 V                                     | not in our DT yet → no cpufreq        |
+  | Battery           | 5300 mAh design (qmax 5800), sense 10 mΩ   | OCV 3400–4313 mV                                              | ~rk817_charger~ exists, not enabled   |
+  | Audio codec       | RK817 codec + simple-audio-card            | headset detect ~rk-headset~                                   | todo                                  |
+  | GPU               | Mali-G52 (~arm,mali-bifrost~)              |                                                               | Panfrost, needs vdd_gpu in DT         |
+  | Display pipe      | VOP2 vp1 → DSI0 ~fe060000~ + D-PHY ~fe850000~ | 4 lanes                                                    | works                                 |
+  | Panel             | Jadard JD9365, 800×1280, 135×216 mm        | enable GPIO3_B1 (act. high), reset GPIO3_C3 (act. low)        | works, ~panel-jadard-jd9365da-h3~ + our table |
+  | Backlight         | ~pwm-backlight~ PWM14 (~fe700020~)         | period 25 µs (40 kHz), stock default 77/255                   | works                                 |
+  | Touchscreen       | Silead GSL3673 @ i2c1 0x40                 | IRQ GPIO0_B0, reset GPIO0_C2                                  | todo: ~silead~ + firmware from Android |
+  | Accelerometer     | SC7A20 @ i2c1 0x19 or DA223 @ 0x27         | IRQ GPIO3_A2; swap_xy, revert_y                               | todo; both drivers bound on Android   |
+  | Volume keys       | ~adc-keys~ on SARADC ch0                   | idle ≈ 1.8 V (raw 1023); raw < 900 = a key is held            | works                                 |
+  | Power key         | RK817 pwrkey                               |                                                               | todo (needs RK817 node)               |
+  | USB-C             | DWC3 ~fcc00000~, HS only, OTG              | USB2 PHY0 ~fe8a0000~; stock quirks + PHY tuning needed        | gadget works, intermittently          |
+  | HDMI              | enabled in stock DT                        | not wired on this tablet                                      | ignored                               |
+  | Cameras           | 12 candidates on i2c2                      | front 2 MP, rear 5 MP                                         | skipped                               |
+
+* Power (RK817 and SYR837)
+  - RK817 enable registers have per-bit write-enable masks (high nibble =
+    mask, low nibble = enable). Example: writing ~0x88~ to ~0xB3~ changes
+    only LDO8.
+  - 32 kHz clock output for Wi-Fi is already on at boot (RK817 register
+    ~0xF2~ bit 7). No write needed.
+  - Rails that Android keeps always-on but our boot leaves at reset default:
+    | RK817 rail | stock name   | stock V | stock user      | state in our boot |
+    |------------+--------------+---------+-----------------+-------------------|
+    | LDO9       | vcc2v8_dvp   | 2.8 V   | none listed     | off               |
+    | LDO8       | vcc1v8_dvp   | 1.8 V   | IO domain vccio6| off               |
+    | LDO4       | vccio_acodec | 3.3 V   | IO domain vccio1| off               |
+    | BOOST      | boost        | 5 V     | USB OTG switch  | off               |
+    Turning LDO4/8/9 on was tested ("rails" experiment): irrelevant to the
+    panel. They will matter for audio (LDO4) and cameras.
+  - Our DT uses dummy fixed regulators (~vcc_sys_dummy~, ~vcc_3v3_dummy~,
+    ~vcc_1v8_dummy~) so Linux never switches a real rail.
+
+* IO domains
+  - Boot state: all domains in 3.3 V mode (PMU_GRF ~IO_VSEL0 = 0x00~,
+    ~IO_VSEL1 = 0xFF~).
+  - vccio4 (sdmmc1 / Wi-Fi + UART1) must be in 1.8 V mode: our DT sets
+    ~&pmu_io_domains { vccio4-supply = <&vcc_1v8_dummy>; }~.
+
+* Battery reading without a driver
+  Read-only. Battery voltage is in RK817 registers ~0x78~ (high byte) and
+  ~0x79~ (low byte), on i2c bus 0, chip address 0x20:
+  #+begin_src sh
+  sudo i2cget -y -f 0 0x20 0x78 b
+  sudo i2cget -y -f 0 0x20 0x79 b
+  #+end_src
+  ~<RAW>~ = high × 256 + low. The chip's own calibration pair (registers
+  ~0x93~–~0x96~) gives k = 70 and b = 14, the same formula the mainline
+  ~rk817_charger~ driver uses:
+
+  V (µV) = 70 × <RAW> + 14 × 1000
+
+  Worked example (2026-09-25, full battery): high ~0xee~, low ~0x16~,
+  <RAW> = 0xee16 = 60950 → V = 4 280 500 µV ≈ 4.28 V.
+
+* Panel
+  - Timings: pixel clock 67 MHz; horizontal 800 active, 18/18/18
+    (front/sync/back); vertical 1280 active, 12/4/8.
+  - Stock ~dsi,flags = 0xa03~ (VIDEO | BURST | NO_EOT | LPM). *On mainline
+    use 0x603* (VIDEO | BURST | NO_EOT | CLOCK_NON_CONTINUOUS, no LPM),
+    see [[file:findings.org][findings]].
+  - Init sequence: 202 two-byte DCS writes. Page select ~E0 xx~, unlock
+    ~E1 93 / E2 65 / E3 F8~ (the JD9365 signature), then Sleep Out ~11~
+    (+120 ms) and Display On ~29~ (+100 ms). Exit: ~28~ (+1 ms), ~10~ (+3 ms).
+    Converted to driver syntax in ~kernel/p25t-panel-init.c.inc~.
+  - Delays: prepare/reset/init 20 ms, enable 120 ms, disable/unprepare 20 ms.
+  - Pixel clock source: VPLL preset to 1608 MHz in ~&cru~ (1608 / 24 = 67 MHz).
+
+* Wi-Fi and Bluetooth (AIC8801)
+  - MAC addresses on this unit: Wi-Fi ~8c:35:92:f2:b5:45~,
+    Bluetooth ~8C:35:92:F2:B5:46~.
+  - Power sequence: vcc_wl (GPIO0_A0 low) with 100 ms start-up, then
+    WL_REG_ON (GPIO0_C0) released 50 ms later (mmc-pwrseq-simple).
+  - Firmware: ~/lib/firmware/aic8800_fw/SDIO/aic8800/~ (from the radxa package).
+  - Bluetooth is a plain H4 UART device: no kernel driver needed beyond
+    ~hci_uart~; ~btattach -B /dev/ttyS1 -P h4 -S 1500000~.
+
+* USB-C (DWC3 + USB2 PHY0)
+  - Stock DWC3 quirks: ~snps,dis_enblslpm_quirk~,
+    ~snps,dis-u2-freeclk-exists-quirk~, ~snps,dis-del-phy-power-chg-quirk~,
+    ~snps,dis-tx-ipgap-linecheck-quirk~.
+  - Stock PHY tuning (~rk3568_usb2phy_tuning~ in the vendor kernel), applied
+    by our initramfs with ~devmem~:
+    | Address          | Change                     | Meaning                    |
+    |------------------+----------------------------+----------------------------|
+    | ~0xfe8a0030~     | bit 2 off, bits 6:4 = 6    | HS eye height 437.5 mV     |
+    | ~0xfe8a0000~     | bits 2:0 = 4               | pre-emphasis on            |
+    | ~0xfdca0048/4c~  | ~0x000f4240~               | 10 ms bvalid filter        |
+
+* eMMC partitions (Android A/B, read-only for us)
+  In order: loader, security, uboot_a, uboot_b, trust_a, trust_b, misc,
+  dtbo_a, dtbo_b, vbmeta_a, vbmeta_b, boot_a, boot_b, backup, cache,
+  metadata, frp, baseparameter, super (userdata follows).
+  Bootloader state: locked. The loader-mode (~rkdeveloptool~) read only
+  returned real data below sector 65536, see [[file:findings.org][findings]].
+
+* Closest mainline reference boards
+  - ~rk3566-anbernic-rg353x.dtsi~: RK3566 + RK817 + DSI panel + SDIO Wi-Fi.
+  - ~rk3566-pinetab2.dtsi~: RK3566 tablet layout, battery, backlight.

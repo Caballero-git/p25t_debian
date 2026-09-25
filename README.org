@@ -1,0 +1,85 @@
+#+TITLE: p25t-linux — Debian on the Teclast P25T tablet
+#+AUTHOR: Jose M. Caballero Guerrero
+#+DATE: 2026-09-25
+#+STARTUP: overview
+
+* What this is
+  Mainline Linux (7.3-rc) and Debian 13 "trixie" (arm64) running on the
+  Teclast P25T (board P9A6, Rockchip RK3566, RK817 PMIC, 4 GB LPDDR4X),
+  booted entirely from a microSD card. The internal eMMC (Android 12) is
+  never written: remove the card and the tablet is stock again.
+
+  The bootloader is locked. We do not need to unlock it: the stock SPL
+  tries the SD card first and loads our U-Boot from a GPT partition named
+  ~uboot~ (see [[file:docs/boot.org][docs/boot.org]]).
+
+* Status (2026-09-25)
+  | Area                              | State   | Notes                                              |
+  |-----------------------------------+---------+----------------------------------------------------|
+  | Boot from microSD                 | works   | stock SPL → mainline U-Boot v2026.10-rc5 → Linux   |
+  | Display 800×1280 JD9365 panel     | works   | DSI commands must be sent in HS mode               |
+  | Backlight                         | works   | PWM14                                              |
+  | USB-C gadget (serial + network)   | flaky   | best with the cable plugged in before power-on    |
+  | Debian 13 root on the card        | works   | ext4 partition labelled ~p25troot~                 |
+  | Wi-Fi AIC8800 (SDIO)              | works   | out-of-tree driver, patched for 7.3                |
+  | Bluetooth AIC8800 (UART1)         | works   | ~btattach~, keyboard paired                        |
+  | Volume keys (SARADC)              | works   | used to skip the Debian hand-over                  |
+  | Battery / charger (RK817)         | todo    | readable by i2c, no driver bound yet               |
+  | Touchscreen GSL3673               | todo    | ~silead~ driver + firmware blob                    |
+  | Audio RK817 codec                 | todo    |                                                    |
+  | Accelerometer                     | todo    | SC7A20 or DA223, unconfirmed                       |
+  | CPU frequency / GPU (Panfrost)    | todo    | vdd_cpu SYR837 not in the DT yet                   |
+  | Console on screen w/o USB cable   | open    | blinking cursor only, getty did start              |
+
+* Folder map
+  | Path          | Contents                                                              |
+  |---------------+-----------------------------------------------------------------------|
+  | ~docs/~       | the knowledge: hardware, boot chain, kernel, Debian, findings, to-do  |
+  | ~u-boot/~     | U-Boot config, FIT description, BL31 splitter, SD image builder       |
+  | ~kernel/~     | device tree, kernel patches, kernel config, AIC8800 build fix         |
+  | ~initramfs/~  | the stage-1 ~init~ (logging, USB PHY tuning, hand-over to Debian)     |
+  | ~debian/~     | root filesystem builder and card installer                            |
+  | ~install/~    | stage scripts: internet via PC, Wi-Fi, Bluetooth                      |
+  | ~tools/~      | analysis helpers: firmware unpacker, DT scanners, Android probes      |
+
+  | Document                                  | Read it for                                      |
+  |-------------------------------------------+--------------------------------------------------|
+  | [[file:docs/hardware.org][docs/hardware.org]] | what is inside the tablet and how it is wired  |
+  | [[file:docs/boot.org][docs/boot.org]]         | how the card boots, SD layout, U-Boot, initramfs |
+  | [[file:docs/kernel.org][docs/kernel.org]]     | building the kernel, DT and the Wi-Fi driver     |
+  | [[file:docs/debian.org][docs/debian.org]]     | building, installing and using Debian            |
+  | [[file:docs/findings.org][docs/findings.org]] | the hard-won lessons and dead ends               |
+  | [[file:docs/todo.org][docs/todo.org]]         | what is left                                     |
+
+* Quick start (outline)
+  Details in the docs; each step has its own script.
+  1. Build U-Boot (~u-boot/p25t-u-boot.config~) and the kernel
+     (~kernel/patches~, ~kernel/p25t-kernel.config~).
+  2. ~u-boot/build_sd_image.sh~ → an SD image with U-Boot, kernel, DT, initramfs.
+  3. ~tools/write_sdcard.sh~ → write it to the card (checks the device, verifies).
+  4. ~debian/build_debian.sh~ then ~debian/install_debian.sh~ → Debian on the card.
+  5. ~install/pc_install_stage5.sh~ → Wi-Fi driver and network (from the PC).
+  6. ~install/bt_install.sh~ → Bluetooth (on the tablet).
+  7. Insert the card, power on. Debian logs in on the screen and over SSH.
+
+* Safety rules followed throughout
+  - Never write to the eMMC. Every script checks that its target is a
+    removable/USB disk.
+  - Writes to the RK817 power chip only after an explicit, reviewed proposal.
+    The DT deliberately has no RK817 or SYR837 regulator nodes yet, so Linux
+    cannot change rails left on by the bootloader.
+  - Recovery path for the eMMC is the official firmware image (RKDevTool),
+    not our backup (see the backup caveat in [[file:docs/findings.org][findings]]).
+
+* Conventions in these documents
+  - Plain src blocks are literal: type them as they are.
+  - ~<UPPER-CASE>~ in angle brackets is a placeholder you replace,
+    e.g. ~<CARD-DEVICE>~ → ~/dev/sdb~.
+  - Prompt ~jose@hp240~ = the PC (Linux Mint 22); ~jose@p25t~ = the tablet.
+
+* Credits and licences
+  - Linux: GPL-2.0. Our patches are under the same licence.
+  - U-Boot: GPL-2.0+. BL31 (~rk3568_bl31_v1.46.elf~) is a Rockchip binary
+    from ~rkbin~ and is not redistributed here.
+  - AIC8800 driver: [[https://github.com/radxa-pkg/aic8800][radxa-pkg/aic8800]] (GPL-2.0); only our patch is here.
+  - Panel init table extracted from the stock device tree.
