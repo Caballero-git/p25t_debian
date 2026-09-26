@@ -49,16 +49,14 @@
     input event devices present for the power key.
   - Every RK817 write was proposed and approved first, per the standing
     rule. Values mirror the stock DT; nothing that was on got switched off.
-  - Open follow-up, flagged during a battery-consumption review
-    (2026-09-26): ~BOOST~ is ~regulator-always-on~ in *every* DTB (patch
-    0008), not just host-mode, because nothing else keeps it up during
-    late-boot regulator cleanup and it has to be live before ~OTG_SWITCH~
-    can gate real 5 V onto VBUS. Stock Android's own DT has no explicit
-    always-on flag on it. Could be rescoped to host-mode-only (move the
-    ~regulator-always-on~/~regulator-boot-on~ lines from the shared base
-    file into the host-mode DTB override, same pattern as
-    ~usb2phy0_otg { phy-supply = ...; }~) — a real but minor quiescent-draw
-    saving, not proposed/built yet, pending approval.
+  - Follow-up from the battery-consumption review, resolved (patch 0010,
+    2026-09-26): ~BOOST~ had been ~regulator-always-on~ in *every* DTB
+    (patch 0008), not just host-mode. Moved the always-on/boot-on lines
+    into a host-mode-only DTB override (same pattern as
+    ~usb2phy0_otg { phy-supply = ...; }~); the host-mode DTB compiled
+    byte-for-byte identical to before (verified by checksum), so zero
+    regression risk on the receiver test. Confirmed on hardware: ~boost~
+    now shows ~disabled~ in normal mode; charger/battery unaffected.
   - Also noted: the mainline ~rk817_charger.c~ driver hardcodes the USB
     input-current limit to 1.5 A (stock Android uses 2 A) and never
     touches the chip's own charge-enable bit (left at hardware default) —
@@ -76,14 +74,30 @@
     charging past that initial phase. No further action - let it finish a
     full charge/rest cycle, which also lets the fuel gauge recalibrate.
 
-* TODO CPU frequency and GPU
-  - SYR837 (~silergy,syr827~) at i2c0 0x40 as vdd_cpu, then the cpufreq OPPs.
-  - vdd_gpu (RK817 DCDC) for Panfrost.
+* DONE CPU frequency (vdd_cpu / DVFS), TODO GPU
   - Flagged 2026-09-26 (battery-consumption review): with no cpufreq/OPPs
-    at all, the CPU likely never drops below its default/boot frequency —
+    at all, the CPU likely never dropped below its default/boot frequency —
     the most plausible *software* contributor to faster-than-Android
-    drain during real use, bigger than anything found in the RK817 side.
-    Not started.
+    drain during real use, bigger than anything found on the RK817 side.
+  - Turned out frequency scaling was already silently active before any
+    DT work here - ~rk3566.dtsi~ already ships a standard OPP table wired
+    to all 4 CPUs, and ~CONFIG_CPU_FREQ~/~CPUFREQ_DT~/~CPUFREQ_DT_PLATDEV~
+    were already on. Only voltage scaling was missing.
+  - Patch 0011 (2026-09-26): wired the real ~vdd_cpu~ chip, SYR837
+    (~silergy,syr827~ @ i2c0 0x40, confirmed from the stock DT - which
+    lists four alternative vdd_cpu parts, only this one populated here)
+    as ~cpu-supply~ on all 4 CPUs. Values copied verbatim from the stock
+    DT. Every write proposed and approved first, per the standing rule -
+    same as the RK817 patches, even though this chip isn't RK817, since
+    it's the CPU core rail. See [[file:hardware.org][hardware]] and
+    [[file:kernel.org][kernel]] for the full writeup.
+  - Confirmed working 2026-09-26: clean hardware detect in ~dmesg~, no
+    errors; voltage tracks frequency exactly against the OPP table's
+    targets (1.025 V at 1416 MHz idle, 1.15 V at 1800 MHz under load -
+    both exact matches, not just in-range).
+  - Still open: ~vdd_gpu~ (RK817 DCDC) for Panfrost - GPU has an OPP table
+    too (~rk3566.dtsi~) but no supply wired, same situation CPU was in
+    before this patch. Not started.
 
 * TODO Touchscreen (Silead GSL3673, i2c1 0x40, IRQ GPIO0_B0, reset GPIO0_C2)
   - Mainline ~silead~ driver; the firmware blob must be extracted from the

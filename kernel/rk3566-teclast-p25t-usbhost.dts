@@ -28,3 +28,14 @@
 &usb2phy0_otg {
 	phy-supply = <&rk817_otg_switch>;
 };
+
+/*
+ * BOOST is left unconstrained in the base DT (disabled at late boot in
+ * normal/peripheral mode, since nothing there consumes it). Force it back
+ * on here: OTG_SWITCH's phy-supply link above needs real 5V behind it to
+ * actually gate anything onto the USB-C VBUS pin.
+ */
+&rk817_boost {
+	regulator-always-on;
+	regulator-boot-on;
+};

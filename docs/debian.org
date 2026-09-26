@@ -187,6 +187,27 @@
   The script keeps a backup of the normal DTB the first time you switch,
   so "normal" is always a plain file copy, never a rebuild.
 
+* Test scripts (~tests/test_NN.sh~ → ~result_NN.txt~)
+  Standing pattern for anything more than a couple of one-line checks:
+  a numbered script instead of pasting commands into the SSH session
+  by hand. Not just convenience - it removes the length/line-count
+  limits a pasted block runs into, and multi-line snippets pasted into
+  a terminal can lose indentation or get mangled anyway.
+
+  Claude writes ~tests/test_NN.sh~ (next free number) into this folder
+  and verifies it landed correctly, byte for byte, the same way as any
+  other file in this project. From the PC, card in the tablet and
+  reachable over Wi-Fi/SSH:
+  #+begin_src sh
+  scp ~/p25t-backup/tests/test_NN.sh jose@p25t:~/
+  ssh jose@p25t 'bash test_NN.sh > result_NN.txt 2>&1'
+  scp jose@p25t:~/result_NN.txt ~/p25t-backup/tests/
+  #+end_src
+  Claude then reads ~result_NN.txt~ back the same way it reads any other
+  file here. The scripts themselves are throwaway (not committed to the
+  kernel/patches history) - what matters is the numbered result trail
+  sitting next to the DTB/patch history for whatever they were checking.
+
 * Rollback
   - Kernel/DT: copy ~Image.stage5~ / ~.dtb.stage5~ (or ~.stage4~) over the
     current ones on ~P25TBOOT~ (card in the PC).

@@ -17,6 +17,8 @@
     | 0007 | DT: USB-C host-mode test variant (new board file, see below)   |
     | 0008 | DT: RK817 BOOST/OTG_SWITCH regulators, for USB-C VBUS          |
     | 0009 | DT: RK817 charger + battery data (~rk817_charger~)              |
+    | 0010 | DT: scope RK817 BOOST always-on to the host-mode DTB only      |
+    | 0011 | DT: wire real vdd_cpu (SYR837) for CPU DVFS                    |
   - Also needs a kernel *config* change (not a DT patch): ~CONFIG_USB_XHCI_HCD=y~
     and ~CONFIG_USB_XHCI_PLATFORM=y~, both already set in
     ~kernel/p25t-kernel.config~. Without them the ~dwc3~ glue driver still
@@ -176,6 +178,81 @@
     is ~dev_dbg~ (silent unless dynamic debug is on) — there is no
     "probed OK" line in this driver at all. Use the
     ~/sys/class/power_supply/~ check above instead.
+
+* Scope RK817 BOOST always-on to host-mode only (patch 0010) — working
+  - Follow-up from a battery-consumption review (2026-09-26): patch 0008
+    made ~BOOST~ ~regulator-always-on~/~regulator-boot-on~ in the *shared*
+    base DT, so it ran 24/7 even in normal/peripheral mode, where nothing
+    consumes it. Needed at the time so ~OTG_SWITCH~'s ~phy-supply~ link
+    would have real 5V behind it once host mode was requested — but the
+    stock DT itself has no always-on flag on ~BOOST~ at all.
+  - Fix: removed the always-on/boot-on lines from ~&rk817_boost~ in the
+    base file (~rk3566-teclast-p25t.dts~), added them back as an override
+    only in the host-mode file (~rk3566-teclast-p25t-usbhost.dts~), same
+    pattern as the existing ~&usb2phy0_otg { phy-supply = ...; };~
+    override. Checked before building: nothing else in either DTB
+    references ~rk817_boost~/~rk817_otg_switch~, so nothing else could be
+    riding on this rail.
+  - Because the override reconstructs the exact same property set, the
+    *host-mode DTB compiled byte-for-byte identical* to before this patch
+    (same sha256) — zero regression risk on the already-confirmed
+    USB-receiver path. Only the base/normal DTB's binary changed.
+  - Confirmed working 2026-09-26, cable power, normal mode:
+    #+begin_src sh
+    for d in /sys/class/regulator/regulator.*/; do
+      echo "$d $(cat "$d"name 2>/dev/null) $(cat "$d"state 2>/dev/null)"
+    done | grep -i boost
+    #+end_src
+    → ~boost ... disabled~ (previously ~enabled~). Charger/battery
+    (patch 0009) unaffected: still ~Charging~, capacity rising normally.
+
+* Real vdd_cpu / CPU DVFS (patch 0011) — working
+  - Context: ~cpufreq-dt~ had been silently active with *frequency-only*
+    scaling since before this patch — nobody had to add anything for that
+    part. ~rk3566.dtsi~ already ships a standard ~cpu0_opp_table~ (408
+    MHz–1.8 GHz, ~opp-shared~) wired to all four ~&cpuN~ nodes, and our
+    ~.config~ already had ~CONFIG_CPU_FREQ~, ~CONFIG_CPUFREQ_DT~,
+    ~CONFIG_CPUFREQ_DT_PLATDEV~ and the ~schedutil~ governor enabled.
+    Confirmed active before this patch: ~scaling_available_frequencies~
+    listed all 7 steps, ~scaling_governor~ was ~schedutil~. What was
+    missing was voltage scaling - with no ~cpu-supply~, the CPU sat at
+    whatever fixed voltage the bootloader set for its max frequency, even
+    while idling at 408 MHz.
+  - The real chip on this board: checked the stock DT, which lists *four*
+    alternative vdd_cpu parts (generic Rockchip SDK board file - not all
+    populated); only ~syr837@40~, ~compatible = "silergy,syr827"~, i2c0
+    address 0x40, is actually on this tablet. Mainline already has a
+    driver for this exact chip family: ~drivers/regulator/fan53555.c~
+    (~CONFIG_REGULATOR_FAN53555=y~, already built).
+  - Added a ~vdd_cpu: regulator@40~ node in ~&i2c0~ (shared base file,
+    applies to both DTBs, like patch 0009), values copied verbatim from
+    the stock DT's ~syr837@40~ node: min 712500 µV, max 1500000 µV,
+    ramp-delay 1000, ~fcs,suspend-voltage-selector = 1~,
+    ~regulator-always-on~ (stock has no ~regulator-boot-on~ on this node
+    either - matched exactly). Stock's own ~regulator-init-microvolt~ and
+    ~regulator-initial-state~ have *no mainline binding* - checked
+    ~drivers/regulator/core.c~, ~of_regulator.c~, and the
+    ~fcs,fan53555.yaml~ binding doc, none of them recognise either
+    property - so both were dropped; probing this regulator only reports
+    the chip's existing state, it never forces a voltage on boot.
+    ~vin-supply~ mirrors stock's ~vcc3v8_sys~ via our existing
+    ~vcc_sys_dummy~. The existing OPP table's voltage ceiling (1.15 V)
+    sits well inside this chip's real range (712.5 mV–1.5 V), so the OPP
+    table itself needed no changes.
+  - Wired ~cpu-supply = <&vdd_cpu>;~ on ~&cpu0~ through ~&cpu3~, same
+    pattern as ~rk3566-pinetab2.dtsi~ (a real mainline board using the
+    same chip family, listed as a reference board - see the top of this
+    file).
+  - Confirmed working 2026-09-26, cable power: ~dmesg~ shows a clean,
+    error-free detect -
+    #+begin_src text
+    fan53555-regulator 0-0040: FAN53555 Option[8] Rev[1] Detected!
+    #+end_src
+    and voltage tracks frequency exactly against ~cpu0_opp_table~'s
+    targets - idle at 1416 MHz read back 1025000 µV (table target:
+    1025000), under synthetic load at 1800 MHz (max) read back 1150000 µV
+    (table target: 1150000). Both exact matches, not just "in range".
+    Charger/battery sanity-checked unaffected in the same run.
 
 * AIC8800 Wi-Fi/Bluetooth driver (out of tree)
   Source: [[https://github.com/radxa-pkg/aic8800][radxa-pkg/aic8800]], commit ~516e3b0~

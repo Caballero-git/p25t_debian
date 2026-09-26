@@ -1,0 +1,68 @@
+From dc3a4052f1264d899191a06f8e9a9cffd5f9f974 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sat, 26 Sep 2026 19:27:19 +0200
+Subject: [PATCH] arm64: dts: rockchip: P25T: scope RK817 BOOST always-on to
+ host-mode DTB
+
+BOOST was forced regulator-always-on/boot-on in the shared base DT
+(patch 0008), needed only so that OTG_SWITCH's phy-supply link has
+real 5V behind it in host mode. In normal/peripheral mode nothing
+consumes BOOST at all, so this kept the boost converter live 24/7
+for no reason - a real, if minor, quiescent draw the stock DT does
+not have (stock leaves BOOST unconstrained too).
+
+Move the always-on/boot-on flags out of the base file and into the
+host-mode DTB as an override on &rk817_boost, the same pattern already
+used for &usb2phy0_otg's phy-supply. Base DTB: BOOST left unconstrained,
+matching stock, disabled by Linux's regulator core at late boot since
+it has no consumer there. Host-mode DTB: functionally and now
+byte-for-byte identical to before this commit (verified: same DTB
+checksum), since the override reconstructs exactly the same node.
+---
+ .../boot/dts/rockchip/rk3566-teclast-p25t-usbhost.dts | 11 +++++++++++
+ arch/arm64/boot/dts/rockchip/rk3566-teclast-p25t.dts  | 10 ++++++++--
+ 2 files changed, 19 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/rockchip/rk3566-teclast-p25t-usbhost.dts b/arch/arm64/boot/dts/rockchip/rk3566-teclast-p25t-usbhost.dts
+index 2ed847245..3cb20403c 100644
+--- a/arch/arm64/boot/dts/rockchip/rk3566-teclast-p25t-usbhost.dts
++++ b/arch/arm64/boot/dts/rockchip/rk3566-teclast-p25t-usbhost.dts
+@@ -28,3 +28,14 @@ &usb_host0_xhci {
+ &usb2phy0_otg {
+ 	phy-supply = <&rk817_otg_switch>;
+ };
++
++/*
++ * BOOST is left unconstrained in the base DT (disabled at late boot in
++ * normal/peripheral mode, since nothing there consumes it). Force it back
++ * on here: OTG_SWITCH's phy-supply link above needs real 5V behind it to
++ * actually gate anything onto the USB-C VBUS pin.
++ */
++&rk817_boost {
++	regulator-always-on;
++	regulator-boot-on;
++};
+diff --git a/arch/arm64/boot/dts/rockchip/rk3566-teclast-p25t.dts b/arch/arm64/boot/dts/rockchip/rk3566-teclast-p25t.dts
+index db1be30d6..b736cfd90 100644
+--- a/arch/arm64/boot/dts/rockchip/rk3566-teclast-p25t.dts
++++ b/arch/arm64/boot/dts/rockchip/rk3566-teclast-p25t.dts
+@@ -359,8 +359,14 @@ rk817_boost: BOOST {
+ 				regulator-name = "boost";
+ 				regulator-min-microvolt = <4900000>;
+ 				regulator-max-microvolt = <5400000>;
+-				regulator-always-on;
+-				regulator-boot-on;
++				/*
++				 * Left unconstrained on purpose (matches the stock DT,
++				 * which has no always-on flag either): nothing in the
++				 * normal/peripheral DTB consumes this rail, so Linux
++				 * disables it at late boot. The host-mode DTB overrides
++				 * this node back to always-on/boot-on, since OTG_SWITCH's
++				 * phy-supply link needs it live. See hardware.org/todo.org.
++				 */
+ 			};
+ 
+ 			rk817_otg_switch: OTG_SWITCH {
+-- 
+2.43.0
+

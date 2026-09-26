@@ -35,7 +35,7 @@
   | Wi-Fi chip        | stock DT says rtl8723cs; *real: AIC8801*   | host-wake GPIO0_C4 (unused so far)                            | out of tree ~aic8800_fdrv~            |
   | Bluetooth         | same AIC8801, UART1 (uart1m0)              | BT_REG_ON GPIO0_C1 (high = on), wake GPIO0_C3, host-wake GPIO0_B7, RTS/CTS | works via ~btattach~ H4 1.5 Mbaud |
   | PMIC              | RK817 @ i2c0 0x20                          | regulators, RTC, 32k clock, charger, fuel gauge, codec        | minimal node (patches 0008–0009): BOOST/OTG_SWITCH, charger+battery |
-  | vdd_cpu           | SYR837 @ i2c0 0x40 (~silergy,syr827~)      | vin = vccsys, 0.712–1.5 V                                     | not in our DT yet → no cpufreq        |
+  | vdd_cpu           | SYR837 @ i2c0 0x40 (~silergy,syr827~)      | vin = vccsys, 0.712–1.5 V                                     | works (patch 0011, confirmed 2026-09-26) |
   | Battery           | 5300 mAh design (qmax 5800), sense 10 mΩ   | OCV 3400–4313 mV                                              | works (patch 0009, confirmed 2026-09-26) |
   | Audio codec       | RK817 codec + simple-audio-card            | headset detect ~rk-headset~                                   | todo                                  |
   | GPU               | Mali-G52 (~arm,mali-bifrost~)              |                                                               | Panfrost, needs vdd_gpu in DT         |
@@ -62,7 +62,7 @@
     | LDO9       | vcc2v8_dvp   | 2.8 V       | none listed      | off                           |
     | LDO8       | vcc1v8_dvp   | 1.8 V       | IO domain vccio6 | off                           |
     | LDO4       | vccio_acodec | 3.3 V       | IO domain vccio1 | off                           |
-    | BOOST      | boost        | 4.9–5.4 V   | feeds OTG_SWITCH | on (patch 0008, always-on)   |
+    | BOOST      | boost        | 4.9–5.4 V   | feeds OTG_SWITCH | host-mode DTB only (patch 0010) |
     | OTG_SWITCH | otg_switch   | (switch)    | USB-C VBUS gate  | on, host-mode DTB only       |
     Turning LDO4/8/9 on was tested ("rails" experiment): irrelevant to the
     panel. They will matter for audio (LDO4) and cameras.
@@ -70,9 +70,7 @@
     ~vcc_1v8_dummy~) so Linux never switches a real rail — *except* BOOST
     and OTG_SWITCH (patch 0008, 2026-09-26): a minimal ~pmic@20~ node under
     ~&i2c0~ with only these two regulators, values copied verbatim from the
-    stock DT (~Firmware/dt/boot-0-0x6c0fe00.dts~). ~BOOST~ mirrors what
-    stock already does (always-on there too), so this isn't switching on a
-    rail stock treats as off. ~OTG_SWITCH~ is the actual gate onto the
+    stock DT (~Firmware/dt/boot-0-0x6c0fe00.dts~). ~OTG_SWITCH~ is the actual gate onto the
     USB-C VBUS pin; it is only ever requested via ~usb2phy0_otg~'s
     ~phy-supply~ in the *host-mode* DTB (~rk3566-teclast-p25t-usbhost.dts~)
     — the normal/peripheral DTB never references it, so it stays off there,
@@ -96,6 +94,32 @@
     quirks worth knowing (charge-enable is left at hardware default; the
     USB input-current limit is hardcoded to 1.5 A rather than read from
     the DT, versus the stock 2 A).
+  - Patch 0010 (2026-09-26, from a battery-consumption review): ~BOOST~
+    had been ~regulator-always-on~/~regulator-boot-on~ in the *shared*
+    base file since patch 0008 — unlike the stock DT, which has no
+    always-on flag on it at all. Moved those two lines out of the base
+    file and into an override in the host-mode DTB only (nothing else
+    references ~BOOST~/~OTG_SWITCH~, checked before building), so the 5V
+    boost converter is now live only while host mode is actually in use,
+    not 24/7. The host-mode DTB's override reconstructs the identical
+    property set, so it compiled *byte-for-byte identical* to before —
+    zero regression risk there. Confirmed 2026-09-26: ~boost~ shows
+    ~disabled~ in normal mode; charger/battery unaffected.
+  - Patch 0011 (2026-09-26): real ~vdd_cpu~ (SYR837, ~silergy,syr827~ @
+    i2c0 0x40) wired as ~cpu-supply~ on ~&cpu0~-~&cpu3~, for full DVFS.
+    ~cpufreq-dt~ had been silently frequency-scaling already (config was
+    already enabled, ~rk3566.dtsi~'s OPP table came in for free via
+    ~#include~) but never touched voltage with no regulator attached.
+    Values copied verbatim from the stock DT's ~syr837@40~ node (min/max
+    712.5 mV–1.5 V, ramp-delay, ~fcs,suspend-voltage-selector~,
+    always-on); stock's own ~regulator-init-microvolt~/
+    ~regulator-initial-state~ have no mainline binding (checked) and were
+    dropped, so probing only reports the chip's existing state, never
+    forces a voltage. Confirmed 2026-09-26: ~dmesg~ shows a clean detect
+    (~FAN53555 Option[8] Rev[1] Detected!~, no errors); voltage tracks
+    frequency exactly against ~rk3566.dtsi~'s OPP table — 1.025 V at
+    1416 MHz idle, 1.15 V at 1800 MHz under load, both exact OPP targets.
+    See [[file:kernel.org][kernel]] for the full writeup.
 
 * IO domains
   - Boot state: all domains in 3.3 V mode (PMU_GRF ~IO_VSEL0 = 0x00~,

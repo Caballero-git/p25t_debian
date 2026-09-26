@@ -348,6 +348,36 @@
 &i2c0 {
 	status = "okay";
 
+	/*
+	 * Real vdd_cpu chip on this board, confirmed from the stock DT (which
+	 * lists four alternative vdd_cpu parts - generic Rockchip SDK board
+	 * file - only this one is actually populated here). Values copied
+	 * verbatim from the stock DT's syr837@40 node (min/max/ramp-delay,
+	 * fcs,suspend-voltage-selector, always-on); the stock DT's own
+	 * regulator-init-microvolt/regulator-initial-state are Rockchip
+	 * BSP-only properties with no mainline binding, so they are not
+	 * carried over - just reporting the chip's existing state on probe,
+	 * never forcing a voltage. vin-supply matches stock's vcc3v8_sys via
+	 * our existing vcc_sys_dummy. Feeds &cpu0..&cpu3's cpu-supply below,
+	 * for real DVFS on top of the cpufreq-dt scaling already active from
+	 * rk3566.dtsi's cpu0_opp_table. See kernel.org/hardware.org.
+	 */
+	vdd_cpu: regulator@40 {
+		compatible = "silergy,syr827";
+		reg = <0x40>;
+		vin-supply = <&vcc_sys_dummy>;
+		regulator-name = "vdd_cpu";
+		regulator-min-microvolt = <712500>;
+		regulator-max-microvolt = <1500000>;
+		regulator-ramp-delay = <1000>;
+		fcs,suspend-voltage-selector = <1>;
+		regulator-always-on;
+
+		regulator-state-mem {
+			regulator-off-in-suspend;
+		};
+	};
+
 	pmic@20 {
 		compatible = "rockchip,rk817";
 		reg = <0x20>;
@@ -359,8 +389,14 @@
 				regulator-name = "boost";
 				regulator-min-microvolt = <4900000>;
 				regulator-max-microvolt = <5400000>;
-				regulator-always-on;
-				regulator-boot-on;
+				/*
+				 * Left unconstrained on purpose (matches the stock DT,
+				 * which has no always-on flag either): nothing in the
+				 * normal/peripheral DTB consumes this rail, so Linux
+				 * disables it at late boot. The host-mode DTB overrides
+				 * this node back to always-on/boot-on, since OTG_SWITCH's
+				 * phy-supply link needs it live. See hardware.org/todo.org.
+				 */
 			};
 
 			rk817_otg_switch: OTG_SWITCH {
@@ -375,4 +411,26 @@
 			rockchip,sleep-filter-current-microamp = <100000>;
 		};
 	};
+};
+
+/*
+ * Real DVFS: cpu0_opp_table (rk3566.dtsi) already lists a min/target/max
+ * microvolt triplet per frequency step; without a cpu-supply the OPP core
+ * still lets cpufreq-dt scale frequency (already confirmed active), but
+ * never touches voltage. Wiring vdd_cpu here lets it scale both.
+ */
+&cpu0 {
+	cpu-supply = <&vdd_cpu>;
+};
+
+&cpu1 {
+	cpu-supply = <&vdd_cpu>;
+};
+
+&cpu2 {
+	cpu-supply = <&vdd_cpu>;
+};
+
+&cpu3 {
+	cpu-supply = <&vdd_cpu>;
 };
