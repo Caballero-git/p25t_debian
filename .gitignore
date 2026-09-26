@@ -16,3 +16,5 @@ emmc/
 logs/
 *-log.txt
 wpa_supplicant*.conf
+#
+push_to_github.sh

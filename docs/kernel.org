@@ -168,6 +168,14 @@
     versus the stock DT's ~max_input_current = 2000mA~ — a real but modest
     cut to charge rate, not something this patch introduced a way to fix
     without patching the driver itself.
+  - ~dmesg | grep -iE "rk817.charg|rk817.batt|power_supply"~ comes back
+    *empty* even on a working probe — checked the source, not a red flag.
+    ~rk817_charger_probe()~ only calls ~dev_info~ when it has to correct an
+    out-of-range DT value (max voltage/current outside sane limits); ours
+    are in range, so those never fire. Everything else in the probe path
+    is ~dev_dbg~ (silent unless dynamic debug is on) — there is no
+    "probed OK" line in this driver at all. Use the
+    ~/sys/class/power_supply/~ check above instead.
 
 * AIC8800 Wi-Fi/Bluetooth driver (out of tree)
   Source: [[https://github.com/radxa-pkg/aic8800][radxa-pkg/aic8800]], commit ~516e3b0~
