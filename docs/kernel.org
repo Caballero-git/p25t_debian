@@ -16,6 +16,7 @@
     | 0006 | DT: Bluetooth UART1 (AIC8800) and BT_REG_ON                     |
     | 0007 | DT: USB-C host-mode test variant (new board file, see below)   |
     | 0008 | DT: RK817 BOOST/OTG_SWITCH regulators, for USB-C VBUS          |
+    | 0009 | DT: RK817 charger + battery data (~rk817_charger~)              |
   - Also needs a kernel *config* change (not a DT patch): ~CONFIG_USB_XHCI_HCD=y~
     and ~CONFIG_USB_XHCI_PLATFORM=y~, both already set in
     ~kernel/p25t-kernel.config~. Without them the ~dwc3~ glue driver still
@@ -68,7 +69,7 @@
   | ~BT~, ~BT_HCIUART~ (+ ~H4~, ~SERDEV~)    | m     | Bluetooth over UART1                   |
   | ~BT_HIDP~, ~UHID~, ~BT_RFCOMM~           | m     | Bluetooth keyboards                    |
   | ~ROCKCHIP_SARADC~, ~KEYBOARD_ADC~        | y     | volume keys                            |
-  | ~MFD_RK8XX_I2C~, ~CHARGER_RK817~         | y     | built, but no RK817 node in the DT yet |
+  | ~MFD_RK8XX_I2C~, ~CHARGER_RK817~         | y     | built; RK817 node in the DT since patch 0008/0009 |
   | ~EXT4_FS~, ~VFAT_FS~                     | y     | root and boot partitions               |
 
 * Device tree notes
@@ -137,6 +138,36 @@
     by cable/ID pin), which the stock DT has the hardware for (Type-C PD
     chips, ~extcon~, ~usb-role-switch~) but we never wired up — see
     [[file:todo.org][todo]].
+
+* RK817 charger + battery (patch 0009) — working
+  - Adds a ~charger {}~ subnode inside ~pmic@20~ (~monitored-battery~,
+    sense resistor, sleep-current thresholds) and a top-level
+    ~battery: battery {}~ node (~simple-battery~), both in the shared base
+    DT — applies to the normal and host-mode DTBs alike, unlike patch 0008.
+  - Binding is the *generic* Linux ~power_supply_battery_info~ scheme
+    (~monitored-battery~ phandle + a ~simple-battery~ node), not the stock
+    vendor ~rk817,charger~/~rk817,battery~ properties — different shape,
+    values copied from the stock DT and converted (design capacity, OCV
+    table, charge-termination/max-current/max-voltage), cross-checked
+    against ~rk3566-pinetab2.dtsi~ (a real mainline board using the same
+    driver).
+  - Confirmed working 2026-09-26, on cable power:
+    #+begin_src sh
+    ls /sys/class/power_supply/
+    cat /sys/class/power_supply/*/uevent
+    #+end_src
+    ~rk817-battery~ and ~rk817-charger~ both probed.
+    ~POWER_SUPPLY_STATUS=Charging~, ~CHARGE_TYPE=Standard~,
+    ~CURRENT_AVG~ ≈ 1.10 A, ~USB_TYPE=Unknown [DCP]~ (port correctly
+    recognised as a dedicated charging port, not a data host).
+  - The mainline ~rk817_charger.c~ driver never touches the chip's own
+    charge-enable bit (~RK817_CHRG_EN~, ~CHRG_TERM~ register bit 6) — it
+    only programs voltage/current *limits* and reads back status; charging
+    enable is left at the chip's power-on-reset default. It also hardcodes
+    the USB input-current limit to 1.5 A (not read from any DT property),
+    versus the stock DT's ~max_input_current = 2000mA~ — a real but modest
+    cut to charge rate, not something this patch introduced a way to fix
+    without patching the driver itself.
 
 * AIC8800 Wi-Fi/Bluetooth driver (out of tree)
   Source: [[https://github.com/radxa-pkg/aic8800][radxa-pkg/aic8800]], commit ~516e3b0~

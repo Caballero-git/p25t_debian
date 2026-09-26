@@ -34,9 +34,9 @@
   | Wi-Fi SDIO bus    | ~dwmmc@fe2c0000~ (sdmmc1), non-removable   | supply switch GPIO0_A0 (act. low), WL_REG_ON GPIO0_C0, 32k from RK817 | works, 4-bit 50 MHz, Linux mmc2 |
   | Wi-Fi chip        | stock DT says rtl8723cs; *real: AIC8801*   | host-wake GPIO0_C4 (unused so far)                            | out of tree ~aic8800_fdrv~            |
   | Bluetooth         | same AIC8801, UART1 (uart1m0)              | BT_REG_ON GPIO0_C1 (high = on), wake GPIO0_C3, host-wake GPIO0_B7, RTS/CTS | works via ~btattach~ H4 1.5 Mbaud |
-  | PMIC              | RK817 @ i2c0 0x20                          | regulators, RTC, 32k clock, charger, fuel gauge, codec        | not in our DT yet (on purpose)        |
+  | PMIC              | RK817 @ i2c0 0x20                          | regulators, RTC, 32k clock, charger, fuel gauge, codec        | minimal node (patches 0008–0009): BOOST/OTG_SWITCH, charger+battery |
   | vdd_cpu           | SYR837 @ i2c0 0x40 (~silergy,syr827~)      | vin = vccsys, 0.712–1.5 V                                     | not in our DT yet → no cpufreq        |
-  | Battery           | 5300 mAh design (qmax 5800), sense 10 mΩ   | OCV 3400–4313 mV                                              | ~rk817_charger~ exists, not enabled   |
+  | Battery           | 5300 mAh design (qmax 5800), sense 10 mΩ   | OCV 3400–4313 mV                                              | works (patch 0009, confirmed 2026-09-26) |
   | Audio codec       | RK817 codec + simple-audio-card            | headset detect ~rk-headset~                                   | todo                                  |
   | GPU               | Mali-G52 (~arm,mali-bifrost~)              |                                                               | Panfrost, needs vdd_gpu in DT         |
   | Display pipe      | VOP2 vp1 → DSI0 ~fe060000~ + D-PHY ~fe850000~ | 4 lanes                                                    | works                                 |
@@ -81,6 +81,21 @@
     ~CONFIG_USB_XHCI_HCD~ was also enabled, see [[file:kernel.org][kernel]])
     but no bus-powered device — receiver or wired keyboard — could signal
     its presence with no 5 V on the line. Confirmed fixed 2026-09-26.
+  - Patch 0009 (2026-09-26) adds the ~charger {}~/~battery {}~ pair inside
+    the same ~pmic@20~ node, in the *shared* base DT (applies to both the
+    normal and host-mode DTBs, unlike BOOST/OTG_SWITCH which are
+    host-mode-only in effect). Values (design capacity, OCV table,
+    charge-termination/max-current/max-voltage) copied from the stock DT's
+    ~rk817,charger~/~rk817,battery~ properties and converted to the generic
+    ~simple-battery~/~monitored-battery~ shape the mainline
+    ~rk817_charger~ driver expects — a different binding, not a verbatim
+    copy. Confirmed 2026-09-26: ~rk817-battery~/~rk817-charger~ both probe,
+    reporting ~Charging~, ~Standard~ charge type, ≈1.10 A, USB type
+    correctly detected as ~DCP~ (a dedicated charging port). See
+    [[file:kernel.org][kernel]] for the full writeup, including two driver
+    quirks worth knowing (charge-enable is left at hardware default; the
+    USB input-current limit is hardcoded to 1.5 A rather than read from
+    the DT, versus the stock 2 A).
 
 * IO domains
   - Boot state: all domains in 3.3 V mode (PMU_GRF ~IO_VSEL0 = 0x00~,

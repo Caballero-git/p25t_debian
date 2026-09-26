@@ -36,18 +36,54 @@
     active. Real OTG dual-role (see the USB gadget item below) would let
     the port switch automatically instead.
 
-* TODO Battery and charger (RK817)
-  - We now have a *minimal* RK817 node (patch 0008): just ~BOOST~ and
-    ~OTG_SWITCH~, for USB-C VBUS. Still to add: the charger, the
-    ~rk817_charger~ battery data (5300 mAh, sense 10 mΩ, OCV table from the
-    stock DT), power key, RTC.
-  - Every RK817 write must be proposed and approved first. Mirror the stock
-    voltages exactly; never switch off a rail that is on.
-  - Also gives: power key, RTC (a real clock across reboots), clean poweroff.
+* DONE Battery and charger (RK817)
+  - Patch 0008: minimal RK817 node, just ~BOOST~ and ~OTG_SWITCH~, for
+    USB-C VBUS (see the USB wireless-receiver item above).
+  - Patch 0009 (2026-09-26): added the ~charger {}~/~battery {}~ pair
+    (~rk817_charger~, 5300 mAh, sense 10 mΩ, OCV table, all from the stock
+    DT). Confirmed on hardware, cable power: ~rk817-battery~ and
+    ~rk817-charger~ both probe, ~Charging~/~Standard~, ≈1.10 A, USB type
+    ~DCP~. See [[file:hardware.org][hardware]] and [[file:kernel.org][kernel]].
+  - Power key and RTC came online for free once the RK817 node existed at
+    all (no charger-specific DT needed) — ~/dev/rtc0~ live and correct,
+    input event devices present for the power key.
+  - Every RK817 write was proposed and approved first, per the standing
+    rule. Values mirror the stock DT; nothing that was on got switched off.
+  - Open follow-up, flagged during a battery-consumption review
+    (2026-09-26): ~BOOST~ is ~regulator-always-on~ in *every* DTB (patch
+    0008), not just host-mode, because nothing else keeps it up during
+    late-boot regulator cleanup and it has to be live before ~OTG_SWITCH~
+    can gate real 5 V onto VBUS. Stock Android's own DT has no explicit
+    always-on flag on it. Could be rescoped to host-mode-only (move the
+    ~regulator-always-on~/~regulator-boot-on~ lines from the shared base
+    file into the host-mode DTB override, same pattern as
+    ~usb2phy0_otg { phy-supply = ...; }~) — a real but minor quiescent-draw
+    saving, not proposed/built yet, pending approval.
+  - Also noted: the mainline ~rk817_charger.c~ driver hardcodes the USB
+    input-current limit to 1.5 A (stock Android uses 2 A) and never
+    touches the chip's own charge-enable bit (left at hardware default) —
+    neither is a DT change, both would need a driver patch; not planned
+    for now.
+  - The "many hours, only 25%" report (2026-09-26) that triggered this
+    review: the tablet had sat unused for months and started at a literal
+    0% — something the user says they'd rarely seen before. A deeply
+    discharged, long-idle Li-ion cell is routinely put through a slow
+    pre-charge/trickle phase by the charger IC before ramping to full
+    current, and the gas gauge's own calibration (relax voltage, OCV
+    table) goes stale over months of no charge cycles. Both fit the
+    symptom on their own, with nothing pointing at our kernel/DT changes;
+    our own check minutes later (≈1.10 A, rising %) looks like normal
+    charging past that initial phase. No further action - let it finish a
+    full charge/rest cycle, which also lets the fuel gauge recalibrate.
 
 * TODO CPU frequency and GPU
   - SYR837 (~silergy,syr827~) at i2c0 0x40 as vdd_cpu, then the cpufreq OPPs.
   - vdd_gpu (RK817 DCDC) for Panfrost.
+  - Flagged 2026-09-26 (battery-consumption review): with no cpufreq/OPPs
+    at all, the CPU likely never drops below its default/boot frequency —
+    the most plausible *software* contributor to faster-than-Android
+    drain during real use, bigger than anything found in the RK817 side.
+    Not started.
 
 * TODO Touchscreen (Silead GSL3673, i2c1 0x40, IRQ GPIO0_B0, reset GPIO0_C2)
   - Mainline ~silead~ driver; the firmware blob must be extracted from the
@@ -84,6 +120,12 @@
     (the 4.28 V reading was taken while charging, not at rest), a
     battery-protection cutoff that needs VBUS to release, or the power
     button itself needing a longer hold than usual.
+  - Supporting data point (2026-09-26): after months of disuse the tablet
+    was found at a literal 0%, unusually low for it - consistent with a
+    battery-protection cutoff and/or a long-idle self-discharge, either of
+    which would need VBUS to release/recover before the ONKEY press can
+    do anything. Strengthens the "stock hardware behavior on this
+    particular, long-idle battery" reading over a software cause.
   - Practical workaround for testing (e.g. the USB host-mode DTB, which
     needs no PC cable once running): power on with the PC cable plugged
     in as usual, wait for it to boot, then unplug the PC and plug in the
