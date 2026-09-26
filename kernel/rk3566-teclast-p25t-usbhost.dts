@@ -1,0 +1,30 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * P25T, USB-C in HOST mode instead of the usual peripheral (gadget) mode.
+ *
+ * Test-only variant: swap this in place of rk3566-teclast-p25t.dtb on
+ * P25TBOOT to see whether a USB keyboard/mouse receiver is detected.
+ * While this DTB is loaded, the USB gadget console and the usb0 network
+ * link to the PC are NOT available (same physical port, opposite mode);
+ * use Wi-Fi/SSH to check dmesg and lsusb. Swap back to the normal DTB
+ * afterwards, or keep this instead of the other only if you decide the
+ * USB port should always be host mode (giving up the USB gadget console).
+ */
+
+/dts-v1/;
+#include "rk3566-teclast-p25t.dts"
+
+&usb_host0_xhci {
+	dr_mode = "host";
+};
+
+/*
+ * Power the VBUS pin. OTG_SWITCH (RK817) is otherwise unused - defined in
+ * the base DT but never enabled there. Requesting it here as the PHY's
+ * supply makes the usb2phy driver enable it while (and only while) this
+ * host-mode DTB is active; it goes back to unrequested/off the moment you
+ * switch back to the normal DTB.
+ */
+&usb2phy0_otg {
+	phy-supply = <&rk817_otg_switch>;
+};

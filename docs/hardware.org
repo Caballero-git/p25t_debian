@@ -57,16 +57,30 @@
   - 32 kHz clock output for Wi-Fi is already on at boot (RK817 register
     ~0xF2~ bit 7). No write needed.
   - Rails that Android keeps always-on but our boot leaves at reset default:
-    | RK817 rail | stock name   | stock V | stock user      | state in our boot |
-    |------------+--------------+---------+-----------------+-------------------|
-    | LDO9       | vcc2v8_dvp   | 2.8 V   | none listed     | off               |
-    | LDO8       | vcc1v8_dvp   | 1.8 V   | IO domain vccio6| off               |
-    | LDO4       | vccio_acodec | 3.3 V   | IO domain vccio1| off               |
-    | BOOST      | boost        | 5 V     | USB OTG switch  | off               |
+    | RK817 rail | stock name   | stock V     | stock user       | state in our boot            |
+    |------------+--------------+-------------+------------------+-------------------------------|
+    | LDO9       | vcc2v8_dvp   | 2.8 V       | none listed      | off                           |
+    | LDO8       | vcc1v8_dvp   | 1.8 V       | IO domain vccio6 | off                           |
+    | LDO4       | vccio_acodec | 3.3 V       | IO domain vccio1 | off                           |
+    | BOOST      | boost        | 4.9–5.4 V   | feeds OTG_SWITCH | on (patch 0008, always-on)   |
+    | OTG_SWITCH | otg_switch   | (switch)    | USB-C VBUS gate  | on, host-mode DTB only       |
     Turning LDO4/8/9 on was tested ("rails" experiment): irrelevant to the
     panel. They will matter for audio (LDO4) and cameras.
   - Our DT uses dummy fixed regulators (~vcc_sys_dummy~, ~vcc_3v3_dummy~,
-    ~vcc_1v8_dummy~) so Linux never switches a real rail.
+    ~vcc_1v8_dummy~) so Linux never switches a real rail — *except* BOOST
+    and OTG_SWITCH (patch 0008, 2026-09-26): a minimal ~pmic@20~ node under
+    ~&i2c0~ with only these two regulators, values copied verbatim from the
+    stock DT (~Firmware/dt/boot-0-0x6c0fe00.dts~). ~BOOST~ mirrors what
+    stock already does (always-on there too), so this isn't switching on a
+    rail stock treats as off. ~OTG_SWITCH~ is the actual gate onto the
+    USB-C VBUS pin; it is only ever requested via ~usb2phy0_otg~'s
+    ~phy-supply~ in the *host-mode* DTB (~rk3566-teclast-p25t-usbhost.dts~)
+    — the normal/peripheral DTB never references it, so it stays off there,
+    same as before this patch. This was needed because without it, the USB
+    host port had no VBUS at all: xHCI came up fine (once
+    ~CONFIG_USB_XHCI_HCD~ was also enabled, see [[file:kernel.org][kernel]])
+    but no bus-powered device — receiver or wired keyboard — could signal
+    its presence with no 5 V on the line. Confirmed fixed 2026-09-26.
 
 * IO domains
   - Boot state: all domains in 3.3 V mode (PMU_GRF ~IO_VSEL0 = 0x00~,

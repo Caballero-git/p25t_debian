@@ -10,10 +10,37 @@
 * DONE Wi-Fi (AIC8801, SDIO)
 * DONE Bluetooth keyboard (AIC8801, UART1)
 
+* DONE USB wireless keyboard/mouse receiver (host-mode test, patches 0007+0008)
+  - Bluetooth keyboard turned out faulty (misbehaves on the PC too, not
+    our stack). Built a second DTB, ~dr_mode = "host"~ instead of
+    ~"peripheral"~ on the USB-C port, to try a USB receiver instead.
+  - Swap in/out with ~usbhost_toggle.sh~ (see [[file:debian.org][debian]]).
+    Sacrifices the gadget console + ~usb0~ while active; use Wi-Fi/SSH.
+  - Result (2026-09-26): works. Needed two more fixes beyond the DTB swap,
+    both now folded in permanently:
+    1. ~CONFIG_USB_XHCI_HCD~/~CONFIG_USB_XHCI_PLATFORM~ were off in the
+       kernel config - ~dwc3~ bound but nothing could drive the xHCI
+       controller it created. Root cause found by reading our own
+       ~.config~, not by guessing.
+    2. No VBUS on the port at all - traced to RK817's ~BOOST~/~OTG_SWITCH~
+       regulators being entirely absent from our DT. Added a minimal RK817
+       node (patch 0008) with just these two, values copied from the stock
+       DT, ~OTG_SWITCH~ wired to ~usb2phy0_otg~ via ~phy-supply~ only in
+       the host-mode DTB. See [[file:hardware.org][hardware]] and
+       [[file:kernel.org][kernel]] for the full writeup.
+    Confirmed with both a wired USB keyboard and a Logitech USB receiver
+    (keyboard + mouse) - both enumerate, ~input:~ devices register, typing
+    works on the console.
+  - Still open: this is a manual DTB swap, not automatic role switching -
+    keeping host mode means giving up the gadget console/~usb0~ while it's
+    active. Real OTG dual-role (see the USB gadget item below) would let
+    the port switch automatically instead.
+
 * TODO Battery and charger (RK817)
-  - Add the RK817 node with its real regulators, the charger and the
+  - We now have a *minimal* RK817 node (patch 0008): just ~BOOST~ and
+    ~OTG_SWITCH~, for USB-C VBUS. Still to add: the charger, the
     ~rk817_charger~ battery data (5300 mAh, sense 10 mΩ, OCV table from the
-    stock DT).
+    stock DT), power key, RTC.
   - Every RK817 write must be proposed and approved first. Mirror the stock
     voltages exactly; never switch off a rail that is on.
   - Also gives: power key, RTC (a real clock across reboots), clean poweroff.
@@ -33,10 +60,46 @@
   - Find out which chip answers; SC7A20 has a mainline driver (~st_accel~),
     DA223 does not.
 
+* OPEN Power button doesn't wake it from off unless USB cable is plugged in
+  - Found 2026-09-25, reported 2026-09-26 (unrelated to the USB host-mode
+    DTB, patch 0007): with the tablet fully off and no cable, pressing the
+    power button does nothing. Plugging a USB-C cable into the PC makes it
+    power on by itself, no button press needed.
+  - Very likely NOT a software issue on our side. The decision to power on
+    from a fully-off state is made by the RK817 PMIC's own hardware state
+    machine (ONKEY debounce, VBUS-presence auto-boot), *before* the SoC
+    boot ROM runs — i.e. before U-Boot, our kernel, our DTB or the
+    initramfs get to execute at all. We have never written to the RK817 on
+    the real hardware (only read-only dumps, plus the "rails" LDO
+    experiment which was only ever exercised in an emulated PMIC, never on
+    the tablet) - see [[file:findings.org][findings]].
+  - Auto-boot-on-VBUS is a common, intentional PMIC/charger feature on
+    Android devices and is probably factory behavior, not something we
+    configured.
+  - Best isolation test (cheap, no risk): remove the SD card so the
+    tablet boots stock Android, and try the power button with no cable.
+    If it also fails to turn on, this is stock hardware/firmware
+    behavior, nothing to do with this project.
+  - Possible causes if it turns out to be real: aged/near-empty battery
+    (the 4.28 V reading was taken while charging, not at rest), a
+    battery-protection cutoff that needs VBUS to release, or the power
+    button itself needing a longer hold than usual.
+  - Practical workaround for testing (e.g. the USB host-mode DTB, which
+    needs no PC cable once running): power on with the PC cable plugged
+    in as usual, wait for it to boot, then unplug the PC and plug in the
+    USB receiver instead - the DWC3 host controller enumerates whatever
+    is connected at the time, so it doesn't need to be the receiver at
+    the moment of power-on.
+  - Do not attempt a fix by writing RK817 registers without proposing it
+    first - this touches power-on/charging logic, not just a display or
+    Wi-Fi rail.
+
 * OPEN USB gadget is intermittent
   - Works best with the cable plugged in before power-on. Compare DWC3
     and PHY registers of a good and a bad boot; consider a role-switch /
     VBUS detection (usb2phy extcon) instead of the fixed peripheral mode.
+  - Real OTG dual-role (see the host-mode test above) would also let the
+    port switch automatically instead of needing two DTBs.
 
 * OPEN Only a blinking cursor on the panel after a cable-less boot
   - getty on ~tty1~ did start (journal). Suspects: console on a different

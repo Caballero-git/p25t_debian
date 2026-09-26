@@ -157,6 +157,36 @@
   Debian's own ~linux-image~ packages are not used and not needed: the
   kernel lives on ~P25TBOOT~ and is replaced by copying files.
 
+* USB host-mode test (trying a USB wireless keyboard/mouse receiver)
+  Stage 6 item, only needed while the Bluetooth keyboard is unavailable
+  or you want to compare it against a USB receiver. See
+  [[file:kernel.org][kernel]] for what the DTB change actually is.
+
+  On the PC, card in the PC, from ~usbhost_test/~:
+  #+begin_src sh
+  bash usbhost_toggle.sh host
+  #+end_src
+  Then: card back in the tablet, power on, plug the receiver's USB-C
+  adapter into the tablet (try both before and after power-on), and check
+  over Wi-Fi/SSH (no gadget console or ~usb0~ in this mode):
+  #+begin_src sh
+  ssh jose@<TABLET-WIFI-IP>
+  dmesg | tail -30
+  lsusb
+  #+end_src
+  A working receiver shows up as a new USB device in ~lsusb~ and as
+  ~input:~ lines in ~dmesg~; try typing/moving the mouse and watch
+  ~evtest~ (install with ~sudo apt install evtest~) if you want to confirm
+  key/movement events arrive.
+
+  Card back in the PC, switch back when done:
+  #+begin_src sh
+  bash usbhost_toggle.sh normal
+  #+end_src
+  ~usbhost_toggle.sh status~ shows which one is currently on the card.
+  The script keeps a backup of the normal DTB the first time you switch,
+  so "normal" is always a plain file copy, never a rebuild.
+
 * Rollback
   - Kernel/DT: copy ~Image.stage5~ / ~.dtb.stage5~ (or ~.stage4~) over the
     current ones on ~P25TBOOT~ (card in the PC).

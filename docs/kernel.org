@@ -14,6 +14,13 @@
     | 0004 | DT: stock DWC3 quirks on the OTG controller                     |
     | 0005 | DT: SDIO Wi-Fi (AIC8800) on sdmmc1                              |
     | 0006 | DT: Bluetooth UART1 (AIC8800) and BT_REG_ON                     |
+    | 0007 | DT: USB-C host-mode test variant (new board file, see below)   |
+    | 0008 | DT: RK817 BOOST/OTG_SWITCH regulators, for USB-C VBUS          |
+  - Also needs a kernel *config* change (not a DT patch): ~CONFIG_USB_XHCI_HCD=y~
+    and ~CONFIG_USB_XHCI_PLATFORM=y~, both already set in
+    ~kernel/p25t-kernel.config~. Without them the ~dwc3~ glue driver still
+    binds in host mode, but nothing in the kernel can drive the xHCI child
+    device it creates - see "USB-C host-mode test variant" below.
   - ~kernel/rk3566-teclast-p25t.dts~ is the resulting DT (for reading;
     it is identical to the file the patches create).
   - ~kernel/p25t-panel-init.c.inc~ is the 202-command init table converted
@@ -89,6 +96,47 @@
     (see [[file:findings.org][findings]]).
   - After the init table the driver only logs
     ~p25t: init sequence sent...~.
+
+* USB-C host-mode test variant (patches 0007, 0008) — working
+  - Adds a *second* board file, ~kernel/rk3566-teclast-p25t-usbhost.dts~,
+    which ~#include~s the normal one and overrides
+    ~&usb_host0_xhci { dr_mode = "host"; };~ plus ~&usb2phy0_otg { phy-supply
+    = <&rk817_otg_switch>; };~ (patch 0008, see below). Built as an extra
+    Makefile target, ~rk3566-teclast-p25t-usbhost.dtb~ — the normal DTB is
+    untouched, both are just files.
+  - Purpose: try a USB wireless keyboard/mouse receiver on the tablet's
+    single USB-C port. The port is one physical DWC3 controller, so it is
+    either the gadget console + ~usb0~ network (normal DTB) or a USB host
+    for a receiver (this DTB) — never both at once with our current DT.
+  - Swap it in and out on ~P25TBOOT~ with
+    ~usbhost_toggle.sh~ (see [[file:debian.org][debian]], "USB host-mode test");
+    it keeps a backup of the normal DTB so switching back is a plain
+    file copy, no rebuild needed.
+  - Confirmed working 2026-09-26: a wired USB keyboard and a Logitech
+    USB receiver (keyboard + mouse) both enumerate and register
+    ~input:~ devices; typing works on the console. Getting here needed
+    two separate fixes on top of the plain ~dr_mode = "host"~ change:
+    1. *Kernel config*: ~CONFIG_USB_XHCI_HCD~/~CONFIG_USB_XHCI_PLATFORM~
+       were off (this kernel was built for gadget-only use). ~dwc3~ still
+       bound and created its ~xhci-hcd~ child device, but nothing in the
+       kernel could drive it — no root hub, no ~lsusb~ output, no
+       ~xhci_hcd~ lines in ~dmesg~ at all. Both are now ~y~ in
+       ~p25t-kernel.config~.
+    2. *VBUS power* (patch 0008): with xHCI working, the root hub showed
+       up but nothing plugged in was ever detected — no bus-powered
+       device can signal its presence with no 5 V on the line. The stock
+       Android DT (~Firmware/dt/boot-0-0x6c0fe00.dts~) showed why: RK817's
+       ~BOOST~ rail (5 V, always-on there) and ~OTG_SWITCH~ (the actual
+       gate onto VBUS, switched by Android's own USB HAL) were both
+       absent from our tree - we had no RK817 node at all. Patch 0008
+       adds a minimal one (just these two regulators, values copied from
+       stock) and links ~OTG_SWITCH~ to ~usb2phy0_otg~ via ~phy-supply~,
+       only in this host-mode DTB - see [[file:hardware.org][hardware]]
+       and [[file:todo.org][todo]] for the full writeup.
+  - This is still a stand-in for real OTG dual-role support (auto-switching
+    by cable/ID pin), which the stock DT has the hardware for (Type-C PD
+    chips, ~extcon~, ~usb-role-switch~) but we never wired up — see
+    [[file:todo.org][todo]].
 
 * AIC8800 Wi-Fi/Bluetooth driver (out of tree)
   Source: [[https://github.com/radxa-pkg/aic8800][radxa-pkg/aic8800]], commit ~516e3b0~

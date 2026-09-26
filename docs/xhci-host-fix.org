@@ -1,0 +1,90 @@
+#+TITLE: P25T — enabling the USB host-controller driver (xHCI)
+#+DATE: 2026-09-26
+#+STARTUP: overview
+
+* Why this is needed
+  The USB-host-mode test (patch 0007, [[file:kernel.org][kernel]]) puts the port's
+  DWC3 controller into ~dr_mode = "host"~, and it *does* bind
+  (~/sys/bus/platform/devices/fcc00000.usb/uevent~ shows ~DRIVER=dwc3~).
+  But nothing showed up in ~lsusb~ or ~dmesg~ because our running kernel's
+  ~.config~ never turned on the actual xHCI host-controller driver:
+  #+begin_example
+  # CONFIG_USB_XHCI_HCD is not set
+  #+end_example
+  DWC3 in host mode still creates a child device named ~xhci-hcd~, but
+  with ~USB_XHCI_HCD~ off there is no driver in the kernel to claim it —
+  so no USB bus is ever registered. Nothing was misconfigured in the DT;
+  the kernel this ran on was simply built for gadget-only use. This adds
+  the missing driver and rebuilds only the ~Image~ — the DTB already on
+  the card does not need to change.
+
+* Steps (on the PC, in your kernel tree)
+  ~<KERNEL-DIR>~ is the checkout you already used to build patches
+  0001–0007 (the one with branch ~p25t-bringup~, or whatever you called it).
+
+  1. Go there and confirm you're on the right tree:
+     #+begin_src sh
+     cd <KERNEL-DIR>
+     git log --oneline -3
+     #+end_src
+     The top commit should be the patch-0007 one ("USB-C host-mode test
+     variant"); if it isn't, ~cd~ to wherever that checkout actually is.
+
+  2. Turn the two options on:
+     #+begin_src sh
+     scripts/config --file .config -e USB_XHCI_HCD -e USB_XHCI_PLATFORM
+     make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
+     #+end_src
+
+  3. Check it actually took (don't skip this):
+     #+begin_src sh
+     grep -E "CONFIG_USB_XHCI_HCD|CONFIG_USB_XHCI_PLATFORM" .config
+     #+end_src
+     Expected:
+     #+begin_example
+     CONFIG_USB_XHCI_HCD=y
+     CONFIG_USB_XHCI_PLATFORM=y
+     #+end_example
+
+  4. Rebuild just the kernel image (dtbs and modules are untouched by
+     this change, no need to rebuild them):
+     #+begin_src sh
+     make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- LOCALVERSION= -j$(nproc) Image
+     #+end_src
+     Much faster than a full build; use ~nohup~ if your session might
+     time out (see [[file:kernel.org][kernel]]).
+
+  5. Copy it onto the card (card in the PC, mounted as ~P25TBOOT~):
+     #+begin_src sh
+     cp arch/arm64/boot/Image /media/jose/P25TBOOT/Image
+     sync
+     #+end_src
+
+  6. Verify the copy, always:
+     #+begin_src sh
+     cmp arch/arm64/boot/Image /media/jose/P25TBOOT/Image && echo "Image on card matches"
+     #+end_src
+
+  7. Card back in the tablet, power on. It is still using the host-mode
+     DTB (untouched) — nothing else to swap. Over Wi-Fi/SSH:
+     #+begin_src sh
+     ssh jose@<TABLET-WIFI-IP>
+     lsusb
+     dmesg | grep -iE "xhci|dwc3"
+     #+end_src
+     Plug the receiver in (before or after boot, try both) if it isn't in already.
+
+* What success looks like
+  - ~lsusb~: at least a root-hub line (e.g. ~Bus 001 Device 001: ID
+    1d6b:0002 Linux Foundation 2.0 root hub~), plus one more line for the
+    receiver once it's plugged in.
+  - ~dmesg~: lines with ~xhci-hcd~ (new USB bus registered) and, once the
+    receiver is in, a new-device line and ~input:~ registration.
+
+* If it still shows nothing
+  Then the missing ~phy-supply~ on ~usb2phy0_otg~ (no VBUS-sourcing
+  regulator wired up — the RK817 ~BOOST~ rail is off, see
+  [[file:hardware.org][hardware]]) becomes the leading remaining suspect: the bus could exist
+  but never see power on the line, so no device enumerates. That would be
+  a real RK817 register change and needs to be proposed and approved
+  first, same as any other RK817 write — see [[file:todo.org][todo]].
