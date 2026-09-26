@@ -106,9 +106,28 @@
 * TODO Audio (RK817 codec)
   - Needs LDO4 (vccio_acodec, 3.3 V) and the codec node + simple-audio-card.
 
-* TODO Accelerometer (SC7A20 0x19 or DA223 0x27 on i2c1, IRQ GPIO3_A2)
-  - Find out which chip answers; SC7A20 has a mainline driver (~st_accel~),
-    DA223 does not.
+* DONE Accelerometer (SC7A20 @ i2c1 0x19, IRQ GPIO3_A2)
+  - Identified on hardware 2026-09-26 (patch 0012 + ~tests/test_02.sh~):
+    0x19 answers, 0x27 (DA223) does not - the chip is the SC7A20. WHOAMI
+    read back ~0x11~, which turns out to be an exact match for a
+    dedicated mainline entry (~silan,sc7a20~ in ~st_accel~, not the
+    generic LIS3DH path) - no new driver needed. See [[file:kernel.org][kernel]]
+    for the full writeup.
+  - Patch 0013 (2026-09-26, built, not yet deployed): added the
+    ~accelerometer@19~ DT node (~compatible = "silan,sc7a20"~, IRQ at
+    GPIO3_A2, a best-effort ~mount-matrix~ translated from stock's
+    swap_xy/revert_x/y/z flags - *not* verified against real driver
+    source). See [[file:kernel.org][kernel]] for the full writeup.
+  - First test (~tests/test_03.sh~, 2026-09-26) found no probe at all -
+    ~CONFIG_IIO_ST_ACCEL_3AXIS~ turned out to be disabled in our
+    kernel ~.config~, so the driver was never built in. Enabled it,
+    rebuilt ~Image~ (DTBs unaffected), deployed, re-tested - *working*:
+    clean probe, IIO device ~sc7a20~ present, raw axis values respond
+    to the tablet being moved. See [[file:kernel.org][kernel]] for the full writeup.
+  - Still open (low priority): the mount-matrix's *orientation* is a
+    best-effort guess (see kernel.org) - confirmed the values move,
+    not yet confirmed they move the *correct* way. Revisit once there
+    is an actual consumer to test against (e.g. screen rotation).
 
 * OPEN Power button doesn't wake it from off unless USB cable is plugged in
   - Found 2026-09-25, reported 2026-09-26 (unrelated to the USB host-mode

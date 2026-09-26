@@ -43,7 +43,7 @@
   | Panel             | Jadard JD9365, 800×1280, 135×216 mm        | enable GPIO3_B1 (act. high), reset GPIO3_C3 (act. low)        | works, ~panel-jadard-jd9365da-h3~ + our table |
   | Backlight         | ~pwm-backlight~ PWM14 (~fe700020~)         | period 25 µs (40 kHz), stock default 77/255                   | works                                 |
   | Touchscreen       | Silead GSL3673 @ i2c1 0x40                 | IRQ GPIO0_B0, reset GPIO0_C2                                  | todo: ~silead~ + firmware from Android |
-  | Accelerometer     | SC7A20 @ i2c1 0x19 or DA223 @ 0x27         | IRQ GPIO3_A2; swap_xy, revert_y                               | todo; both drivers bound on Android   |
+  | Accelerometer     | SC7A20 @ i2c1 0x19 (DA223 @ 0x27 not present)| IRQ GPIO3_A2; swap_xy, revert_y                              | works (patch 0013 + config fix, confirmed 2026-09-26); mount-matrix orientation unverified |
   | Volume keys       | ~adc-keys~ on SARADC ch0                   | idle ≈ 1.8 V (raw 1023); raw < 900 = a key is held            | works                                 |
   | Power key         | RK817 pwrkey                               |                                                               | todo (needs RK817 node)               |
   | USB-C             | DWC3 ~fcc00000~, HS only, OTG              | USB2 PHY0 ~fe8a0000~; stock quirks + PHY tuning needed        | gadget works, intermittently          |

@@ -19,6 +19,8 @@
     | 0009 | DT: RK817 charger + battery data (~rk817_charger~)              |
     | 0010 | DT: scope RK817 BOOST always-on to the host-mode DTB only      |
     | 0011 | DT: wire real vdd_cpu (SYR837) for CPU DVFS                    |
+    | 0012 | DT: enable i2c1 to identify accelerometer chip                |
+    | 0013 | DT: add SC7A20 accelerometer node on i2c1                     |
   - Also needs a kernel *config* change (not a DT patch): ~CONFIG_USB_XHCI_HCD=y~
     and ~CONFIG_USB_XHCI_PLATFORM=y~, both already set in
     ~kernel/p25t-kernel.config~. Without them the ~dwc3~ glue driver still
@@ -73,6 +75,7 @@
   | ~ROCKCHIP_SARADC~, ~KEYBOARD_ADC~        | y     | volume keys                            |
   | ~MFD_RK8XX_I2C~, ~CHARGER_RK817~         | y     | built; RK817 node in the DT since patch 0008/0009 |
   | ~EXT4_FS~, ~VFAT_FS~                     | y     | root and boot partitions               |
+  | ~IIO_ST_ACCEL_3AXIS~ (+ ~_I2C_3AXIS~)    | y     | SC7A20 accelerometer (patch 0013's DT node needs this - was off by default, found 2026-09-26 when the node didn't probe) |
 
 * Device tree notes
   - Real rails are *not* described: dummy fixed regulators stand in, so
@@ -253,6 +256,134 @@
     1025000), under synthetic load at 1800 MHz (max) read back 1150000 µV
     (table target: 1150000). Both exact matches, not just "in range".
     Charger/battery sanity-checked unaffected in the same run.
+
+* Enable i2c1, accelerometer identification (patch 0012) — chip identified
+  - Context: the stock DT lists *two* alternative accelerometers on
+    i2c1, and unlike vdd_cpu's four alternatives on i2c0 (only one of
+    which is actually populated), *both* are left ~status = "okay"~:
+    | Node        | Label       | Address | Notes                        |
+    |-------------+-------------+---------+-------------------------------|
+    | ~sensor@19~   | ~gs_sc7a20~   | 0x19    | ST-compatible register map   |
+    | ~sensorda@27~ | ~gs_da223~    | 0x27    | Domintech-family, newer chip |
+    Both marked ~okay~ in stock implies Android probes both and lets
+    whichever chip actually answers win - so which one is on *this*
+    tablet had to be found on real hardware, not read off the DT.
+  - Driver-support research (before hardware confirmation):
+    - SC7A20 register-maps like the ST LIS3DH/LIS2DH12 family, which
+      has a mainline driver (~drivers/iio/accel/st_accel_i2c.c~ /
+      ~st_accel_core.c~). ~st_sensors_core.c~ gates bind on an exact
+      WHOAMI/WAI register match, so a register-compatible clone with a
+      different WHOAMI byte would normally be refused - *but* (found
+      afterwards, see below) mainline already carries a dedicated
+      entry for this exact clone.
+    - DA223 has no mainline driver of any kind at present
+      (~drivers/iio/accel/dmard0{6,9},10.c~ are Domintech but a
+      different/older chip family) - would need one written from
+      scratch.
+  - Patch 0012 only enables the ~&i2c1~ bus itself (~status = "okay"~,
+    shared base file, applies to both DTBs) - no accelerometer child
+    node yet. Read-only discovery step, same spirit as how RK817 was
+    first probed on i2c0 before any regulator work went in. i2c1 also
+    feeds the touchscreen (Silead GSL3673 @0x40, separate TODO), so
+    this benefits that item too.
+  - Also fixed a now-stale comment above ~&i2c0~ that still described
+    SYR837 as "no node, read-only probing only" - inaccurate since
+    patch 0011 added the real ~vdd_cpu~ node.
+  - Diagnostic: ~tests/test_02.sh~ (see [[file:debian.org][debian]] for the
+    ~test_NN.sh~/~result_NN.txt~ pipeline) - ~i2cdetect -y 1~ scan, plus
+    a conditional WHOAMI read at 0x19 if it answers.
+  - *Result, confirmed on hardware 2026-09-26*: 0x19 answers, 0x27 does
+    not (no ACK) - the physically-present chip is the *SC7A20*, not the
+    DA223. WHOAMI (reg 0x0f) at 0x19 read back ~0x11~, *not* the
+    LIS3DH/LIS2DH12 family's ~0x33~ - so this is not a "close enough"
+    clone under ~st_accel~'s usual WHOAMI gate.
+  - Checked ~st_accel_core.c~ for what that implies, and it turns out
+    to be a non-issue: mainline already carries a *dedicated* entry
+    for this exact part (added by a 2022 patch series, "iio: Silan
+    SC7A20 accelerometer support", not something we need to write).
+    ~st_accel_i2c.c~ has ~compatible = "silan,sc7a20"~ →
+    ~SC7A20_ACCEL_DEV_NAME~, and its ~st_sensor_settings~ entry in
+    ~st_accel_core.c~ carries its own comment: /"Not an ST part.
+    Register-compatible with the LIS2DH, even though the WAI value is
+    different."/ with ~.wai = 0x11~ - an *exact* match to what we read
+    on hardware. Register-compatible with the LIS2DH means the same
+    ODR/full-scale/axis-enable/data-ready register layout ~st_accel~
+    already knows how to drive; only the identity byte differs, and
+    mainline already accounts for that.
+* SC7A20 accelerometer node (patch 0013 + config fix) — working
+  - Added ~accelerometer@19~ under ~&i2c1~ (shared base file):
+    - ~compatible = "silan,sc7a20"~, ~reg = <0x19>~ - matches the chip
+      confirmed present by patch 0012.
+    - ~interrupt-parent = <&gpio3>; interrupts = <2 8>;~ - decoded from
+      stock DT's ~irq-gpio = <0x3e 0x02 0x08>~ (0x3e = ~gpio@fe760000~ =
+      gpio3): GPIO3_A2, ~IRQ_TYPE_LEVEL_LOW~. Same raw
+      interrupt-cells style already used for RK817's own interrupt in
+      this file.
+    - ~mount-matrix = "0","1","0","-1","0","0","0","0","1";~ - the
+      standard mainline IIO orientation property
+      (~iio_read_mount_matrix()~, confirmed called from
+      ~st_accel_core.c~). Stock DT has *no* such property - only the
+      Android-specific boolean flags ~swap_xy=1, revert_x=0,
+      revert_y=1, revert_z=0~, consumed by a closed-source sensor
+      HAL/driver we don't have access to. Translated assuming the
+      common "swap axes, then negate the flagged ones" convention
+      (~out = rawY, -rawX, rawZ~ for these flag values) - *not*
+      verified against real driver source, only against the flag
+      values themselves. Orientation/rotation behaviour is unconfirmed
+      until checked with real tilt tests.
+    - No ~vdd-supply~/~vddio-supply~: stock DT has none for this node
+      either, and ~st_accel_core.c~ doesn't look up any supply
+      property for this driver.
+  - Built cleanly (~DTC~ lines only, no warnings), decompiled and
+    checked: ~compatible~, ~reg~, ~interrupt-parent~ (resolves to
+    ~gpio@fe760000~, confirmed = gpio3), ~interrupts~, and the 9-element
+    ~mount-matrix~ string array all present as expected.
+  - Deployed to the card (both DTBs, ~usbhost_test/~ reference copy,
+    2026-09-26) and tested with ~tests/test_03.sh~ - *no probe at all*:
+    empty ~dmesg~ match, no matching IIO device (only the SARADC one).
+  - Root cause: ~CONFIG_IIO_ST_ACCEL_3AXIS~ was ~# ... is not set~ in
+    our ~.config~ - the whole ~st_accel~ driver family (core, i2c, spi)
+    was never built into this kernel at all, so there was nothing to
+    even attempt a bind, let alone log an error. This is a kernel
+    *config* gap, not a DT bug - the DT node itself was fine.
+  - Fixed 2026-09-26: enabled ~CONFIG_IIO_ST_ACCEL_3AXIS~ (~scripts/config
+    --enable~ + ~make olddefconfig~, which pulled in the dependent
+    ~CONFIG_IIO_ST_ACCEL_I2C_3AXIS=y~ automatically, plus the unused
+    SPI variant the same way sibling drivers like ~IIO_ST_LSM6DSX_SPI~
+    already do in this config). Rebuilt just ~Image~ (DTBs unaffected -
+    all three ~st_accel_*.o~ files compiled and linked in as builtin,
+    confirmed in the build log). ~kernel/p25t-kernel.config~ updated to
+    match.
+  - New ~Image~ deployed to ~P25TBOOT~ (in 4 chunks - it's ~31.6 MB,
+    over the device-bridge write tool's per-file limit; reassembled
+    and checksum-verified on the PC by hand, old ~Image~ kept as
+    ~Image.pre-accel-backup~) and re-tested 2026-09-26, confirmed
+    *working*:
+    #+begin_src text
+    st-accel-i2c 1-0019: supply vdd not found, using dummy regulator
+    st-accel-i2c 1-0019: supply vddio not found, using dummy regulator
+    st-accel-i2c 1-0019: interrupts on the falling edge or active low level
+    CPU: 0 ... Comm: irq/59-sc7a20-t Not tainted 7.3.0-rc4-p25t #8 PREEMPT
+    #+end_src
+    (the "supply ... not found, using dummy regulator" lines are
+    expected/harmless - matches our note above that this driver looks
+    up no supply property at all; a dozen "SPI driver st-accel-spi has
+    no spi_device_id for ..." lines are also harmless noise from the
+    unused SPI variant's of_match/spi_device_id table mismatch, nothing
+    to do with us). IIO device present: ~/sys/bus/iio/devices/iio:device0~,
+    ~name = sc7a20~, with a registered ~trigger0~ and a ~mount_matrix~
+    sysfs file (confirming our DT property was read). Raw axis reads
+    (~tests/test_03.sh~, 3 samples 1s apart) responded to the tablet
+    being handled during the test - e.g. z went from -624 to -752 while
+    y rose from 288 to 448 - confirming the sensor is live and reactive,
+    not stuck at a constant/garbage value.
+  - Still open: the *orientation* of the mount-matrix guess (which axis
+    ends up "up" on screen, i.e. whether ~out = rawY, -rawX, rawZ~ is
+    actually right) is not yet verified against a known physical
+    orientation - the quick test above only confirms the values move,
+    not that they move the *correct* way. Revisit once there's an
+    actual consumer of the orientation (e.g. testing screen rotation)
+    to check against.
 
 * AIC8800 Wi-Fi/Bluetooth driver (out of tree)
   Source: [[https://github.com/radxa-pkg/aic8800][radxa-pkg/aic8800]], commit ~516e3b0~

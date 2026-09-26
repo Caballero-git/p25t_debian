@@ -1,0 +1,93 @@
+From 79ffdd6aae0dd1b4bc9ee26cf3d4b409f765825a Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sat, 26 Sep 2026 21:20:49 +0200
+Subject: [PATCH] arm64: dts: rockchip: P25T: enable i2c1 to identify
+ accelerometer chip
+
+The stock Android DT lists two alternative accelerometers on i2c1,
+both left status = "okay" (unlike the four vdd_cpu regulator
+alternatives on i2c0, where only one is actually populated):
+
+  - sensor@19    "gs_sc7a20"  0x19
+  - sensorda@27  "gs_da223"   0x27
+
+Since both are marked okay in the stock DT, Android appears to probe
+both at runtime and let whichever chip actually answers win. We don't
+yet have a child node for either one - this patch only enables the
+i2c1 bus itself so a follow-up i2cdetect/i2cget diagnostic can find
+out, on real hardware, which chip is physically present:
+
+  - SC7A20 register-maps like the ST LIS3DH/LIS2DH12 family, which has
+    a mainline driver (st_accel). However st_sensors_core.c gates on
+    an exact WHOAMI/WAI register match before it will bind - even a
+    register-compatible clone chip is refused if the WHOAMI byte
+    doesn't match, so this is only "close" if that byte also matches.
+  - DA223 has no mainline driver of any kind at present; supporting it
+    would mean writing one from scratch.
+
+No accelerometer child node is added here - this is a read-only
+discovery step, same spirit as how RK817 was first probed on i2c0
+before any regulator work went in. i2c1 also feeds the touchscreen
+(Silead GSL3673 @0x40, separate TODO), so enabling the bus benefits
+that item too.
+
+Also fixes a now-stale comment above &i2c0 that still described the
+SYR837 vdd_cpu regulator as "no node, read-only probing only" - no
+longer accurate since patch 0011 added the real vdd_cpu node. Updated
+to correctly reference patches 0008-0009 and 0011.
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_0156c5MfQpFxaYWNNLMrcym9
+---
+ .../boot/dts/rockchip/rk3566-teclast-p25t.dts | 31 ++++++++++++++++---
+ 1 file changed, 26 insertions(+), 5 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/rockchip/rk3566-teclast-p25t.dts b/arch/arm64/boot/dts/rockchip/rk3566-teclast-p25t.dts
+index c034f062b..f8194ed90 100644
+--- a/arch/arm64/boot/dts/rockchip/rk3566-teclast-p25t.dts
++++ b/arch/arm64/boot/dts/rockchip/rk3566-teclast-p25t.dts
+@@ -332,11 +332,12 @@ &pwm14 {
+ };
+ 
+ /*
+- * I2C0: RK817 PMIC @0x20, SYR837 @0x40 (SYR837 still has no node, read-only
+- * probing only). The RK817 node below is deliberately minimal: only the
+- * two regulators needed to power the USB-C port's VBUS, nothing else on
+- * the chip (no battery/codec/pwrkey/RTC). Values copied verbatim from the
+- * stock Android device tree (Firmware/dt/boot-0-0x6c0fe00.dts):
++ * I2C0: RK817 PMIC @0x20 (BOOST/OTG_SWITCH regulators + charger/battery,
++ * patches 0008-0009) and SYR837 @0x40 (vdd_cpu, patch 0011). The RK817
++ * node itself stays deliberately minimal beyond that (no codec/pwrkey
++ * node - both came up for free once the chip had any node at all).
++ * Values copied verbatim from the stock Android device tree
++ * (Firmware/dt/boot-0-0x6c0fe00.dts):
+  *   - BOOST: regulator-always-on there too - stock never turns this rail
+  *     off, we are not switching on anything stock treats as off.
+  *   - OTG_SWITCH: stock leaves it switchable (its own USB HAL enables it
+@@ -434,3 +435,23 @@ &cpu2 {
+ &cpu3 {
+ 	cpu-supply = <&vdd_cpu>;
+ };
++
++/*
++ * I2C1: bus enable only, no chip node yet. Investigation step: the stock
++ * DT lists TWO alternative accelerometers here, both marked status="okay"
++ * unlike vdd_cpu's four alternatives (only one of which was real) - so
++ * Android probes both and whichever chip actually answers wins:
++ *   - sensor@19  "gs_sc7a20"  0x19 - has a mainline-compatible register
++ *     map (ST LIS3DH/LIS2DH12 family) IF its WHOAMI byte matches; if so,
++ *     just a DT node away.
++ *   - sensorda@27 "gs_da223"  0x27 - no mainline driver at all for this
++ *     chip; would need one written from scratch.
++ * Enabling the bus lets us i2cdetect/i2cget which one is really here
++ * before deciding which path applies. No child node added - purely
++ * read-only discovery, same spirit as how RK817 was first probed on
++ * i2c0 before any regulator work. Also feeds the touchscreen (Silead
++ * GSL3673 @0x40, separate TODO).
++ */
++&i2c1 {
++	status = "okay";
++};
+-- 
+2.43.0
+
