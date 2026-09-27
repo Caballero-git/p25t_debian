@@ -154,6 +154,28 @@
 				       <3724000 20>, <3677000 15>, <3608000 10>, <3543000 5>,
 				       <3400000 0>;
 	};
+
+	/*
+	 * Analog audio via the RK817 codec (patch 0015). "Analog RK817" name
+	 * and mclk-fs=256 (48kHz*256=12.288MHz) copied from the real
+	 * rk3566-quartz64-a.dts reference board - same codec, same i2s1_8ch
+	 * cpu-side controller. See the pmic@20/rk817 node comment above and
+	 * &i2s1_8ch below for the clock/pin details.
+	 */
+	rk817-sound {
+		compatible = "simple-audio-card";
+		simple-audio-card,name = "Analog RK817";
+		simple-audio-card,format = "i2s";
+		simple-audio-card,mclk-fs = <256>;
+
+		simple-audio-card,cpu {
+			sound-dai = <&i2s1_8ch>;
+		};
+
+		simple-audio-card,codec {
+			sound-dai = <&rk817>;
+		};
+	};
 };
 
 &saradc {
@@ -192,10 +214,11 @@
 
 /*
  * IO domain vccio4 (SDIO pins) is fed by RK817 LDO1 = 1.8 V (reg 0xCC = 0x30).
- * Only this one domain is declared, so only its voltage mode is set (1.8 V),
- * as the stock kernel does.
+ * vccio1 (audio codec IO, patch 0015) added the same way stock has it:
+ * fed by RK817 LDO_REG4 (vccio_acodec, 3.3 V) - see pmic@20/regulators.
  */
 &pmu_io_domains {
+	vccio1-supply = <&vccio_acodec>;
 	vccio4-supply = <&vcc_1v8_dummy>;
 	status = "okay";
 };
@@ -333,11 +356,12 @@
 
 /*
  * I2C0: RK817 PMIC @0x20 (BOOST/OTG_SWITCH regulators + charger/battery,
- * patches 0008-0009) and SYR837 @0x40 (vdd_cpu, patch 0011). The RK817
- * node itself stays deliberately minimal beyond that (no codec/pwrkey
- * node - both came up for free once the chip had any node at all).
- * Values copied verbatim from the stock Android device tree
- * (Firmware/dt/boot-0-0x6c0fe00.dts):
+ * patches 0008-0009; DCDC_REG2/vdd_gpu, patch 0014; audio codec +
+ * vccio_acodec, patch 0015) and SYR837 @0x40 (vdd_cpu, patch 0011). The
+ * RK817 node itself stays deliberately minimal beyond that (no pwrkey
+ * node - came up for free once the chip had any node at all). Values
+ * copied verbatim from the stock Android
+ * device tree (Firmware/dt/boot-0-0x6c0fe00.dts):
  *   - BOOST: regulator-always-on there too - stock never turns this rail
  *     off, we are not switching on anything stock treats as off.
  *   - OTG_SWITCH: stock leaves it switchable (its own USB HAL enables it
@@ -345,6 +369,8 @@
  *     enable it through &usb2phy0_otg's phy-supply in the host-mode DTB
  *     variant (see rk3566-teclast-p25t-usbhost.dts) - the normal DTB
  *     never references it, so it stays unused/off there, same as today.
+ *   - DCDC_REG2/vdd_gpu: stock has both regulator-always-on AND
+ *     regulator-boot-on on this one (unlike BOOST) - mirrored exactly.
  */
 &i2c0 {
 	status = "okay";
@@ -379,11 +405,51 @@
 		};
 	};
 
-	pmic@20 {
+	rk817: pmic@20 {
 		compatible = "rockchip,rk817";
 		reg = <0x20>;
 		interrupt-parent = <&gpio0>;
 		interrupts = <3 8>; /* GPIO0_A3, IRQ_TYPE_LEVEL_LOW - matches stock */
+
+		/*
+		 * Audio codec (patch 0015). Mainline's rk817_codec.c has no
+		 * separate DT subnode - #sound-dai-cells/clocks live directly on
+		 * this node, matching sound/soc/codecs/rk817_codec.c's
+		 * devm_clk_get(dev.parent, "mclk") and the rockchip,rk817.yaml
+		 * binding's own top-level example. Stock's codec{} subnode
+		 * (clocks=<&cru 0x1a3>, pinctrl-0, hp-volume/spk-volume/
+		 * capture-volume/use-ext-amplifier/spk-ctl-gpios) is Rockchip
+		 * BSP-only: rockchip,rk817.yaml's codec: schema only recognises
+		 * rockchip,mic-in-differential, and clock ID 0x1a3=419 has no
+		 * matching macro anywhere in mainline's rk3568-cru.h (only an
+		 * unrelated reset macro shares that number) - it doesn't exist
+		 * as a distinct clock in mainline's clk-rk3568.c at all, so it
+		 * cannot be carried over. Values below copied instead from a
+		 * real, working mainline board with the same chip combo
+		 * (arch/arm64/boot/dts/rockchip/rk3566-quartz64-a.dts), and
+		 * cross-checked against Documentation/devicetree/bindings/sound/
+		 * rockchip,i2s-tdm.yaml's own worked example, which uses the
+		 * identical &i2s1_8ch + i2s1m0 + trcm-sync-tx-only combination.
+		 *
+		 * spk-ctl-gpios deliberately NOT carried over: stock's value
+		 * (<&gpio3 2 ...>, GPIO3_A2) is the exact same physical pin
+		 * already confirmed on real hardware to be the SC7A20
+		 * accelerometer's IRQ line (patch 0013) - a single pin cannot
+		 * serve both. The quartz64-a reference board doesn't wire any
+		 * speaker-amp GPIO either, so this is omitted rather than
+		 * guessed. Practical effect, unconfirmed until tested: the
+		 * built-in speaker's amplifier may need to be enabled some
+		 * other way (or may default on/off in hardware) - headphone
+		 * jack output should be unaffected either way. See
+		 * hardware.org/todo.org.
+		 */
+		assigned-clocks = <&cru I2S1_MCLKOUT_TX>;
+		assigned-clock-parents = <&cru CLK_I2S1_8CH_TX>;
+		clocks = <&cru I2S1_MCLKOUT_TX>;
+		clock-names = "mclk";
+		pinctrl-names = "default";
+		pinctrl-0 = <&i2s1m0_mclk>;
+		#sound-dai-cells = <0>;
 
 		regulators {
 			rk817_boost: BOOST {
@@ -402,6 +468,50 @@
 
 			rk817_otg_switch: OTG_SWITCH {
 				regulator-name = "otg_switch";
+			};
+
+			/*
+			 * GPU rail. Values copied verbatim from the stock DT's own
+			 * DCDC_REG2 (regulator-name is "vdd_gpu" there too, confirming
+			 * this is the right rail). Stock's regulator-init-microvolt
+			 * (900000) and regulator-initial-mode (2) are Rockchip
+			 * BSP-only properties with no mainline binding (checked
+			 * against /schemas/regulator/regulator.yaml, which is all
+			 * rockchip,rk817.yaml references for this node) - dropped,
+			 * same treatment as vdd_cpu's equivalent stock properties.
+			 * Feeds &gpu's mali-supply below, for Panfrost GPU DVFS on
+			 * top of rk3568.dtsi's existing gpu_opp_table. See
+			 * kernel.org/hardware.org.
+			 */
+			vdd_gpu: DCDC_REG2 {
+				regulator-name = "vdd_gpu";
+				regulator-min-microvolt = <500000>;
+				regulator-max-microvolt = <1350000>;
+				regulator-ramp-delay = <6001>;
+				regulator-always-on;
+				regulator-boot-on;
+
+				regulator-state-mem {
+					regulator-off-in-suspend;
+				};
+			};
+
+			/*
+			 * Audio codec IO/analog supply (patch 0015). Stock's own
+			 * LDO_REG4 is named "vccio_acodec" and is the vccio1-supply
+			 * for &pmu_io_domains below - same always-on/boot-on
+			 * treatment as stock, no BSP-only properties on this one.
+			 */
+			vccio_acodec: LDO_REG4 {
+				regulator-name = "vccio_acodec";
+				regulator-min-microvolt = <3300000>;
+				regulator-max-microvolt = <3300000>;
+				regulator-always-on;
+				regulator-boot-on;
+
+				regulator-state-mem {
+					regulator-off-in-suspend;
+				};
 			};
 		};
 
@@ -491,4 +601,35 @@
 				"-1", "0", "0",
 				"0", "0", "1";
 	};
+};
+
+/*
+ * GPU (Panfrost/Mali Bifrost). Disabled by default in rk356x-base.dtsi;
+ * rk3568.dtsi already wires operating-points-v2 = <&gpu_opp_table> onto
+ * &gpu (200-800 MHz, no changes needed there). We only need to turn it on
+ * and wire the real rail - mali-supply is the property name the mainline
+ * binding (Documentation/devicetree/bindings/gpu/arm,mali-bifrost.yaml,
+ * matching our exact compatible "rockchip,rk3568-mali") expects, and
+ * stock's own GPU node uses the same property name for the same purpose.
+ */
+&gpu {
+	status = "okay";
+	mali-supply = <&vdd_gpu>;
+};
+
+/*
+ * I2S1 (patch 0015): cpu side of the RK817 audio codec (see rk817-sound
+ * and pmic@20/rk817 above). Already fully wired in rk356x-base.dtsi
+ * (clocks, DMA, resets) - just disabled by default, same shape as &gpu
+ * was. pinctrl-0 (single data line each way) + rockchip,trcm-sync-tx-only
+ * copied verbatim from Documentation/devicetree/bindings/sound/
+ * rockchip,i2s-tdm.yaml's own worked example and from the real
+ * rk3566-quartz64-a.dts reference board, which uses this exact
+ * controller+codec combination.
+ */
+&i2s1_8ch {
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2s1m0_sclktx &i2s1m0_lrcktx &i2s1m0_sdi0 &i2s1m0_sdo0>;
+	rockchip,trcm-sync-tx-only;
+	status = "okay";
 };

@@ -37,8 +37,8 @@
   | PMIC              | RK817 @ i2c0 0x20                          | regulators, RTC, 32k clock, charger, fuel gauge, codec        | minimal node (patches 0008–0009): BOOST/OTG_SWITCH, charger+battery |
   | vdd_cpu           | SYR837 @ i2c0 0x40 (~silergy,syr827~)      | vin = vccsys, 0.712–1.5 V                                     | works (patch 0011, confirmed 2026-09-26) |
   | Battery           | 5300 mAh design (qmax 5800), sense 10 mΩ   | OCV 3400–4313 mV                                              | works (patch 0009, confirmed 2026-09-26) |
-  | Audio codec       | RK817 codec + simple-audio-card            | headset detect ~rk-headset~                                   | todo                                  |
-  | GPU               | Mali-G52 (~arm,mali-bifrost~)              |                                                               | Panfrost, needs vdd_gpu in DT         |
+  | Audio codec       | RK817 codec + simple-audio-card (i2s1_8ch) | vccio_acodec=LDO_REG4; Playback Mux HP/SPK; no spk-ctl-gpios (pin taken by accel IRQ) | headphone jack works (patch 0015, confirmed 2026-09-27); built-in speaker silent (needs real amp-enable pin, unknown); mic capture untested/no sound; headset detect ~rk-headset~ still todo |
+  | GPU               | Mali-G52 (~arm,mali-bifrost~)              |                                                               | works (patch 0014, confirmed 2026-09-27); vdd_gpu = RK817 DCDC_REG2, DVFS 200-800 MHz |
   | Display pipe      | VOP2 vp1 → DSI0 ~fe060000~ + D-PHY ~fe850000~ | 4 lanes                                                    | works                                 |
   | Panel             | Jadard JD9365, 800×1280, 135×216 mm        | enable GPIO3_B1 (act. high), reset GPIO3_C3 (act. low)        | works, ~panel-jadard-jd9365da-h3~ + our table |
   | Backlight         | ~pwm-backlight~ PWM14 (~fe700020~)         | period 25 µs (40 kHz), stock default 77/255                   | works                                 |

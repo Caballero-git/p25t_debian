@@ -74,7 +74,7 @@
     charging past that initial phase. No further action - let it finish a
     full charge/rest cycle, which also lets the fuel gauge recalibrate.
 
-* DONE CPU frequency (vdd_cpu / DVFS), TODO GPU
+* DONE CPU frequency (vdd_cpu / DVFS) and GPU (vdd_gpu / Panfrost DVFS)
   - Flagged 2026-09-26 (battery-consumption review): with no cpufreq/OPPs
     at all, the CPU likely never dropped below its default/boot frequency —
     the most plausible *software* contributor to faster-than-Android
@@ -95,16 +95,63 @@
     errors; voltage tracks frequency exactly against the OPP table's
     targets (1.025 V at 1416 MHz idle, 1.15 V at 1800 MHz under load -
     both exact matches, not just in-range).
-  - Still open: ~vdd_gpu~ (RK817 DCDC) for Panfrost - GPU has an OPP table
-    too (~rk3566.dtsi~) but no supply wired, same situation CPU was in
-    before this patch. Not started.
+  - Patch 0014 (2026-09-26, built, not yet deployed): wired ~vdd_gpu~ -
+    turned out to be RK817's own ~DCDC_REG2~, not a separate chip like
+    vdd_cpu - and enabled ~&gpu~ (~status = "disabled"~ by default) with
+    ~mali-supply = <&vdd_gpu>~. RK817 register-level change, explicitly
+    proposed and approved first, per the standing rule. Also enabled
+    ~CONFIG_DRM_PANFROST~ (was off, same situation as the
+    accelerometer's config gap - done proactively this time). See
+    [[file:kernel.org][kernel]] for the full writeup.
+  - Deployed and tested (~tests/test_04.sh~, 2026-09-27): *working*,
+    first try - clean Panfrost probe (Mali-G52), ~vdd_gpu~ regulator
+    enabled, ~card1~/~renderD128~ present, devfreq DVFS active
+    (200-800 MHz range, ~simple_ondemand~ governor). See
+    [[file:kernel.org][kernel]] for the full writeup. GPU bring-up is
+    done - nothing else known to be missing for basic Panfrost/Mesa 3D
+    acceleration.
 
 * TODO Touchscreen (Silead GSL3673, i2c1 0x40, IRQ GPIO0_B0, reset GPIO0_C2)
   - Mainline ~silead~ driver; the firmware blob must be extracted from the
     Android vendor partition and converted to the ~silead~ format.
 
-* TODO Audio (RK817 codec)
-  - Needs LDO4 (vccio_acodec, 3.3 V) and the codec node + simple-audio-card.
+* DONE Audio (RK817 codec) — headphone jack works
+  - Patch 0015 (2026-09-27): wired ~vccio_acodec~ (LDO_REG4, 3.3 V) as
+    ~pmu_io_domains~' ~vccio1-supply~, the codec's ~mclk~ (~&cru
+    I2S1_MCLKOUT_TX~, no BSP-only ~codec {}~ subnode - mainline's
+    driver wants these on ~pmic@20~ itself), a ~rk817-sound~
+    simple-audio-card node, and enabled ~&i2s1_8ch~ (~status =
+    "disabled"~ by default, same shape as GPU before patch 0014). RK817
+    register-level change, explicitly proposed and approved before
+    being made. Config fix (whole ~CONFIG_SOUND~ subsystem was off)
+    checked and applied proactively before the build. See
+    [[file:kernel.org][kernel]] for the full writeup, including two
+    unrelated deployment snags (a missing ~LOCALVERSION=~ that broke
+    Wi-Fi/Bluetooth, and the boot partition running out of space from
+    accumulated old backups) and how they were fixed.
+  - Deliberately *not* wired: ~spk-ctl-gpios~ (stock's speaker-amp
+    enable pin is the same physical GPIO already confirmed as the
+    accelerometer's IRQ - can't be both) and
+    ~rockchip,mic-in-differential~ (mic wiring unknown).
+  - *Confirmed on hardware 2026-09-27*: ALSA card ~RK817~ registered,
+    playback + capture PCM present. ~speaker-test~ over the headphone
+    jack (mux at its default ~HP~) - clean, audible tone. This meets
+    the original ask ("audio would be a nice feature").
+  - *Still open, non-blocking*:
+    - Built-in speaker stays silent even with the codec's ~Playback
+      Mux~ switched to ~SPK~ (~amixer -c0 cset numid=4 SPK~) - the mux
+      only picks the codec's internal output stage, it doesn't
+      substitute for whatever hardware GPIO enables the external
+      amplifier. The real amp-enable pin for *this* board is unknown
+      (stock's value is taken by the accelerometer IRQ) and would need
+      identifying some other way (schematic, or trial of unused GPIOs)
+      before it can be wired.
+    - Mic capture: ~arecord~ + ~aplay~ round-trip produced no audible
+      sound. Mic wiring on this board was already unconfirmed going in
+      (see hardware.org); no capture-source-select control shows up in
+      ~amixer~ either, so there's no way to tell from software alone
+      whether a mic is physically present. Not investigated further
+      without more information.
 
 * DONE Accelerometer (SC7A20 @ i2c1 0x19, IRQ GPIO3_A2)
   - Identified on hardware 2026-09-26 (patch 0012 + ~tests/test_02.sh~):

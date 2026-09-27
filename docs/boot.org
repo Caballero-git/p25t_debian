@@ -123,6 +123,36 @@
   The card currently carries the build with sha256 ~ac4f3d83e704…~; its
   ~init~ is byte-identical to ~initramfs/init~ in this folder.
 
+* Choosing the USB-C role for the next boot
+  U-Boot's ~bootcmd~ hardcodes the DTB filename it loads
+  (~rk3566-teclast-p25t.dtb~, see "Boot command" above), so the USB-C
+  port's role (~dr_mode~ - device/peripheral vs. host, fixed at kernel
+  probe time) can't change after the kernel has booted - it can only be
+  chosen for the boot that hasn't happened yet, by deciding which DTB
+  variant's *content* sits at that exact filename.
+
+  ~tools/set-usb-role.sh~ (copied onto the card, run from an SSH session
+  on the tablet itself - ~P25TBOOT~ is mounted at ~/boot/firmware~, see
+  debian.org) does exactly that:
+  #+begin_example
+  set-usb-role.sh host    # next boot: USB-C as host (wired keyboard/mouse)
+  set-usb-role.sh normal  # next boot: USB-C as device (console/network - default)
+  set-usb-role.sh status  # which one is currently set
+  #+end_example
+  It copies either ~rk3566-teclast-p25t-usbhost.dtb~ or the permanent
+  ~rk3566-teclast-p25t-normal.dtb~ (a copy of the working "normal" DTB
+  kept under its own name specifically so the rollback-backup pruning
+  described under patch 0015 in kernel.org never touches it) over the
+  active ~rk3566-teclast-p25t.dtb~, then leaves the actual ~reboot~ to
+  the user. In host mode the port also sources power for whatever's
+  plugged in rather than only receiving it, so charging behaviour over
+  that same cable may differ - this exact host-mode DTB was already
+  hardware-confirmed working with a USB wireless keyboard/mouse receiver
+  early in the project (patches 0007+0008), so the mode itself is
+  known-good; only the convenience of switching to it is new here. Wi-Fi
+  (and SSH over it) is unaffected either way - it's a separate
+  controller from the USB-C PHY.
+
 * Rescue and rollback
   | Situation                           | Action                                                              |
   |-------------------------------------+---------------------------------------------------------------------|

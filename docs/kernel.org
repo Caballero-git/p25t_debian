@@ -21,6 +21,8 @@
     | 0011 | DT: wire real vdd_cpu (SYR837) for CPU DVFS                    |
     | 0012 | DT: enable i2c1 to identify accelerometer chip                |
     | 0013 | DT: add SC7A20 accelerometer node on i2c1                     |
+    | 0014 | DT: wire vdd_gpu (RK817 DCDC_REG2) for GPU DVFS                |
+    | 0015 | DT: wire RK817 audio codec + i2s1_8ch                          |
   - Also needs a kernel *config* change (not a DT patch): ~CONFIG_USB_XHCI_HCD=y~
     and ~CONFIG_USB_XHCI_PLATFORM=y~, both already set in
     ~kernel/p25t-kernel.config~. Without them the ~dwc3~ glue driver still
@@ -76,6 +78,11 @@
   | ~MFD_RK8XX_I2C~, ~CHARGER_RK817~         | y     | built; RK817 node in the DT since patch 0008/0009 |
   | ~EXT4_FS~, ~VFAT_FS~                     | y     | root and boot partitions               |
   | ~IIO_ST_ACCEL_3AXIS~ (+ ~_I2C_3AXIS~)    | y     | SC7A20 accelerometer (patch 0013's DT node needs this - was off by default, found 2026-09-26 when the node didn't probe) |
+  | ~DRM_PANFROST~                           | y     | GPU (patch 0014's ~&gpu~ node needs this - off by default, enabled proactively this time after the accelerometer lesson) |
+  | ~SOUND~, ~SND~, ~SND_SOC~                | y     | whole sound subsystem was off (patch 0015's audio needs this - checked proactively this time; ~CONFIG_SOUND~ itself was unset, hiding everything under it) |
+  | ~SND_SOC_ROCKCHIP_I2S_TDM~               | y     | i2s1_8ch controller driver (patch 0015)               |
+  | ~SND_SOC_RK817~                          | y     | RK817 codec driver (patch 0015; ~MFD_RK8XX~ dependency already satisfied) |
+  | ~SND_SIMPLE_CARD~ (+ ~_UTILS~)           | y     | machine driver for the ~rk817-sound~ simple-audio-card node (patch 0015) |
 
 * Device tree notes
   - Real rails are *not* described: dummy fixed regulators stand in, so
@@ -384,6 +391,237 @@
     not that they move the *correct* way. Revisit once there's an
     actual consumer of the orientation (e.g. testing screen rotation)
     to check against.
+
+* vdd_gpu / GPU DVFS (patch 0014 + config fix) — working
+  - Context: same shape as vdd_cpu before patch 0011 - ~rk3568.dtsi~
+    already ships a ~gpu_opp_table~ (200-800 MHz) wired onto ~&gpu~ via
+    its own ~operating-points-v2~ override, but the GPU node itself is
+    left ~status = "disabled"~ in ~rk356x-base.dtsi~, and has no real
+    voltage rail behind that OPP table either way.
+  - Unlike vdd_cpu (a separate SYR837 chip on i2c0), the real chip here
+    is *RK817's own DCDC_REG2* - confirmed from the stock DT, which
+    already names this exact rail "vdd_gpu" and wires it to the stock
+    GPU node's own ~mali-supply~ property. Per the standing rule, this
+    RK817 register-level change was explicitly proposed and approved
+    before being made (2026-09-26).
+  - Added ~vdd_gpu: DCDC_REG2 {}~ inside the existing
+    ~pmic@20/regulators~ block. Values copied verbatim from the stock
+    DT: min 500000 uV, max 1350000 uV, ramp-delay 6001 (also the exact
+    boilerplate value ~Documentation/devicetree/bindings/mfd/
+    rockchip,rk817.yaml~'s own example uses for DCDC_REG1/REG2 on a
+    different board), ~regulator-always-on~ *and* ~regulator-boot-on~
+    (stock has both on this rail, unlike BOOST which has neither).
+    Stock's own ~regulator-init-microvolt~ (900000) and
+    ~regulator-initial-mode~ (2) are Rockchip BSP-only properties with
+    no mainline binding - checked against
+    ~/schemas/regulator/regulator.yaml~, which is all
+    ~rockchip,rk817.yaml~ references for this node - so dropped, same
+    treatment as vdd_cpu's equivalent stock properties in patch 0011.
+  - Added ~&gpu { status = "okay"; mali-supply = <&vdd_gpu>; };~ -
+    ~mali-supply~ is the property name
+    ~Documentation/devicetree/bindings/gpu/arm,mali-bifrost.yaml~
+    defines for this exact compatible (~"rockchip,rk3568-mali"~),
+    matching stock's own GPU node's property name for the same
+    purpose. No changes needed to ~operating-points-v2~ -
+    ~rk3568.dtsi~ already wires that onto ~&gpu~, and DT fragments from
+    different files merge onto the same node.
+  - Config fix, done proactively this time (lesson from the
+    accelerometer's patch 0012/0013 round-trip): ~CONFIG_DRM_PANFROST~
+    was also ~# ... is not set~ - enabled it before deploying anything,
+    pulling in ~PM_DEVFREQ~/~DEVFREQ_GOV_SIMPLE_ONDEMAND~ automatically
+    (Panfrost uses devfreq for GPU DVFS, not cpufreq-dt). Rebuilt
+    ~Image~ (~panfrost_dump.o~ and the rest of the driver confirmed
+    compiled in as builtin) and both DTBs in the same pass.
+  - Built cleanly, decompiled and checked: DCDC_REG2's phandle matches
+    ~&gpu~'s ~mali-supply~ reference, ~status = "okay"~,
+    ~operating-points-v2~ present (inherited from ~rk3568.dtsi~), all
+    regulator values exact matches to the stock DT's decoded hex
+    values.
+  - Deployed to the card (both DTBs + new ~Image~, chunked and
+    reassembled by hand on the PC, same as patch 0013's config fix) and
+    tested 2026-09-27 with ~tests/test_04.sh~ - confirmed *working*,
+    cleanly, first try:
+    #+begin_src text
+    panfrost fde60000.gpu: clock rate = 594000000
+    panfrost fde60000.gpu: bus_clock rate = 500000000
+    panfrost fde60000.gpu: mali-g52 id 0x7402 major 0x1 minor 0x0 status 0x0
+    panfrost fde60000.gpu: shader_present=0x1 l2_present=0x1
+    [drm] Initialized panfrost 1.6.0 for fde60000.gpu on minor 1
+    #+end_src
+    - ~vdd_gpu~ regulator: ~state=enabled microvolts=900000~ (the same
+      900 mV stock's dropped ~regulator-init-microvolt~ named - this is
+      the chip's own hardware default/POR value showing through, not
+      something we forced, since that BSP-only property was never
+      carried over).
+    - DRM: ~card0~ (display/DSI-1, pre-existing) *and* ~card1~
+      (~fde60000.gpu~) both present, with a working render node
+      (~renderD128~, ~crw-rw---- root render~).
+    - Devfreq (real GPU DVFS, Panfrost's equivalent of cpufreq-dt):
+      ~/sys/class/devfreq/fde60000.gpu~, governor ~simple_ondemand~,
+      ~cur_freq=600000000~ - within the OPP table's 200-800 MHz range,
+      confirming voltage+frequency scaling is live, not just a fixed
+      clock.
+    - Charger/battery sanity-checked unaffected in the same run
+      (Charging, 100% - battery had finished a full charge cycle since
+      the accelerometer testing).
+  - This closes out GPU bring-up. Nothing else known to be missing for
+    basic Panfrost/Mesa 3D acceleration on this board.
+
+* RK817 audio codec + i2s1_8ch (patch 0015 + config fix) — working (headphones)
+  - Board has: built-in speaker(s), a 3.5 mm headphone jack, and a mic
+    the user has never used/confirmed. Goal is basic playback first;
+    capture is a bonus if it comes for free.
+  - Mainline's ~sound/soc/codecs/rk817_codec.c~ has *no separate DT
+    subnode* for the codec - ~#sound-dai-cells~/clocks live directly on
+    the ~pmic@20~ MFD node itself (~devm_clk_get(dev.parent, "mclk")~),
+    matching ~Documentation/devicetree/bindings/mfd/rockchip,rk817.yaml~'s
+    own top-level example. Stock's DT instead has a ~codec {}~ subnode
+    with many extra properties (~hp-volume~, ~spk-volume~,
+    ~capture-volume~, ~use-ext-amplifier~, ~spk-ctl-gpios~, its own
+    ~clocks~/~pinctrl-0~) - checked against that binding's ~codec:~
+    schema, which recognises only ~rockchip,mic-in-differential~; the
+    rest is Rockchip BSP-only and dropped, same treatment as the
+    ~vdd_cpu~/~vdd_gpu~ stock properties in earlier patches.
+  - Stock's raw ~mclk~ clock ID (~<&cru 0x1a3>~, 419 decimal) has *no
+    matching macro* anywhere in mainline's ~rk3568-cru.h~ - only an
+    unrelated reset macro (~SRST_P_GRF_VCCIO567~) shares that number -
+    and no corresponding clock exists in mainline's
+    ~drivers/clk/rockchip/clk-rk3568.c~ either, so it could not be
+    carried over.
+  - Resolved by cross-referencing a real, working mainline board using
+    the identical RK817 + i2s1_8ch combination:
+    ~arch/arm64/boot/dts/rockchip/rk3566-quartz64-a.dts~. It wires the
+    codec's ~mclk~ as ~<&cru I2S1_MCLKOUT_TX>~ directly, with
+    ~assigned-clock-parents = <&cru CLK_I2S1_8CH_TX>~ - a real, settable
+    mux clock (confirmed in ~clk-rk3568.c~,
+    ~COMPOSITE_NODIV(I2S1_MCLKOUT_TX, ...)~) that's shared with
+    ~i2s1_8ch~'s own bit-clock chain. Also confirms the ~i2s1m0_mclk~
+    pinctrl pin (~rk3568-pinctrl.dtsi~, GPIO1_A2) that a first pass at
+    ~rk356x-base.dtsi~ alone had missed.
+  - Added:
+    - ~vccio_acodec: LDO_REG4 {}~ (3.3 V, always-on/boot-on) inside
+      ~pmic@20/regulators~ - matches stock's own regulator-name for
+      this rail.
+    - ~pmic@20~: ~clocks~/~clock-names = "mclk"~/~assigned-clocks~/
+      ~assigned-clock-parents~ as above, ~pinctrl-0 = <&i2s1m0_mclk>~,
+      ~#sound-dai-cells = <0>~.
+    - ~&pmu_io_domains~: ~vccio1-supply = <&vccio_acodec>~ (matches
+      stock, which feeds this same IO domain from this same rail).
+    - New top-level ~rk817-sound~ ~simple-audio-card~ node (cpu =
+      ~i2s1_8ch~, codec = ~rk817~, ~mclk-fs = 256~ i.e. 48kHz*256 =
+      12.288 MHz - also stock's own ~assigned-clock-rate~ value, and the
+      quartz64-a reference board's value).
+    - ~&i2s1_8ch~: enabled with the ~i2s1m0~ pinctrl group (one data
+      line each way: ~sclktx~, ~lrcktx~, ~sdi0~, ~sdo0~) +
+      ~rockchip,trcm-sync-tx-only~ - copied from
+      ~Documentation/devicetree/bindings/sound/rockchip,i2s-tdm.yaml~'s
+      own worked example, which uses this identical combination. Was
+      already fully wired for clocks/DMA/resets in
+      ~rk356x-base.dtsi~, just ~status = "disabled"~ by default - same
+      shape as ~&gpu~ before patch 0014.
+  - *~spk-ctl-gpios~ deliberately dropped*: stock's value
+    (~<&gpio3 2 ...>~, GPIO3_A2) is the *exact same physical pin*
+    already confirmed on real hardware to be the SC7A20 accelerometer's
+    IRQ line (patch 0013) - one pin cannot serve both, and the
+    quartz64-a reference board wires no speaker-amp GPIO at all
+    either. Practical effect on the *built-in speaker* specifically is
+    unconfirmed until tested; the headphone jack should be unaffected
+    either way. ~rockchip,mic-in-differential~ also omitted (mic wiring
+    on this board is unknown - defaults to single-ended).
+  - Config fix, checked proactively before building this time (lesson
+    from the accelerometer/GPU round-trips): the *entire* sound
+    subsystem was off - ~CONFIG_SOUND~ itself was unset, so nothing
+    under it even appeared as a Kconfig comment. Enabled ~CONFIG_SOUND~,
+    ~CONFIG_SND~, ~CONFIG_SND_SOC~, ~CONFIG_SND_SOC_ROCKCHIP_I2S_TDM~,
+    ~CONFIG_SND_SOC_RK817~ (~CONFIG_MFD_RK8XX~ dependency already
+    satisfied), ~CONFIG_SND_SIMPLE_CARD~ before the build, not after a
+    failed test.
+  - Built cleanly (~Image~ + both DTBs), decompiled and checked: all
+    phandle cross-references resolve correctly (~rk817-sound~'s
+    ~cpu~/~codec~ sound-dai phandles match ~i2s1_8ch~/~rk817~'s own
+    phandles; ~mclk~ clock args decode to ~I2S1_MCLKOUT_TX~/
+    ~CLK_I2S1_8CH_TX~ exactly; ~vccio1-supply~ phandle matches
+    ~vccio_acodec~; ~i2s1_8ch~ shows ~status = "okay"~ and
+    ~rockchip,trcm-sync-tx-only~).
+  - Test script ~tests/test_05.sh~ written (dmesg/ALSA-card checks + an
+    audible ~speaker-test~ tone, since this is the first patch in this
+    project that needs a human to actually listen rather than just
+    read a result file). Its own audible-test guard was buggy (~[ -s
+    /proc/asound/cards ]~ - ~/proc~ files always report size 0 in
+    their inode metadata even when ~cat~ shows real content, so the
+    check always failed and skipped the tone) - harmless, since the
+    rest of the script's dmesg/ALSA checks already showed the codec
+    working and the tone was then run by hand instead. Left as a
+    known bug in the script rather than reflown, since it didn't block
+    anything.
+  - *Deployment hit two unrelated snags, both resolved, neither a DT
+    defect*:
+    1. Forgot ~LOCALVERSION=~ (empty) on the ~make Image~ command line
+       for this patch's rebuild (see "Build" section above - this
+       project's own documented gotcha). Kernel release came out as
+       ~7.3.0-rc4-p25t+~ (trailing ~+~) instead of ~7.3.0-rc4-p25t~.
+       Since the AIC8800 Wi-Fi/Bluetooth driver is an *out-of-tree*
+       module installed at ~/usr/lib/modules/7.3.0-rc4-p25t/extra/~, the
+       mismatched release string meant the kernel looked in a directory
+       that didn't exist, so neither module loaded - Wi-Fi *and*
+       Bluetooth both went dark (same chip, same modules) while every
+       *built-in* driver (display, GPU, accelerometer, and the new
+       audio bits) worked fine and the framebuffer login looked
+       completely normal. Diagnosed by noticing BT (unrelated to Wi-Fi
+       at the driver level, but same AIC8800 module) was *also* down,
+       which pointed at the shared out-of-tree module path rather than
+       anything audio/DT-specific. Fixed by rebuilding ~Image~ with
+       ~LOCALVERSION=~ on the command line (release string back to
+       ~7.3.0-rc4-p25t~; ~sha256sum~
+       ~def3c202f312aab058ef9de4cde1cc031659350557ff95cbc6e3a4f7ac3a19aa~)
+       and redeploying.
+    2. The redeploy then ran the ~P25TBOOT~ partition out of space -
+       the card had accumulated roughly 250 MB of superseded backups
+       going back to the earliest bring-up stages (~stage1-backup/~,
+       ~stage2/~, ~Image.stage4~/~.stage5~, and a full
+       ~.pre-<patch>-backup~ chain per patch for both DTBs). The
+       failed ~mv~ left a truncated 15 MB ~Image~ on the card (would
+       not have booted) while the tablet kept running fine from its
+       current in-memory boot. Fixed by deleting everything except the
+       single most recent known-good rollback (patch 0014's
+       ~.pre-audio-backup~ trio) and the active files, freeing space,
+       then redeploying cleanly. Lesson: prune old
+       ~.pre-<patch>-backup~ files after a patch is confirmed working
+       instead of letting them accumulate indefinitely - only the most
+       recent rollback point is actually useful.
+  - *Hardware-confirmed 2026-09-27*: ~/proc/asound/cards~ shows
+    ~0 [RK817] : simple-card - Analog RK817~; ~/proc/asound/pcm~ shows
+    one playback *and* one capture stream
+    (~fe410000.i2s-rk817-hifi rk817-hifi-0~). ~amixer -c0 controls~
+    reveals a `Playback Mux` control (~HP~/~SPK~, defaults to ~HP~) -
+    a mainline codec-driver feature, not something we wired ourselves.
+    - *Headphone jack: works, confirmed by ear* - ~speaker-test -D
+      hw:0,0 -c2 -t sine -f 1000 -l 1~ produced a clean, audible tone
+      through headphones on the first try, mux left at its default
+      ~HP~.
+    - *Built-in speaker: silent* - switching the mux to ~SPK~
+      (~amixer -c0 cset numid=4 SPK~) and re-running ~speaker-test~
+      produced no sound. Consistent with the deliberately-omitted
+      ~spk-ctl-gpios~ (see above) - the mux only selects the codec's
+      internal output stage, it doesn't substitute for whatever
+      enables the external speaker amplifier in hardware. Left as an
+      open item (see todo.org) rather than guessed at further without
+      a schematic - the accelerometer's IRQ pin still holds
+      GPIO3_A2, so any real fix needs the *actual* amp-enable pin
+      identified some other way, not assumed from stock's (evidently
+      wrong-for-this-board) value.
+    - *Mic capture: tried, no audible result* - ~arecord -D hw:0,0 -f
+      cd -d 3~ followed by ~aplay~ produced nothing audible. The
+      board's mic was already flagged as "never used, wiring unknown"
+      going in; no ~rockchip,mic-in-differential~ or input-source mux
+      was wired since none of that was confirmed, and ~amixer~ shows
+      no capture-source-select control at all (only ~Mic Capture
+      Gain~), so there's currently no way to tell from software alone
+      whether a mic is physically present on this board. Open item,
+      not investigated further without more information.
+  - *Net result: the original ask ("audio would be a nice feature") is
+    met* - playback works cleanly over the headphone jack. Speaker and
+    mic capture are documented as known, non-blocking gaps.
 
 * AIC8800 Wi-Fi/Bluetooth driver (out of tree)
   Source: [[https://github.com/radxa-pkg/aic8800][radxa-pkg/aic8800]], commit ~516e3b0~
