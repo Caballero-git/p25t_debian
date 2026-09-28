@@ -153,6 +153,27 @@
       whether a mic is physically present. Not investigated further
       without more information.
 
+* DONE SoC thermal sensor (tsadc)
+  - Came up while deciding against installing ~lm-sensors~' blind
+    ~sensors-detect~ probing (all I2C devices on this board are
+    already identified, none is a discrete hwmon chip). The real
+    sensor was the RK3568's own on-die ~tsadc~ - already fully wired
+    in ~rk356x-base.dtsi~, including a ~thermal-zones~ node with
+    ~cpu-thermal~/~gpu-thermal~ zones and trip points, just ~status =
+    "disabled"~ by default.
+  - Patch 0016 (2026-09-27): single ~&tsadc { status = "okay"; ...
+    }~ override, ~hw-tshut-mode~/~hw-tshut-polarity~ copied from two
+    independent reference boards (quartz64-a, qnap-tsx33) that agree.
+    Not an RK817 change, no kernel ~.config~ change, DTB-only - no
+    ~Image~ rebuild. See [[file:kernel.org][kernel]] for the full
+    writeup.
+  - *Confirmed on hardware 2026-09-27*: ~cpu-thermal~ 41875 (41.9°C),
+    ~gpu-thermal~ 40000 (40.0°C) at idle, both read straight from
+    ~/sys/class/thermal/thermal_zone{0,1}/~. Also available via the
+    standard ~sensors~ command (lm-sensors package) since
+    ~CONFIG_THERMAL_HWMON=y~ was already set - no ~sensors-detect~
+    probing needed or used.
+
 * DONE Accelerometer (SC7A20 @ i2c1 0x19, IRQ GPIO3_A2)
   - Identified on hardware 2026-09-26 (patch 0012 + ~tests/test_02.sh~):
     0x19 answers, 0x27 (DA223) does not - the chip is the SC7A20. WHOAMI
@@ -227,6 +248,101 @@
   - getty on ~tty1~ did start (journal). Suspects: console on a different
     VT, fbcon hand-over timing, or the panel/backlight state after the
     initramfs. The ~p25t-bootlog~ reports of such a boot are the starting point.
+  - Possibly the same underlying VT-acquisition issue as "Multiple VT
+    sessions - on-demand getty spawning" below - not confirmed, but worth
+    re-checking together if either one gets root-caused first.
+
+* OPEN Multiple VT sessions — on-demand getty spawning
+  - Motivation: the user wants at least two usable sessions on the panel
+    at once - one normal-user, one for ~sudo -i~/root - without juggling a
+    single shell. ~tty1~ (normal user) already existed; ~tty2~/~tty3~
+    were meant to be logind's on-demand ~autovt@.service~, spawned the
+    moment you first switch to that VT (Ctrl+left-Alt+F2/F3).
+
+  - *Symptom*: Ctrl+Alt+F2/F3 switched the panel to a fresh-looking VT
+    (later, ~chvt 2~ confirmed the switch itself works), but no working
+    login shell ever appeared. Keystrokes visibly echoed on screen but
+    never reached the login prompt - a password typed at the "login:"
+    prompt stayed visible (no echo suppression), and Enter did nothing.
+
+  - *Ruled out first* (both confirmed fine, not the cause):
+    - The VT-switch mechanism itself: ~chvt 2~ works cleanly once run
+      from a real root shell (~sudo su -~, then ~chvt 2~) - plain ~sudo
+      chvt 2~ fails with "Couldn't get a file descriptor referring to
+      the console", because ~sudo~'s ~use_pty~ default routes the
+      command through a pty, which breaks ~chvt~'s console-ioctl-based
+      fd detection. A generic sudo/kbd-package gotcha, unrelated to our
+      kernel/DT.
+    - The keymap: ~dumpkeys~ confirmed plain Alt/Ctrl+Alt+F2 already map
+      to ~Console_2~ (only AltGr+F2 maps elsewhere) - matches the left
+      Alt key the user was actually using. Not a keymap bug.
+
+  - *Root of the real problem*: the getty processes never acquire a
+    controlling terminal (ctty). ~ps aux~ showed ~?~ in the TTY column
+    for every VT getty (~tty1~-~tty3~'s PIDs), while the serial/gadget
+    getties (~ttyGS0~, ~ttyS2~) correctly showed their own tty. ~fuser
+    -v /dev/tty2~ confirmed the getty process does hold the device open
+    - but ~strace -p <pid> -e trace=read,write -f~ while typing on that
+    live VT screen showed *zero* syscalls: the keystrokes are visibly
+    echoed by the kernel's own VT layer but never reach the getty
+    process at all, because it was never given that terminal as its
+    ctty in the first place.
+
+  - *Related, not fully disentangled*: mid-investigation,
+    ~systemctl stop getty@tty2.service~ (and a couple of other
+    ~systemctl~ commands) failed outright with "Failed to get load
+    state of getty@tty2.service: Connection timed out" - systemd/PID1's
+    own control socket was unresponsive, not just the one getty. Most
+    likely caused by the repeated manual enable/disable/kill/strace-attach
+    cycles during testing, but not proven separate from the underlying
+    bug. A direct bypass, ~sudo agetty tty2 linux~ (run manually,
+    outside systemd), did redraw a real "p25t login:" prompt - but login
+    still hung after the username with no shell, same ctty-acquisition
+    symptom, and a second manual attempt immediately printed "Hangup"
+    and exited. Recovered via ~sudo reboot -f~ (plain ~sudo reboot~ hung
+    on the same unresponsive control socket; ~-f~ bypasses it with a
+    direct kernel ~reboot(2)~ syscall).
+
+  - *Confirmed after a clean reboot*: ~getty@tty2.service~, switched
+    from on-demand ~autovt@tty2~ to a *static* enable (started as part
+    of the normal boot sequence, the same way ~tty1~ always was), came
+    up working - clean login, real ctty. ~tty3~, still left on
+    ~autovt@tty3~'s on-demand path at that point, showed the exact same
+    broken symptom as before. This matched the user's own hunch ("Maybe
+    the create ttys on request doesn't work at all") - so ~getty@tty3~
+    was enabled statically too, the same way.
+
+  - *Newest finding, this refines the diagnosis further*: even a
+    statically-enabled getty that came up clean at boot fails the exact
+    same way once you *log out* of it - logging back in without a
+    reboot doesn't work, same broken-ctty symptom recurs. So the real
+    boundary isn't "static enable vs. on-demand autovt" - it's "the
+    unit's very first, boot-time start" vs. *any later (re)start*,
+    whatever triggers it: logind's on-demand autovt spawn, a manual
+    ~systemctl restart~/~enable --now~, or the getty's own automatic
+    respawn after the previous session on that VT exits. None of those
+    later starts reliably acquire a controlling terminal on this
+    system; only the boot-time one does.
+
+  - *Root cause*: NOT understood yet. Not chased further live, per
+    explicit instruction, without more hands-on time on the actual
+    hardware. Candidates worth checking first if this gets picked back
+    up: something in the VT/console kernel config or DT
+    (~CONFIG_VT~/~CONFIG_FRAMEBUFFER_CONSOLE~/~CONFIG_DRM_FBDEV_EMULATION~,
+    or how ~fbcon~ hands the VT over - possibly linked to the "blinking
+    cursor after a cable-less boot" item above), or a systemd/logind
+    behavior specific to this VT/fbcon setup rather than anything in
+    our own patches.
+
+  - *Current practical status (workaround, not a fix)*: ~getty@tty2~
+    and ~getty@tty3~ are now enabled statically in ~p25t-setup.sh~,
+    alongside ~tty1~ - piggybacking on the one start that's known to
+    work (boot) gives the user the normal-user-plus-root sessions they
+    wanted, on ~tty1~-~tty3~. See "Multiple sessions on the panel" in
+    [[file:debian.org][debian]]. *Known limitation*: treat those three
+    sessions as long-lived, not something to casually log out of -
+    once you exit a session on any of them, getting back in currently
+    needs a full reboot, not just switching VTs again.
 
 * TODO Repository
   - Publish this folder as a git repository. A web search on 2026-09-25

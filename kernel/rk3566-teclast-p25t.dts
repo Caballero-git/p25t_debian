@@ -633,3 +633,23 @@
 	rockchip,trcm-sync-tx-only;
 	status = "okay";
 };
+
+/*
+ * SoC thermal sensor (patch 0016). Disabled by default in
+ * rk356x-base.dtsi, same shape as &gpu/&i2s1_8ch above - but here the
+ * thermal-zones node (cpu_thermal using <&tsadc 0>, a gpu thermal zone
+ * using <&tsadc 1>, both with trip points) already exists too, so
+ * nothing else needs wiring. hw-tshut-mode/polarity copied verbatim
+ * from two independent real reference boards that agree on the same
+ * values for this exact SoC - rk3566-quartz64-a.dts and
+ * rk3568-qnap-tsx33.dtsi - this is SoC-internal thermal-shutdown
+ * wiring, not board-schematic dependent like the RK817 audio pins
+ * were, so no board-specific verification needed. No RK817/kernel
+ * .config changes required (CONFIG_ROCKCHIP_THERMAL and
+ * CONFIG_THERMAL_HWMON are already enabled) - DTB-only change.
+ */
+&tsadc {
+	rockchip,hw-tshut-mode = <1>; /* tshut via GPIO, not CRU */
+	rockchip,hw-tshut-polarity = <0>; /* GPIO active-low */
+	status = "okay";
+};

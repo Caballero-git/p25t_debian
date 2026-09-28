@@ -23,6 +23,7 @@
     | 0013 | DT: add SC7A20 accelerometer node on i2c1                     |
     | 0014 | DT: wire vdd_gpu (RK817 DCDC_REG2) for GPU DVFS                |
     | 0015 | DT: wire RK817 audio codec + i2s1_8ch                          |
+    | 0016 | DT: enable tsadc SoC thermal sensor                            |
   - Also needs a kernel *config* change (not a DT patch): ~CONFIG_USB_XHCI_HCD=y~
     and ~CONFIG_USB_XHCI_PLATFORM=y~, both already set in
     ~kernel/p25t-kernel.config~. Without them the ~dwc3~ glue driver still
@@ -83,6 +84,7 @@
   | ~SND_SOC_ROCKCHIP_I2S_TDM~               | y     | i2s1_8ch controller driver (patch 0015)               |
   | ~SND_SOC_RK817~                          | y     | RK817 codec driver (patch 0015; ~MFD_RK8XX~ dependency already satisfied) |
   | ~SND_SIMPLE_CARD~ (+ ~_UTILS~)           | y     | machine driver for the ~rk817-sound~ simple-audio-card node (patch 0015) |
+  | ~ROCKCHIP_THERMAL~, ~THERMAL_HWMON~      | y     | already on by default - tsadc (patch 0016) just needed ~status = "okay"~, no config change |
 
 * Device tree notes
   - Real rails are *not* described: dummy fixed regulators stand in, so
@@ -622,6 +624,58 @@
   - *Net result: the original ask ("audio would be a nice feature") is
     met* - playback works cleanly over the headphone jack. Speaker and
     mic capture are documented as known, non-blocking gaps.
+
+* tsadc SoC thermal sensor (patch 0016) — working
+  - Prompted by asking whether ~lm-sensors~ was worth installing.
+    ~sensors-detect~'s blind I2C-bus probing isn't the right tool
+    here: every I2C device on this board is already identified (RK817
+    PMIC, SC7A20 accelerometer, GSL3673 touchscreen) and none of them
+    is a discrete hwmon chip, so there is nothing new for blind
+    probing to find - it would just be reading devices we already
+    have DT nodes for, or worse, the touchscreen.
+  - The real gap was the RK3568's *own* temperature sensor. Checked
+    ~rk356x-base.dtsi~: ~tsadc: tsadc@fe710000~ (~compatible =
+    "rockchip,rk3568-tsadc"~) is fully clocked/reset/pinctrl'd
+    already, and a ~thermal-zones~ node already exists too - a
+    ~cpu-thermal~ zone (~thermal-sensors = <&tsadc 0>~) and a
+    ~gpu-thermal~ zone (~<&tsadc 1>~), both with trip points defined -
+    only ~status = "disabled"~ on ~&tsadc~ itself was blocking it,
+    same shape as ~&gpu~/~&i2s1_8ch~ before their own enable patches,
+    except here even the thermal-zones wiring needed no changes at
+    all.
+  - Added a single override:
+    #+begin_src dts
+    &tsadc {
+        rockchip,hw-tshut-mode = <1>;     /* tshut via GPIO, not CRU */
+        rockchip,hw-tshut-polarity = <0>; /* GPIO active-low */
+        status = "okay";
+    };
+    #+end_src
+    ~hw-tshut-mode~/~hw-tshut-polarity~ copied verbatim from two
+    independent real reference boards using this same SoC
+    (~rk3566-quartz64-a.dts~, ~rk3568-qnap-tsx33.dtsi~) that agree on
+    the same values - SoC-internal thermal-shutdown wiring, not
+    board-schematic dependent like the RK817 audio pins were, so no
+    board-specific verification was needed.
+  - No kernel ~.config~ change needed - ~CONFIG_ROCKCHIP_THERMAL~ and
+    ~CONFIG_THERMAL_HWMON~ were already ~y~ (defconfig defaults) - and
+    no RK817 involvement, so this is a DTB-only change: rebuilt just
+    the DTBs, no ~Image~ rebuild, no ~LOCALVERSION=~ risk this time.
+  - *Hardware-confirmed 2026-09-27*, immediately after reboot:
+    #+begin_example
+    jose@p25t:~$ cat /sys/class/thermal/thermal_zone0/type /sys/class/thermal/thermal_zone0/temp
+    cat /sys/class/thermal/thermal_zone1/type /sys/class/thermal/thermal_zone1/temp
+    cpu-thermal
+    41875
+    gpu-thermal
+    40000
+    #+end_example
+    CPU 41.9 °C, GPU 40.0 °C - both zones registered and reading
+    sensible idle temperatures. Since ~CONFIG_THERMAL_HWMON=y~ is
+    already set, these same values are also available through the
+    standard ~sensors~ command once ~lm-sensors~ (the package, not its
+    ~sensors-detect~ probing tool) is installed - no probing needed or
+    used.
 
 * AIC8800 Wi-Fi/Bluetooth driver (out of tree)
   Source: [[https://github.com/radxa-pkg/aic8800][radxa-pkg/aic8800]], commit ~516e3b0~

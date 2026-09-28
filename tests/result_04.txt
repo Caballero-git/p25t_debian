@@ -1,0 +1,37 @@
+=== GPU / Panfrost check (patch 0014) ===
+dom 27 sep 2026 09:45:14 CEST
+
+--- dmesg (gpu/panfrost/mali/vdd_gpu related) ---
+[    1.315601] panfrost fde60000.gpu: clock rate = 594000000
+[    1.315740] panfrost fde60000.gpu: bus_clock rate = 500000000
+[    1.321312] panfrost fde60000.gpu: mali-g52 id 0x7402 major 0x1 minor 0x0 status 0x0
+[    1.321344] panfrost fde60000.gpu: features: 00000000,00000df7, issues: 00000000,00000400
+[    1.321368] panfrost fde60000.gpu: Features: L2:0x07110206 Shader:0x00000002 Tiler:0x00000209 Mem:0x1 MMU:0x00002823 AS:0xff JS:0x7
+[    1.321393] panfrost fde60000.gpu: shader_present=0x1 l2_present=0x1
+[    1.323690] panfrost fde60000.gpu: [drm] Using Transparent Hugepage
+[    1.324502] [drm] Initialized panfrost 1.6.0 for fde60000.gpu on minor 1
+
+--- regulator present? (vdd_gpu) ---
+/sys/class/regulator/regulator.8/ name=vdd_gpu state=enabled microvolts=900000
+
+--- DRM devices ---
+total 0
+lrwxrwxrwx 1 root root    0 sep 27 09:37 card0 -> ../../devices/platform/display-subsystem/drm/card0
+lrwxrwxrwx 1 root root    0 sep 27 09:37 card0-DSI-1 -> ../../devices/platform/display-subsystem/drm/card0/card0-DSI-1
+lrwxrwxrwx 1 root root    0 sep 27 09:37 card1 -> ../../devices/platform/fde60000.gpu/drm/card1
+lrwxrwxrwx 1 root root    0 sep 27 09:37 renderD128 -> ../../devices/platform/fde60000.gpu/drm/renderD128
+-r--r--r-- 1 root root 4096 sep 27 09:45 version
+total 0
+drwxr-xr-x 2 root root        100 sep 27 09:37 by-path
+crw-rw---- 1 root video  226,   0 sep 27 09:37 card0
+crw-rw---- 1 root video  226,   1 sep 27 09:37 card1
+crw-rw---- 1 root render 226, 128 sep 27 09:37 renderD128
+
+--- Panfrost devfreq (GPU DVFS) ---
+/sys/class/devfreq/fde60000.gpu -> governor=simple_ondemand cur_freq=600000000 available=200000000 300000000 400000000 600000000 700000000 800000000
+
+--- charger/battery sanity check (unaffected?) ---
+POWER_SUPPLY_STATUS=Charging
+POWER_SUPPLY_CAPACITY=100
+
+=== done ===

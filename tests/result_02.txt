@@ -1,0 +1,47 @@
+=== i2c1 accelerometer identification ===
+sáb 26 sep 2026 21:40:37 CEST
+
+--- i2c-tools present? ---
+i2cdetect not found, attempting: sudo apt install -y i2c-tools
+
+WARNING: apt does not have a stable CLI interface. Use with caution in scripts.
+
+Reading package lists...
+Building dependency tree...
+Reading state information...
+i2c-tools is already the newest version (4.4-2).
+Summary:
+  Upgrading: 0, Installing: 0, Removing: 0, Not Upgrading: 0
+i2cdetect: MISSING (rest of this script will fail)
+
+--- kernel i2c1 bus present? ---
+crw-rw---- 1 root i2c 89, 0 sep 26 21:36 /dev/i2c-0
+crw-rw---- 1 root i2c 89, 1 sep 26 21:36 /dev/i2c-1
+
+--- i2cdetect -y 1 (scan) ---
+     0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
+00:                         -- -- -- -- -- -- -- -- 
+10: -- -- -- -- -- -- -- -- -- 19 -- -- -- -- -- -- 
+20: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
+30: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
+40: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
+50: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
+60: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
+70: -- -- -- -- -- -- -- --                         
+
+--- checking 0x19 (SC7A20 candidate) ---
+0x19 responds.
+WHOAMI (reg 0x0f) at 0x19:
+0x11
+(expected 0x33 for ST LIS3DH/LIS2DH12 family - a match means the
+ mainline st_accel driver should bind with a proper DT node; a
+ mismatch means this is some other/clone chip even though it
+ answers at the same address)
+
+--- checking 0x27 (DA223 candidate) ---
+0x27 did not respond (no ACK).
+
+--- dmesg (i2c/accel/sensor related, in case anything already probed) ---
+(nothing matched)
+
+=== done ===

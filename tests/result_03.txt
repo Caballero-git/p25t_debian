@@ -1,0 +1,60 @@
+=== SC7A20 accelerometer check (patch 0013) ===
+sáb 26 sep 2026 22:58:09 CEST
+
+--- dmesg (accel/i2c1/st_accel related) ---
+[    0.506764] st-accel-i2c 1-0019: supply vdd not found, using dummy regulator
+[    0.506989] st-accel-i2c 1-0019: supply vddio not found, using dummy regulator
+[    0.512133] st-accel-i2c 1-0019: interrupts on the falling edge or active low level
+[    0.513462] SPI driver st-accel-spi has no spi_device_id for st,lis302dl-spi
+[    0.513474] SPI driver st-accel-spi has no spi_device_id for st,lis3lv02dl-accel
+[    0.513480] SPI driver st-accel-spi has no spi_device_id for st,lis3dh-accel
+[    0.513487] SPI driver st-accel-spi has no spi_device_id for st,lsm330d-accel
+[    0.513493] SPI driver st-accel-spi has no spi_device_id for st,lsm330dl-accel
+[    0.513498] SPI driver st-accel-spi has no spi_device_id for st,lsm330dlc-accel
+[    0.513504] SPI driver st-accel-spi has no spi_device_id for st,lis331dlh-accel
+[    0.513510] SPI driver st-accel-spi has no spi_device_id for st,lsm330-accel
+[    0.513515] SPI driver st-accel-spi has no spi_device_id for st,lsm303agr-accel
+[    0.513520] SPI driver st-accel-spi has no spi_device_id for st,lis2dh12-accel
+[    0.513527] SPI driver st-accel-spi has no spi_device_id for st,lng2dm-accel
+[    0.513532] SPI driver st-accel-spi has no spi_device_id for st,h3lis331dl-accel
+[    0.513538] SPI driver st-accel-spi has no spi_device_id for st,lis331dl-accel
+[    0.513547] SPI driver st-accel-spi has no spi_device_id for st,lsm303c-accel
+[    1.140322] CPU: 0 UID: 0 PID: 88 Comm: irq/59-sc7a20-t Not tainted 7.3.0-rc4-p25t #8 PREEMPT 
+
+--- IIO devices present? ---
+total 0
+lrwxrwxrwx 1 root root 0 sep 26 22:56 iio:device0 -> ../../../devices/platform/fe5a0000.i2c/i2c-1/1-0019/iio:device0
+lrwxrwxrwx 1 root root 0 sep 26 22:56 iio:device1 -> ../../../devices/platform/fe720000.saradc/iio:device1
+lrwxrwxrwx 1 root root 0 sep 26 22:56 trigger0 -> ../../../devices/platform/fe5a0000.i2c/i2c-1/1-0019/trigger0
+
+--- looking for the accel IIO device ---
+/sys/bus/iio/devices/iio:device0 -> name: sc7a20
+/sys/bus/iio/devices/iio:device1 -> name: fe720000.saradc
+
+--- using /sys/bus/iio/devices/iio:device0 ---
+raw scale/available files:
+in_accel_scale_available
+in_accel_x_raw
+in_accel_x_scale
+in_accel_y_raw
+in_accel_y_scale
+in_accel_z_raw
+in_accel_z_scale
+mount_matrix
+
+Reading axes 3 times, 1s apart - tilt the tablet between reads if
+you want to see the values change:
+--- reading 1 ---
+x: 16
+y: 288
+z: -624
+--- reading 2 ---
+x: 16
+y: 416
+z: -736
+--- reading 3 ---
+x: 32
+y: 448
+z: -752
+
+=== done ===

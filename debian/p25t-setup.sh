@@ -21,10 +21,18 @@ LABEL=P25TBOOT  /boot/firmware  vfat  defaults,noatime,nofail,flush        0 2
 EOF
 
 echo "--- apt sources"
+# Main archive: Universidad de Zaragoza mirror instead of the generic
+# deb.debian.org redirector - noticeably quicker from here, confirmed to
+# carry arm64 (not every mirror does; e.g. ftp.cica.es only has
+# amd64/i386/all, checked 2026-09-28 - unusable for this tablet).
+# security.debian.org is left as-is on purpose: it's not a redirector
+# to random mirrors like deb.debian.org, it's Debian's own dedicated
+# security CDN, and ordinary mirrors generally don't carry
+# debian-security at all.
 rm -f /etc/apt/sources.list
 cat > /etc/apt/sources.list.d/debian.sources <<'EOF'
 Types: deb
-URIs: http://deb.debian.org/debian
+URIs: https://softlibre.unizar.es/debian
 Suites: trixie trixie-updates
 Components: main contrib non-free non-free-firmware
 Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
@@ -162,9 +170,16 @@ WantedBy=timers.target
 EOF
 
 echo "--- enable services"
+# getty@tty2/tty3 are enabled explicitly (statically), not left to
+# logind's on-demand autovt spawning - that on-demand path does not
+# reliably acquire a controlling terminal on this system (see
+# "Multiple VT sessions" in docs/todo.org). Only units that are
+# started as part of the normal boot sequence come up clean; enabling
+# a couple more here piggybacks on that same boot-time start.
 systemctl enable systemd-networkd.service systemd-resolved.service \
     ssh.service p25t-gadget.service p25t-bootlog.timer \
-    serial-getty@ttyGS0.service getty@tty1.service
+    serial-getty@ttyGS0.service getty@tty1.service \
+    getty@tty2.service getty@tty3.service
 
 echo "--- clean up"
 apt-get clean

@@ -25,7 +25,11 @@
   #+end_src
   It runs ~debian/p25t-setup.sh~ inside the new system (chroot):
   - hostname, ~/etc/hosts~, ~/etc/fstab~ by label (~P25TBOOT~ with ~nofail~);
-  - apt sources (deb822), user with sudo, time zone copied from the PC;
+  - apt sources (deb822): main archive from the Universidad de Zaragoza
+    mirror (~softlibre.unizar.es~, https, confirmed to carry arm64 and
+    noticeably quicker than ~deb.debian.org~ from here) - see "Package
+    mirror" under "Everyday use" below; user with sudo, time zone copied
+    from the PC;
   - large console font; USB gadget service ~p25t-gadget~ (ACM + NCM);
   - ~systemd-networkd~ for ~usb0~ (192.168.7.2/24 with a small DHCP server
     so the PC gets an address automatically);
@@ -156,6 +160,48 @@
 
   Debian's own ~linux-image~ packages are not used and not needed: the
   kernel lives on ~P25TBOOT~ and is replaced by copying files.
+
+* Package mirror
+  ~/etc/apt/sources.list.d/debian.sources~ points the main archive at
+  ~softlibre.unizar.es~ (Universidad de Zaragoza) instead of the generic
+  ~deb.debian.org~ redirector, set in ~p25t-setup.sh~ for every fresh
+  build from 2026-09-28 on. Noticeably quicker from here, and confirmed
+  (2026-09-28) to carry arm64 - not every Spanish university mirror
+  does: ~ftp.cica.es~ (Sevilla), for example, only mirrors
+  amd64/i386/all, so it's not usable for this tablet even though it's
+  otherwise a solid, well-known mirror. ~security.debian.org~ is left
+  untouched on purpose - it's Debian's own dedicated security CDN, not
+  a redirector to third-party mirrors, and ordinary mirrors generally
+  don't carry ~debian-security~ at all.
+
+  To switch an already-installed system (rather than waiting for a
+  rebuild), edit the ~URIs:~ line of the first block in
+  ~/etc/apt/sources.list.d/debian.sources~ by hand and re-run
+  ~sudo apt update~. Should this mirror ever go stale or offline, the
+  Debian mirror list ([[https://www.debian.org/mirror/list][mirror/list]])
+  has others, including ~ftp.cica.es~ for anything that only needs
+  amd64/i386 (not this tablet).
+
+* Multiple sessions on the panel (~tty1~/~tty2~/~tty3~)
+  Working directly on the tablet with a wired keyboard (see "USB
+  host-mode test" below), Ctrl+left-Alt+F1/F2/F3 switches between
+  three separate login sessions on the panel - handy for a normal
+  user on one and ~sudo -i~/root on another without juggling one
+  shell. ~getty@tty2.service~ and ~getty@tty3.service~ are enabled
+  statically in ~p25t-setup.sh~, the same way ~tty1~ always was.
+
+  *Known limitation*: only statically-enabled units that come up as
+  part of the normal boot sequence work reliably. ~systemd-logind~'s
+  own on-demand VT spawning (what would normally start a getty on
+  *any* VT the moment you first switch to it, tty4 and up here) does
+  not reliably acquire a controlling terminal on this system - and
+  neither does restarting/re-enabling a getty unit *after* boot, or
+  a getty's own automatic respawn after you log out of it. In
+  practice: treat ~tty1~-~tty3~ as long-lived sessions you leave
+  logged in, not ones you casually log out of - once you exit a
+  session on any of them, getting back in needs a reboot right now.
+  See "Multiple VT sessions - on-demand getty spawning" in
+  ~docs/todo.org~ for the full investigation.
 
 * USB host-mode test (trying a USB wireless keyboard/mouse receiver)
   Stage 6 item, only needed while the Bluetooth keyboard is unavailable
