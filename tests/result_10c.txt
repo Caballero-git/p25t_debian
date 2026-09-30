@@ -1,0 +1,109 @@
+=== VT / getty / PID 1 evidence (test_10, mode: vt) ===
+mié 30 sep 2026 13:41:45 CEST
+
+--- before the switch (active: tty2) ---
+active VT 2; VTs open by someone (VT_GETSTATE v_state=0x004f): [1, 2, 3, 6]
+autovt@tty4: inactive / getty@tty4: inactive
+
+>>> switching the panel to tty4 (like Ctrl+Alt+F4)
+  +1s active=tty4 autovt@tty4=active
+  +2s active=tty4 autovt@tty4=active
+  +3s active=tty4 autovt@tty4=active
+  +4s active=tty4 autovt@tty4=active
+  +5s active=tty4 autovt@tty4=active
+  +6s active=tty4 autovt@tty4=active
+  +7s active=tty4 autovt@tty4=active
+  +8s active=tty4 autovt@tty4=active
+
+--- state on tty4 after 8 s ---
+active VT 4; VTs open by someone (VT_GETSTATE v_state=0x005f): [1, 2, 3, 4, 6]
+tty4: 80x64, cursor at column 0 row 0, 0 non-empty lines
+    PID    PPID     SID TT       STAT WCHAN                        COMMAND         COMMAND
+   2450    2389    2388 pts/2    S    anon_pipe_read               awk             awk -v t=tty4 NR==1 || index($0, t)
+● getty@tty4.service - Getty on tty4
+     Loaded: loaded (/usr/lib/systemd/system/getty@.service; disabled; preset: enabled)
+     Active: active (running) since Wed 2026-09-30 13:41:45 CEST; 8s ago
+ Invocation: e78fdfb844cc44879efb93dbf9bf2563
+       Docs: man:agetty(8)
+             man:systemd-getty-generator(8)
+             https://0pointer.de/blog/projects/serial-console.html
+   Main PID: 2405 ((agetty))
+      Tasks: 1 (limit: 4702)
+     Memory: 1.5M (peak: 1.5M)
+        CPU: 29ms
+     CGroup: /system.slice/system-getty.slice/getty@tty4.service
+             └─2405 "(agetty)"
+
+sep 30 13:41:45 p25t systemd[1]: Started getty@tty4.service - Getty on tty4.
+
+--- journal since the switch ---
+[   19.032737] p25t kernel: get_txpwr_max:txpwr_max:0 
+[   19.032797] p25t kernel: get_txpwr_max:txpwr_max:0 
+[   19.035249] p25t systemd[1]: Started serial-getty@ttyS2.service - Serial Getty on ttyS2.
+[   19.041361] p25t systemd[1]: Reached target getty.target - Login Prompts.
+[   19.068150] p25t kernel: get_txpwr_max:txpwr_max:0 
+[   19.068480] p25t kernel: get_txpwr_max:txpwr_max:0 
+[   19.068614] p25t kernel: get_txpwr_max:txpwr_max:0 
+[   19.068694] p25t kernel: get_txpwr_max:txpwr_max:0 
+[   19.068774] p25t kernel: get_txpwr_max:txpwr_max:0 
+[   19.068852] p25t kernel: get_txpwr_max:txpwr_max:0 
+[   19.068945] p25t kernel: P2P interface started
+[   19.069014] p25t wpa_supplicant[463]: nl80211: kernel reports: Registration to specific type not supported
+[   19.080116] p25t kernel: Bluetooth: RFCOMM TTY layer initialized
+[   19.080391] p25t kernel: Bluetooth: RFCOMM socket layer initialized
+[   19.080474] p25t kernel: Bluetooth: RFCOMM ver 1.11
+[   19.086747] p25t systemd[1]: Starting systemd-hostnamed.service - Hostname Service...
+[   19.742705] p25t sshd[490]: Server listening on 0.0.0.0 port 22.
+[   19.761901] p25t systemd[1]: Started ssh.service - OpenBSD Secure Shell server.
+[   19.743112] p25t sshd[490]: Server listening on :: port 22.
+[   19.908433] p25t bluetoothd[426]: src/device.c:set_wake_allowed_complete() Set device flags return status: Invalid Parameters
+[   19.912323] p25t kernel: Bluetooth: hci0: Bad flag given (0x1) vs supported (0x6)
+[   19.913462] p25t systemd[1]: e2scrub_reap.service: Deactivated successfully.
+[   19.914644] p25t systemd[1]: Finished e2scrub_reap.service - Remove Stale Online ext4 Metadata Check Snapshots.
+[   19.927591] p25t systemd[1]: Started systemd-hostnamed.service - Hostname Service.
+[   19.928520] p25t dbus-daemon[371]: [system] Successfully activated service 'org.freedesktop.hostname1'
+[   20.677763] p25t wpa_supplicant[463]: wlan0: Trying to associate with 5c:e9:31:b3:92:58 (SSID='CAMPINARED_TP-Link_9258' freq=2417 MHz)
+[   20.684192] p25t kernel: rwnx_send_sm_connect_req drv_vif_index:0 connect to CAMPINARED_TP-Link_9258(23) channel:2417 auth_type:0
+[   20.806720] p25t systemd-networkd[333]: wlan0: Connected WiFi access point: CAMPINARED_TP-Link_9258 (5c:e9:31:b3:92:58)
+[   20.808529] p25t kernel: get_txpwr_max:txpwr_max:0 
+[   20.808851] p25t wpa_supplicant[463]: wlan0: Associated with 5c:e9:31:b3:92:58
+[   20.808851] p25t wpa_supplicant[463]: wlan0: CTRL-EVENT-SUBNET-STATUS-UPDATE status=0
+[   20.914524] p25t wpa_supplicant[463]: wlan0: WPA: Key negotiation completed with 5c:e9:31:b3:92:58 [PTK=CCMP GTK=CCMP]
+[   20.914524] p25t wpa_supplicant[463]: wlan0: CTRL-EVENT-CONNECTED - Connection to 5c:e9:31:b3:92:58 completed [id=0 id_str=]
+[   20.915915] p25t systemd-networkd[333]: wlan0: Gained carrier
+[   20.960768] p25t kernel: rockchip-pm-domain fdd90000.power-management:power-controller: sync_state() pending due to fdea0000.video-codec
+[   20.962309] p25t kernel: rockchip-pm-domain fdd90000.power-management:power-controller: sync_state() pending due to fdeb0000.rga
+[   20.963359] p25t kernel: rockchip-pm-domain fdd90000.power-management:power-controller: sync_state() pending due to fdee0000.video-codec
+[   20.964783] p25t systemd-networkd[333]: wlan0: DHCPv4 address 192.168.1.122/24, gateway 192.168.1.1 acquired from 192.168.1.1
+[   20.968845] p25t dbus-daemon[371]: [system] Activating via systemd: service name='org.freedesktop.PolicyKit1' unit='polkit.service' requested by ':1.7' (uid=0 pid=488 comm="/usr/lib/systemd/systemd-hostnamed")
+[   20.987355] p25t systemd-timesyncd[311]: Network configuration changed, trying to establish connection.
+[   20.996204] p25t systemd[1]: Starting polkit.service - Authorization Manager...
+[   21.279911] p25t polkitd[503]: Started polkitd version 126
+[   21.396664] p25t polkitd[503]: Loading rules from directory /etc/polkit-1/rules.d
+[   21.398383] p25t polkitd[503]: Loading rules from directory /run/polkit-1/rules.d
+[   21.398577] p25t polkitd[503]: Error opening rules directory: Error opening directory “/run/polkit-1/rules.d”: No such file or directory (g-file-error-quark, 4)
+[   21.405930] p25t polkitd[503]: Loading rules from directory /usr/local/share/polkit-1/rules.d
+[   21.406068] p25t polkitd[503]: Error opening rules directory: Error opening directory “/usr/local/share/polkit-1/rules.d”: No such file or directory (g-file-error-quark, 4)
+[   21.406279] p25t polkitd[503]: Loading rules from directory /usr/share/polkit-1/rules.d
+[   21.411878] p25t polkitd[503]: Finished loading, compiling and executing 2 rules
+[   21.413123] p25t systemd[1]: Started polkit.service - Authorization Manager.
+[   21.414031] p25t dbus-daemon[371]: [system] Successfully activated service 'org.freedesktop.PolicyKit1'
+[   21.414911] p25t polkitd[503]: Acquired the name org.freedesktop.PolicyKit1 on the system bus
+[   22.336871] p25t systemd-networkd[333]: wlan0: Gained IPv6LL
+[   22.341391] p25t systemd-timesyncd[311]: Network configuration changed, trying to establish connection.
+[   22.357830] p25t systemd[1]: Finished systemd-networkd-wait-online.service - Wait for Network to be Configured.
+[   22.375619] p25t systemd[1]: Reached target network-online.target - Network is Online.
+[   22.408210] p25t systemd[1]: Starting exim4.service - exim Mail Transport Agent...
+[ 9550.547365] p25t sudo[2383]:     jose : TTY=pts/1 ; PWD=/home/jose/tests ; USER=root ; COMMAND=/usr/bin/bash /home/jose/tests/test_10.sh vt 4
+[ 9550.550154] p25t sudo[2383]: pam_unix(sudo:session): session opened for user root(uid=0) by jose(uid=1000)
+[ 9551.001708] p25t systemd[1]: Started getty@tty4.service - Getty on tty4.
+
+--- PID 1 and logind after the switch ---
+State:	S (sleeping)
+PID 1 wchan: do_epoll_wait
+logind ping: ok
+
+>>> switching back to tty2
+active now: tty2
+
+=== done ===

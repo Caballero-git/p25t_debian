@@ -1,0 +1,9 @@
+=== RK817 LDO9 / touchscreen power (test_08, mode: check) ===
+mar 29 sep 2026 23:07:21 CEST
+RK817 on bus 0 (fdd40000), chip id 0x81 0x74
+  0xB4 = 0x06  -> LDO9 off, BOOST 1, OTG 1
+  0xDC = 0x30  -> LDO9 set to 1800 mV
+touchscreen /sys/bus/i2c/devices/1-0040: not bound
+  status 0xB0: 0x00 0x00 0x00 0x00
+
+=== check done - nothing was written ===

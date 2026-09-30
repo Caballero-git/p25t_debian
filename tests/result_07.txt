@@ -1,0 +1,46 @@
+=== GSL3673 vendor start-up replay (test_07) ===
+mar 29 sep 2026 22:34:28 CEST
+i2c1 (fe5a0000) is bus 1; target /sys/bus/i2c/devices/1-0040 is silead,gsl3673, unbound
+
+--- A: before anything ---
+  status 0xB0 now: 0x00 0x00 0x00 0x00   (separate write/read: 0x00 0x00 0x00 0x00)
+--- A: vendor's final reset_chip + startup_chip ---
+  write 0xE0 <- 0x88 (reset; a NACK here is expected): FAILED - Error: Sending messages failed: No such device or address
+  write 0xE4 <- 0x04 (clock): OK
+  write 0xBC <- 00 00 00 00 (4 bytes): OK
+  write 0xE0 <- 0x00 (start): OK
+  status 0xB0 +10 ms: 0x00 0x00 0x00 0x00   (separate write/read: 0x00 0x00 0x00 0x00)
+  status 0xB0 +~110 ms: 0x00 0x00 0x00 0x00   (separate write/read: 0x00 0x00 0x00 0x00)
+  status 0xB0 +~1.1 s: 0x00 0x00 0x00 0x00   (separate write/read: 0x00 0x00 0x00 0x00)
+RESULT A: still not running -> full vendor sequence (B).
+
+--- B0: firmware file ---
+  /lib/firmware/silead/gsl3673-p25t.fw: 40392 bytes, 5049 entries, checksum OK
+  built 306 transfers (153 pages x [page select + 128-byte burst])
+
+--- B1: clr_reg ---
+  write 0xE0 <- 0x88 (reset; a NACK here is expected): FAILED - Error: Sending messages failed: No such device or address
+  write 0x80 <- 0x03: OK
+  write 0xE4 <- 0x04 (clock): OK
+  write 0xE0 <- 0x00: OK
+--- B2: reset_chip ---
+  write 0xE0 <- 0x88 (reset; a NACK here is expected): FAILED - Error: Sending messages failed: No such device or address
+  write 0xE4 <- 0x04 (clock): OK
+  write 0xBC <- 00 00 00 00 (4 bytes): OK
+--- B3: load_fw (vendor burst format) ---
+  306 transfers in 4788 ms, 0 failed
+--- B4: startup_chip ---
+  write 0xE0 <- 0x00 (start): OK
+--- B5: reset_chip ---
+  write 0xE0 <- 0x88 (reset; a NACK here is expected): FAILED - Error: Sending messages failed: No such device or address
+  write 0xE4 <- 0x04 (clock): OK
+  write 0xBC <- 00 00 00 00 (4 bytes): OK
+--- B6: startup_chip ---
+  write 0xE0 <- 0x00 (start): OK
+  status 0xB0 +10 ms: 0x00 0x00 0x00 0x00   (separate write/read: 0x00 0x00 0x00 0x00)
+  status 0xB0 +~110 ms: 0x00 0x00 0x00 0x00   (separate write/read: 0x00 0x00 0x00 0x00)
+  status 0xB0 +~1.1 s: 0x00 0x00 0x00 0x00   (separate write/read: 0x00 0x00 0x00 0x00)
+RESULT B: still not running even with the vendor's exact sequence.
+=> suspect the firmware table itself (not this panel's) or power/reset outside the chip.
+
+=== done (a reboot puts everything back to normal) ===

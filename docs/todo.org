@@ -457,7 +457,10 @@
   - Real OTG dual-role (see the host-mode test above) would also let the
     port switch automatically instead of needing two DTBs.
 
-* OPEN Only a blinking cursor on the panel after a cable-less boot
+* DONE Only a blinking cursor on the panel after a cable-less boot
+  - *Solved 2026-09-30*: same root cause as the next item, see
+    "Console: one getty on a dead tty" in [[file:findings.org][findings]].
+    Fix: ~serial-getty@ttyGS0~ masked. History below kept for reference.
   - getty on ~tty1~ did start (journal). Suspects: console on a different
     VT, fbcon hand-over timing, or the panel/backlight state after the
     initramfs. The ~p25t-bootlog~ reports of such a boot are the starting point.
@@ -465,7 +468,15 @@
     sessions - on-demand getty spawning" below - not confirmed, but worth
     re-checking together if either one gets root-caused first.
 
-* OPEN Multiple VT sessions — on-demand getty spawning
+* DONE Multiple VT sessions — on-demand getty spawning
+  - *Solved 2026-09-30*: ~serial-getty@ttyGS0~ blocked for ever
+    resetting ~ttyGS0~ (nobody reading it) while holding systemd's
+    ~/dev/console~ lock; every getty started after it waited on that
+    lock. Evidence ~tests/result_10a~ to ~result_10h~, write-up in
+    [[file:findings.org][findings]]. Fix: the unit is masked, tty2/tty3
+    are no longer enabled statically, logind's on-demand tty2-tty6 work,
+    logout respawn works, reboots finish. History below kept for
+    reference; where it contradicts this, this wins.
   - Motivation: the user wants at least two usable sessions on the panel
     at once - one normal-user, one for ~sudo -i~/root - without juggling a
     single shell. ~tty1~ (normal user) already existed; ~tty2~/~tty3~

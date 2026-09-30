@@ -1,0 +1,22 @@
+=== Audio (RK817 codec, patch 0015) check ===
+dom 27 sep 2026 12:57:34 CEST
+
+--- dmesg (audio/codec/i2s/asoc related) ---
+[    1.938802] rockchip-i2s-tdm fe410000.i2s: using zero-initialized flat cache, this may cause unexpected behavior
+
+--- /proc/asound/cards (ALSA card registered?) ---
+ 0 [RK817          ]: simple-card - Analog RK817
+                      Analog RK817
+
+--- /proc/asound/pcm (playback/capture streams) ---
+00-00: fe410000.i2s-rk817-hifi rk817-hifi-0 : fe410000.i2s-rk817-hifi rk817-hifi-0 : playback 1 : capture 1
+
+--- alsa-utils presence ---
+aplay: present (/usr/bin/aplay)
+arecord: present (/usr/bin/arecord)
+amixer: present (/usr/bin/amixer)
+speaker-test: present (/usr/bin/speaker-test)
+
+(speaker-test not available or no ALSA card - skipping audible test)
+
+=== done ===

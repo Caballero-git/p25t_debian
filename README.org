@@ -31,7 +31,7 @@
   | Accelerometer SC7A20              | works   | patch 0013; orientation of the mount-matrix unverified |
   | CPU frequency / GPU (Panfrost)    | works   | DVFS with real vdd_cpu (SYR837) and vdd_gpu (patches 0011, 0014) |
   | SoC temperature (tsadc)           | works   | patch 0016                                         |
-  | Console on screen w/o USB cable   | open    | blinking cursor only, getty did start              |
+  | Console on screen, tty1-tty6      | works   | fixed by masking the ttyGS0 getty (see findings)   |
 
 * Folder map
   | Path          | Contents                                                              |

@@ -1,0 +1,497 @@
+=== VT / getty / PID 1 evidence (test_10, mode: check) ===
+mié 30 sep 2026 14:13:00 CEST
+
+--- kernel, cmdline, consoles ---
+7.3.0-rc4-p25t
+uptime s: 659.84
+console=ttyS2,1500000n8 earlycon clk_ignore_unused loglevel=7 rdinit=/init panic=0
+ttyS2                -W- (EC N  a)    4:66
+active VT (/sys/class/tty/tty0/active): tty1
+console devices (/sys/class/tty/console/active): ttyS2
+/sys/class/vtconsole/vtcon0: (S) dummy device bind=0
+/sys/class/vtconsole/vtcon1: (M) frame buffer device bind=1
+fbcon cursor_blink: 1
+active VT 1; VTs open by someone (VT_GETSTATE v_state=0x005f): [1, 2, 3, 4, 6]
+
+--- H1: is PID 1 responsive? ---
+State:	S (sleeping)
+SigPnd:	0000000000000000
+ShdPnd:	0000000000000000
+wchan: do_epoll_wait
+syscall (nr args...): 22 0x4 0xaaaae1fba320 0x9e 0xffffffffffffffff 0x0 0x8 0xffffe9adc9b0 0xffff838428dc
+kernel stack:
+  [<0>] do_epoll_wait+0x418/0x54c
+  [<0>] do_compat_epoll_pwait.part.0+0x14/0xa8
+  [<0>] __arm64_sys_epoll_pwait+0x78/0x118
+  [<0>] invoke_syscall+0x54/0x10c
+  [<0>] el0_svc_common.constprop.0+0x40/0xe0
+  [<0>] do_el0_svc+0x1c/0x28
+  [<0>] el0_svc+0x38/0x1d0
+  [<0>] el0t_64_sync_handler+0xa0/0xe4
+  [<0>] el0t_64_sync+0x198/0x19c
+257.13-1~deb13u1
+systemctl round trip: 0,05 s
+system state: degraded
+pending jobs:
+  No jobs running.
+PID 1 open ttys:
+
+--- processes in D state or waiting on a tty ---
+    PID    PPID     SID TT       STAT WCHAN                        COMMAND         COMMAND
+     87       2       0 ?        D    rk3x_i2c_xfer_common.isra.0  irq/57-gsl3673  [irq/57-gsl3673]
+    263       1     263 ?        Ds   mmc_blk_rw_wait              systemd-journal /usr/lib/systemd/systemd-journald
+
+--- H2: getty / login processes in detail ---
+pid 382: comm=systemd-logind cmd=/usr/lib/systemd/systemd-logind 
+  State:	S (sleeping) PPid:	1 
+  wchan=do_epoll_wait syscall=22 0x4 0xaaaaebc75910 0x1c 0xffffffffffffffff 0x0 0x8 0xffffd41575f0 0xffffbe9e28dc
+  stack: [<0>] do_epoll_wait+0x418/0x54c
+  stack: [<0>] do_compat_epoll_pwait.part.0+0x14/0xa8
+  stack: [<0>] __arm64_sys_epoll_pwait+0x78/0x118
+  stack: [<0>] invoke_syscall+0x54/0x10c
+  stack: [<0>] el0_svc_common.constprop.0+0xc0/0xe0
+  stack: [<0>] do_el0_svc+0x1c/0x28
+  stack: [<0>] el0_svc+0x38/0x1d0
+  stack: [<0>] el0t_64_sync_handler+0xa0/0xe4
+  fd 0 -> /dev/null
+  fd 1 -> socket:[1827]
+  fd 10 -> socket:[1916]
+  fd 11 -> socket:[1917]
+  fd 12 -> socket:[1918]
+  fd 13 -> anon_inode:[pidfd]
+  fd 14 -> anon_inode:[timerfd]
+  fd 15 -> /dev/input/event0
+  fd 16 -> /dev/tty6
+  fd 18 -> anon_inode:[pidfd]
+  fd 19 -> /run/systemd/sessions/1.ref
+  fd 2 -> socket:[1827]
+  fd 20 -> anon_inode:[pidfd]
+  fd 21 -> /run/systemd/sessions/2.ref
+  fd 3 -> socket:[1909]
+  fd 4 -> anon_inode:[eventpoll]
+  fd 5 -> anon_inode:[signalfd]
+  fd 6 -> anon_inode:[timerfd]
+  fd 7 -> /sys/devices/virtual/tty/tty0/active
+  fd 8 -> socket:[1914]
+  fd 9 -> socket:[1915]
+pid 476: comm=agetty cmd=/sbin/agetty -o -- \u --noreset --noclear - linux 
+  State:	S (sleeping) PPid:	1 
+  wchan=do_select syscall=72 0x6 0xffffe168fb58 0x0 0x0 0x0 0x0 0xffffe168fa80 0xffffae8f28dc
+  stack: [<0>] do_select+0x440/0x63c
+  stack: [<0>] core_sys_select+0x1d4/0x298
+  stack: [<0>] __arm64_sys_pselect6+0xf8/0x1a8
+  stack: [<0>] invoke_syscall+0x54/0x10c
+  stack: [<0>] el0_svc_common.constprop.0+0x40/0xe0
+  stack: [<0>] do_el0_svc+0x1c/0x28
+  stack: [<0>] el0_svc+0x38/0x1d0
+  stack: [<0>] el0t_64_sync_handler+0xa0/0xe4
+  fd 0 -> /dev/tty1
+  fd 1 -> /dev/tty1
+  fd 2 -> /dev/tty1
+  fd 3 -> /run/credentials/getty@tty1.service
+  fd 5 -> anon_inode:inotify
+pid 477: comm=agetty cmd=/sbin/agetty -o -- \u --noreset --noclear - linux 
+  State:	S (sleeping) PPid:	1 
+  wchan=do_select syscall=72 0x6 0xfffff182fa98 0x0 0x0 0x0 0x0 0xfffff182f9c0 0xffffbde428dc
+  stack: [<0>] do_select+0x440/0x63c
+  stack: [<0>] core_sys_select+0x1d4/0x298
+  stack: [<0>] __arm64_sys_pselect6+0xf8/0x1a8
+  stack: [<0>] invoke_syscall+0x54/0x10c
+  stack: [<0>] el0_svc_common.constprop.0+0x40/0xe0
+  stack: [<0>] do_el0_svc+0x1c/0x28
+  stack: [<0>] el0_svc+0x38/0x1d0
+  stack: [<0>] el0t_64_sync_handler+0xa0/0xe4
+  fd 0 -> /dev/tty2
+  fd 1 -> /dev/tty2
+  fd 2 -> /dev/tty2
+  fd 3 -> /run/credentials/getty@tty2.service
+  fd 5 -> anon_inode:inotify
+pid 478: comm=agetty cmd=/sbin/agetty -o -- \u --noreset --noclear - linux 
+  State:	S (sleeping) PPid:	1 
+  wchan=do_select syscall=72 0x6 0xfffff7d32bf8 0x0 0x0 0x0 0x0 0xfffff7d32b20 0xffff9f4a28dc
+  stack: [<0>] do_select+0x440/0x63c
+  stack: [<0>] core_sys_select+0x1d4/0x298
+  stack: [<0>] __arm64_sys_pselect6+0xf8/0x1a8
+  stack: [<0>] invoke_syscall+0x54/0x10c
+  stack: [<0>] el0_svc_common.constprop.0+0x40/0xe0
+  stack: [<0>] do_el0_svc+0x1c/0x28
+  stack: [<0>] el0_svc+0x38/0x1d0
+  stack: [<0>] el0t_64_sync_handler+0xa0/0xe4
+  fd 0 -> /dev/tty3
+  fd 1 -> /dev/tty3
+  fd 2 -> /dev/tty3
+  fd 3 -> /run/credentials/getty@tty3.service
+  fd 5 -> anon_inode:inotify
+pid 479: comm=agetty cmd=/sbin/agetty -o -- \u --noreset --noclear --keep-baud 115200,57600,38400,9600 - vt220 
+  State:	S (sleeping) PPid:	1 
+  wchan=do_select syscall=72 0x6 0xffffcde8f088 0x0 0x0 0x0 0x0 0xffffcde8efb0 0xffffba3b28dc
+  stack: [<0>] do_select+0x440/0x63c
+  stack: [<0>] core_sys_select+0x1d4/0x298
+  stack: [<0>] __arm64_sys_pselect6+0xf8/0x1a8
+  stack: [<0>] invoke_syscall+0x54/0x10c
+  stack: [<0>] el0_svc_common.constprop.0+0x40/0xe0
+  stack: [<0>] do_el0_svc+0x1c/0x28
+  stack: [<0>] el0_svc+0x38/0x1d0
+  stack: [<0>] el0t_64_sync_handler+0xa0/0xe4
+  fd 0 -> /dev/ttyS2
+  fd 1 -> /dev/ttyS2
+  fd 2 -> /dev/ttyS2
+  fd 3 -> /run/credentials/serial-getty@ttyS2.service
+  fd 5 -> anon_inode:inotify
+pid 1198: comm=agetty cmd=/sbin/agetty -o -- \u --noreset --noclear - linux 
+  State:	S (sleeping) PPid:	1 
+  wchan=do_select syscall=72 0x6 0xffffddbfcea8 0x0 0x0 0x0 0x0 0xffffddbfcdd0 0xffffbb9728dc
+  stack: [<0>] do_select+0x440/0x63c
+  stack: [<0>] core_sys_select+0x1d4/0x298
+  stack: [<0>] __arm64_sys_pselect6+0xf8/0x1a8
+  stack: [<0>] invoke_syscall+0x54/0x10c
+  stack: [<0>] el0_svc_common.constprop.0+0x40/0xe0
+  stack: [<0>] do_el0_svc+0x1c/0x28
+  stack: [<0>] el0_svc+0x38/0x1d0
+  stack: [<0>] el0t_64_sync_handler+0xa0/0xe4
+  fd 0 -> /dev/tty4
+  fd 1 -> /dev/tty4
+  fd 2 -> /dev/tty4
+  fd 3 -> /run/credentials/getty@tty4.service
+  fd 5 -> anon_inode:inotify
+
+--- H2: which session owns each tty as controlling terminal ---
+   PID   PPID    SID   PGID  TPGID CTTY     ST COMM
+   476      1    476    476    476 tty1     S  agetty
+   477      1    477    477    477 tty2     S  agetty
+   478      1    478    478    478 tty3     S  agetty
+   479      1    479    479    479 ttyS2    S  agetty
+   890    889    890    890   1261 136:0    S  bash
+  1198      1   1198   1198   1198 tty4     S  agetty
+  1261    890    890   1261   1261 136:0    S  sudo
+  1262    890    890   1261   1261 136:0    S  tee
+  1264   1261   1264   1264   1264 136:1    S  sudo
+  1265   1264   1264   1265   1264 136:1    S  bash
+  1390   1265   1264   1265   1264 136:1    R  python3
+
+--- H3: who has a tty / console / vcs open ---
+/dev/tty         pid   1261 sudo             fd 8
+/dev/tty1        pid    476 agetty           fd 0
+/dev/tty1        pid    476 agetty           fd 1
+/dev/tty1        pid    476 agetty           fd 2
+/dev/tty2        pid    477 agetty           fd 0
+/dev/tty2        pid    477 agetty           fd 1
+/dev/tty2        pid    477 agetty           fd 2
+/dev/tty3        pid    478 agetty           fd 0
+/dev/tty3        pid    478 agetty           fd 1
+/dev/tty3        pid    478 agetty           fd 2
+/dev/tty4        pid   1198 agetty           fd 0
+/dev/tty4        pid   1198 agetty           fd 1
+/dev/tty4        pid   1198 agetty           fd 2
+/dev/tty6        pid    382 systemd-logind   fd 16
+/dev/ttyS1       pid    379 btattach         fd 4
+/dev/ttyS2       pid    479 agetty           fd 0
+/dev/ttyS2       pid    479 agetty           fd 1
+/dev/ttyS2       pid    479 agetty           fd 2
+
+--- H4: text actually on each VT (/dev/vcsN) ---
+tty1: 80x64, cursor at column 12 row 3, 2 non-empty lines
+    1| Debian GNU/Linux 13 p25t tty1
+    3| p25t login:
+tty2: 80x64, cursor at column 12 row 3, 2 non-empty lines
+    1| Debian GNU/Linux 13 p25t tty2
+    3| p25t login:
+tty3: 80x64, cursor at column 12 row 3, 2 non-empty lines
+    1| Debian GNU/Linux 13 p25t tty3
+    3| p25t login:
+tty4: 80x64, cursor at column 12 row 3, 2 non-empty lines
+    1| Debian GNU/Linux 13 p25t tty4
+    3| p25t login:
+tty5: 80x64, cursor at column 0 row 0, 0 non-empty lines
+tty6: 80x64, cursor at column 0 row 0, 0 non-empty lines
+
+--- H1: serial ports - kernel console ttyS2 and gadget ttyGS0 ---
+(no /proc/tty/driver/serial line for port 2)
+crw-rw---- 1 root dialout 510, 0 sep 30 14:02 /dev/ttyGS0
+
+--- systemd units: getty / autovt / serial-getty / logind / console setup ---
+  UNIT                        LOAD   ACTIVE   SUB     DESCRIPTION
+  getty@tty1.service          loaded active   running Getty on tty1
+  getty@tty2.service          loaded active   running Getty on tty2
+  getty@tty3.service          loaded active   running Getty on tty3
+  getty@tty4.service          loaded active   running Getty on tty4
+● serial-getty@ttyGS0.service masked inactive dead    serial-getty@ttyGS0.service
+  serial-getty@ttyS2.service  loaded active   running Serial Getty on ttyS2
+
+Legend: LOAD   → Reflects whether the unit definition was properly loaded.
+        ACTIVE → The high-level unit activation state, i.e. generalization of SUB.
+        SUB    → The low-level unit activation state, values depend on unit type.
+
+6 loaded units listed.
+To show all installed unit files use 'systemctl list-unit-files'.
+[getty@tty1] MainPID=476 NRestarts=0 ExecMainStartTimestampMonotonic=38680877 ActiveState=active SubState=running InactiveEnterTimestampMonotonic=0 
+[getty@tty2] MainPID=477 NRestarts=0 ExecMainStartTimestampMonotonic=38688528 ActiveState=active SubState=running InactiveEnterTimestampMonotonic=0 
+[getty@tty3] MainPID=478 NRestarts=0 ExecMainStartTimestampMonotonic=38695703 ActiveState=active SubState=running InactiveEnterTimestampMonotonic=0 
+[serial-getty@ttyGS0] MainPID=0 NRestarts=0 ExecMainStartTimestampMonotonic=0 ActiveState=inactive SubState=dead InactiveEnterTimestampMonotonic=0 
+[serial-getty@ttyS2] MainPID=479 NRestarts=0 ExecMainStartTimestampMonotonic=38710301 ActiveState=active SubState=running InactiveEnterTimestampMonotonic=0 
+[systemd-logind] MainPID=382 NRestarts=0 ExecMainStartTimestampMonotonic=37451631 ActiveState=active SubState=running InactiveEnterTimestampMonotonic=0 
+[dbus] MainPID=376 NRestarts=0 ExecMainStartTimestampMonotonic=37351225 ActiveState=active SubState=running InactiveEnterTimestampMonotonic=0 
+[console-setup] MainPID=0 NRestarts=0 ExecMainStartTimestampMonotonic=31765946 ActiveState=active SubState=exited InactiveEnterTimestampMonotonic=0 
+[keyboard-setup] MainPID=0 NRestarts=0 ExecMainStartTimestampMonotonic=30191407 ActiveState=active SubState=exited InactiveEnterTimestampMonotonic=0 
+[p25t-gadget] MainPID=0 NRestarts=0 ExecMainStartTimestampMonotonic=37412249 ActiveState=failed SubState=failed InactiveEnterTimestampMonotonic=58292991 
+
+--- H3: logind ---
+NAutoVTs = u 6
+KillUserProcesses = b false
+seat0 CanTTY = b true
+logind ping: ok
+SESSION  UID USER SEAT LEADER CLASS   TTY IDLE SINCE
+      1 1000 jose -    847    user    -   no   -
+      2 1000 jose -    872    manager -   no   -
+
+2 sessions listed.
+seat0
+Devices: n/a
+         ├─/sys/devices/platform/adc-keys/input/input2
+         │ input:input2 "adc-keys"
+         ├─/sys/devices/platform/backlight/backlight/backlight
+         │ backlight:backlight
+         ├─/sys/devices/platform/display-subsystem/drm/card0
+         │ [MASTER] drm:card0
+         │ └─/sys/devices/platform/display-subsystem/drm/card0/card0-DSI-1
+         │   [MASTER] drm:card0-DSI-1
+         ├─/sys/devices/platform/display-subsystem/graphics/fb0
+         │ graphics:fb0 "rockchipdrmfb"
+         ├─/sys/devices/platform/fcc00000.usb/xhci-hcd.8.auto/usb1
+         │ usb:usb1
+         ├─/sys/devices/platform/fdd40000.i2c/i2c-0/0-0020/rk805-pwrkey.2.auto/input/input0
+         │ input:input0 "rk805 pwrkey"
+         ├─/sys/devices/platform/fde60000.gpu/drm/card1
+         │ [MASTER] drm:card1
+         ├─/sys/devices/platform/fde60000.gpu/drm/renderD128
+         │ drm:renderD128
+
+--- configuration (unit files as systemd sees them, logind.conf, tty users) ---
+[Unit]
+Description=Getty on %I
+Documentation=man:agetty(8) man:systemd-getty-generator(8)
+Documentation=https://0pointer.de/blog/projects/serial-console.html
+After=systemd-user-sessions.service plymouth-quit-wait.service getty-pre.target
+After=rc-local.service
+Before=getty.target
+IgnoreOnIsolate=yes
+Conflicts=rescue.service
+Before=rescue.service
+ConditionPathExists=/dev/tty0
+[Service]
+ExecStart=-/sbin/agetty -o '-- \\u' --noreset --noclear - ${TERM}
+Type=idle
+Restart=always
+RestartSec=0
+UtmpIdentifier=%I
+StandardInput=tty
+StandardOutput=tty
+TTYPath=/dev/%I
+TTYReset=yes
+TTYVHangup=yes
+TTYVTDisallocate=yes
+IgnoreSIGPIPE=no
+SendSIGHUP=yes
+ImportCredential=tty.virtual.%I.agetty.*:agetty.
+ImportCredential=tty.virtual.%I.login.*:login.
+ImportCredential=agetty.*
+ImportCredential=login.*
+ImportCredential=shell.*
+UnsetEnvironment=LANG LANGUAGE LC_CTYPE LC_NUMERIC LC_TIME LC_COLLATE LC_MONETARY LC_MESSAGES LC_PAPER LC_NAME LC_ADDRESS LC_TELEPHONE LC_MEASUREMENT LC_IDENTIFICATION
+[Install]
+WantedBy=getty.target
+DefaultInstance=tty1
+[Login]
+units that touch a tty (TTYPath / StandardInput=tty / /dev/tty*):
+  /etc/systemd/journald.conf
+  /usr/lib/systemd/system/getty@.service
+  /usr/lib/systemd/system/emergency.service
+  /usr/lib/systemd/system/systemd-storagetm.service
+  /usr/lib/systemd/system/getty-static.service
+  /usr/lib/systemd/system/console-getty.service
+  /usr/lib/systemd/system/systemd-firstboot.service
+  /usr/lib/systemd/system/container-getty@.service
+  /usr/lib/systemd/system/serial-getty@.service
+  /usr/lib/systemd/system/debug-shell.service
+  /usr/lib/systemd/system/rescue.service
+ACTIVE_CONSOLES="/dev/tty[1-6]"
+CHARMAP="UTF-8"
+CODESET="Lat15"
+FONTFACE="Terminus"
+FONTSIZE="10x20"
+VIDEOMODE=
+
+--- journal this boot: getty, logind, login, console, PID 1 warnings (monotonic time) ---
+[   30.608160] p25t kernel: printk: legacy bootconsole [uart0] enabled
+[   30.609627] p25t kernel: Kernel command line: console=ttyS2,1500000n8 earlycon clk_ignore_unused loglevel=7 rdinit=/init panic=0
+[   30.611497] p25t kernel: clocksource: jiffies: mask: 0xffffffff max_cycles: 0xffffffff, max_idle_ns: 7645041785100000 ns
+[   30.611591] p25t kernel: clocksource: arch_sys_counter: mask: 0xffffffffffffff max_cycles: 0x588fe9dc0, max_idle_ns: 440795202592 ns
+[   30.611685] p25t kernel: Console: colour dummy device 80x25
+[   30.614547] p25t kernel: cpuidle: using governor menu
+[   30.625213] p25t kernel: fe650000.serial: ttyS1 MMIO32:0x00000000fe650000 (irq = 25, base_baud = 1500000) is a 16550A
+[   30.625261] p25t kernel: fe660000.serial: ttyS2 MMIO32:0x00000000fe660000 (irq = 26, base_baud = 1500000) is a 16550A
+[   30.625309] p25t kernel: printk: console [ttyS2] enabled
+[   30.625355] p25t kernel: printk: legacy bootconsole [uart0] disabled
+[   30.643300] p25t kernel: Console: switching to colour frame buffer device 100x80
+[   30.663040] p25t kernel: dw-apb-uart fe660000.serial: forbid DMA for kernel console
+[   30.669823] p25t systemd[1]: Created slice system-getty.slice - Slice /system/getty.
+[   30.669935] p25t systemd[1]: Created slice system-serial\x2dgetty.slice - Slice /system/serial-getty.
+[   30.670123] p25t systemd[1]: Created slice user.slice - User and Session Slice.
+[   30.670181] p25t systemd[1]: Started systemd-ask-password-console.path - Dispatch Password Requests to Console Directory Watch.
+[   30.670428] p25t systemd[1]: Expecting device dev-ttyS2.device - /dev/ttyS2...
+[   30.671593] p25t systemd[1]: Starting keyboard-setup.service - Set the console keyboard layout...
+[   30.673878] p25t systemd[1]: Finished keyboard-setup.service - Set the console keyboard layout.
+[   31.767781] p25t systemd[1]: Starting console-setup.service - Set console font and keymap...
+[   32.465722] p25t systemd[1]: Finished console-setup.service - Set console font and keymap.
+[   37.027795] p25t systemd[1]: Found device dev-ttyS2.device - /dev/ttyS2.
+[   37.365187] p25t systemd[1]: getty-static.service - getty on tty2-tty6 if dbus and logind are not available skipped, unmet condition check ConditionPathExists=!/usr/bin/dbus-daemon
+[   37.400445] p25t systemd[1]: Started p25t-bluetooth.service - P25T: attach the AIC8800 Bluetooth (H4 on ttyS1, 1.5 Mbaud, RTS/CTS).
+[   37.422325] p25t systemd[1]: Starting p25t-gadget.service - P25T USB gadget (serial console + network)...
+[   37.453798] p25t systemd[1]: Starting systemd-logind.service - User Login Management...
+[   37.964144] p25t systemd-logind[382]: New seat seat0.
+[   37.985548] p25t systemd-logind[382]: Watching system buttons on /dev/input/event0 (rk805 pwrkey)
+[   37.992671] p25t systemd[1]: Started systemd-logind.service - User Login Management.
+[   38.592539] p25t systemd[1]: Starting systemd-user-sessions.service - Permit User Sessions...
+[   38.672155] p25t systemd[1]: Finished systemd-user-sessions.service - Permit User Sessions.
+[   38.683560] p25t systemd[1]: Started getty@tty1.service - Getty on tty1.
+[   38.691372] p25t systemd[1]: Started getty@tty2.service - Getty on tty2.
+[   38.701651] p25t systemd[1]: Started getty@tty3.service - Getty on tty3.
+[   38.713529] p25t systemd[1]: Started serial-getty@ttyS2.service - Serial Getty on ttyS2.
+[   38.714790] p25t systemd[1]: Reached target getty.target - Login Prompts.
+[   38.844188] p25t kernel: Bluetooth: RFCOMM TTY layer initialized
+[   58.294217] p25t systemd[1]: Failed to start p25t-gadget.service - P25T USB gadget (serial console + network).
+[   76.704612] p25t sshd-session[847]: Accepted password for jose from 192.168.1.186 port 47920 ssh2
+[   76.722382] p25t sshd-session[847]: pam_unix(sshd:session): session opened for user jose(uid=1000) by jose(uid=0)
+[   76.809921] p25t systemd-logind[382]: New session 1 of user jose.
+[   76.989118] p25t (systemd)[872]: pam_unix(systemd-user:session): session opened for user jose(uid=1000) by jose(uid=0)
+[   76.997802] p25t systemd-logind[382]: New session 2 of user jose.
+[   77.680922] p25t systemd[1]: Started session-1.scope - Session 1 of User jose.
+[   78.251343] p25t systemd[872]: Created slice session.slice - User Core Session Slice.
+[  222.123966] p25t sshd-session[900]: Accepted password for jose from 192.168.1.186 port 52862 ssh2
+[  222.135441] p25t sshd-session[900]: pam_unix(sshd:session): session opened for user jose(uid=1000) by jose(uid=0)
+[  222.162786] p25t systemd-logind[382]: New session 3 of user jose.
+[  222.185237] p25t systemd[1]: Started session-3.scope - Session 3 of User jose.
+[  222.908997] p25t sshd-session[908]: Received disconnect from 192.168.1.186 port 52862:11: disconnected by user
+[  222.910600] p25t sshd-session[908]: Disconnected from user jose 192.168.1.186 port 52862
+[  222.915094] p25t sshd-session[900]: pam_unix(sshd:session): session closed for user jose
+[  222.942597] p25t systemd[1]: session-3.scope: Deactivated successfully.
+[  222.948944] p25t systemd-logind[382]: Session 3 logged out. Waiting for processes to exit.
+[  222.955358] p25t systemd-logind[382]: Removed session 3.
+[  524.561764] p25t sudo[932]:     jose : TTY=pts/0 ; PWD=/home/jose/tests ; USER=root ; COMMAND=/usr/bin/bash /home/jose/tests/test_10.sh
+[  524.564093] p25t sudo[932]: pam_unix(sudo:session): session opened for user root(uid=0) by jose(uid=1000)
+[  529.063049] p25t sudo[932]: pam_unix(sudo:session): session closed for user root
+[  553.406836] p25t sshd-session[1151]: Accepted password for jose from 192.168.1.186 port 48594 ssh2
+[  553.418925] p25t sshd-session[1151]: pam_unix(sshd:session): session opened for user jose(uid=1000) by jose(uid=0)
+[  553.452654] p25t systemd-logind[382]: New session 4 of user jose.
+[  553.477281] p25t systemd[1]: Started session-4.scope - Session 4 of User jose.
+[  554.558074] p25t sshd-session[1159]: Received disconnect from 192.168.1.186 port 48594:11: disconnected by user
+[  554.589045] p25t systemd[1]: session-4.scope: Deactivated successfully.
+[  554.559000] p25t sshd-session[1159]: Disconnected from user jose 192.168.1.186 port 48594
+[  554.597048] p25t systemd-logind[382]: Session 4 logged out. Waiting for processes to exit.
+[  554.564480] p25t sshd-session[1151]: pam_unix(sshd:session): session closed for user jose
+[  554.604187] p25t systemd-logind[382]: Removed session 4.
+[  599.535302] p25t sudo[1178]:     jose : TTY=pts/0 ; PWD=/home/jose/tests ; USER=root ; COMMAND=/usr/bin/bash /home/jose/tests/test_10.sh vt 4
+[  599.537387] p25t sudo[1178]: pam_unix(sudo:session): session opened for user root(uid=0) by jose(uid=1000)
+[  600.014290] p25t systemd[1]: Started getty@tty4.service - Getty on tty4.
+[  612.144607] p25t sudo[1178]: pam_unix(sudo:session): session closed for user root
+[  659.812299] p25t sudo[1261]:     jose : TTY=pts/0 ; PWD=/home/jose/tests ; USER=root ; COMMAND=/usr/bin/bash /home/jose/tests/test_10.sh
+[  659.814108] p25t sudo[1261]: pam_unix(sudo:session): session opened for user root(uid=0) by jose(uid=1000)
+
+--- journal previous boot (if persistent): same filter ---
+[  186.633510] p25t systemd-logind[377]: Watching system buttons on /dev/input/event3 (Logitech USB Keyboard)
+[  211.238131] p25t login[473]: pam_unix(login:session): session opened for user jose(uid=1000) by jose(uid=0)
+[  211.324469] p25t systemd-logind[377]: New session 1 of user jose.
+[  211.505981] p25t systemd-logind[377]: New session 2 of user jose.
+[  886.787586] p25t su[955]: pam_unix(su-l:auth): authentication failure; logname=jose uid=1000 euid=0 tty=/dev/tty1 ruser=jose rhost=  user=root
+[  888.504293] p25t su[955]: FAILED SU (to root) jose on tty1
+[  916.526319] p25t sudo[965]:     jose : TTY=tty1 ; PWD=/home/jose ; USER=root ; COMMAND=/usr/bin/su
+[ 1905.431914] p25t login[475]: pam_unix(login:session): session opened for user jose(uid=1000) by jose(uid=0)
+[ 1905.481994] p25t systemd-logind[377]: New session 3 of user jose.
+[ 6532.994266] p25t systemd-logind[377]: New session 4 of user jose.
+[ 6802.961535] p25t systemd-logind[377]: New session 5 of user jose.
+[ 6803.717857] p25t systemd-logind[377]: Session 5 logged out. Waiting for processes to exit.
+[ 6803.725256] p25t systemd-logind[377]: Removed session 5.
+[ 7981.724529] p25t systemd-logind[377]: New session 6 of user jose.
+[ 7982.481806] p25t systemd-logind[377]: Session 6 logged out. Waiting for processes to exit.
+[ 7982.487088] p25t systemd-logind[377]: Removed session 6.
+[ 8325.754593] p25t systemd-logind[377]: New session 7 of user jose.
+[ 8327.134607] p25t systemd-logind[377]: Session 7 logged out. Waiting for processes to exit.
+[ 8327.142589] p25t systemd-logind[377]: Removed session 7.
+[ 8527.680446] p25t systemd-logind[377]: New session 8 of user jose.
+[ 8528.446340] p25t systemd-logind[377]: Session 8 logged out. Waiting for processes to exit.
+[ 8528.449976] p25t systemd-logind[377]: Removed session 8.
+[ 8590.900591] p25t sudo[2075]:     jose : TTY=pts/1 ; PWD=/home/jose/tests ; USER=root ; COMMAND=/usr/bin/bash /home/jose/tests/test_10.sh
+[ 8972.790706] p25t systemd-logind[377]: New session 9 of user jose.
+[ 8973.849885] p25t systemd-logind[377]: Session 9 logged out. Waiting for processes to exit.
+[ 8973.853428] p25t systemd-logind[377]: Removed session 9.
+[ 9550.547365] p25t sudo[2383]:     jose : TTY=pts/1 ; PWD=/home/jose/tests ; USER=root ; COMMAND=/usr/bin/bash /home/jose/tests/test_10.sh vt 4
+[ 9551.001708] p25t systemd[1]: Started getty@tty4.service - Getty on tty4.
+[ 9588.382209] p25t systemd-logind[377]: New session 10 of user jose.
+[ 9589.182265] p25t systemd-logind[377]: Session 10 logged out. Waiting for processes to exit.
+[ 9589.187419] p25t systemd-logind[377]: Removed session 10.
+[10119.179140] p25t systemd-logind[377]: New session 11 of user jose.
+[10119.910773] p25t systemd-logind[377]: Session 11 logged out. Waiting for processes to exit.
+[10119.918703] p25t systemd-logind[377]: Removed session 11.
+[10277.433895] p25t sudo[2543]:     jose : TTY=pts/1 ; PWD=/home/jose/tests ; USER=root ; COMMAND=/usr/bin/systemctl mask serial-getty@ttyGS0.service
+[10333.654654] p25t sudo[2588]:     jose : TTY=pts/1 ; PWD=/home/jose/tests ; USER=root ; COMMAND=/usr/sbin/reboot
+[10333.688657] p25t systemd-logind[377]: The system will reboot now!
+[10333.690710] p25t systemd-logind[377]: System is rebooting.
+[10333.737553] p25t login[473]: pam_unix(login:session): session closed for user jose
+[10333.743296] p25t login[475]: pam_unix(login:session): session closed for user jose
+[10333.755184] p25t systemd[1]: Stopped target getty.target - Login Prompts.
+[10333.786147] p25t systemd[1]: Stopping getty@tty1.service - Getty on tty1...
+[10333.787633] p25t systemd[1]: Stopping getty@tty2.service - Getty on tty2...
+[10333.791489] p25t systemd[1]: Stopping getty@tty3.service - Getty on tty3...
+[10333.793091] p25t systemd[1]: Stopping getty@tty4.service - Getty on tty4...
+[10333.807940] p25t systemd[1]: Stopping p25t-bluetooth.service - P25T: attach the AIC8800 Bluetooth (H4 on ttyS1, 1.5 Mbaud, RTS/CTS)...
+[10333.809344] p25t btattach[374]: Attaching Primary controller to /dev/ttyS1
+[10333.813461] p25t systemd[1]: Stopping serial-getty@ttyS2.service - Serial Getty on ttyS2...
+[10333.923317] p25t systemd[1]: Stopped p25t-bluetooth.service - P25T: attach the AIC8800 Bluetooth (H4 on ttyS1, 1.5 Mbaud, RTS/CTS).
+[10333.926068] p25t systemd[1]: getty@tty1.service: Deactivated successfully.
+[10333.926985] p25t systemd[1]: Stopped getty@tty1.service - Getty on tty1.
+[10358.790044] p25t systemd-logind[377]: Failed to abandon session scope, ignoring: Connection timed out
+[10358.790186] p25t systemd-logind[377]: Session 1 logged out. Waiting for processes to exit.
+[10433.866559] p25t systemd-logind[377]: Failed to abandon session scope, ignoring: Connection timed out
+[10433.866688] p25t systemd-logind[377]: Session 3 logged out. Waiting for processes to exit.
+[10508.946859] p25t systemd-logind[377]: Failed to abandon session scope, ignoring: Connection timed out
+[10508.946994] p25t systemd-logind[377]: Session 4 logged out. Waiting for processes to exit.
+[10559.013931] p25t systemd-logind[377]: Failed to open /dev/input/event4: No such file or directory
+[10559.015701] p25t systemd-logind[377]: Failed to open /dev/input/event3: No such file or directory
+[10559.016823] p25t systemd-logind[377]: Failed to open /dev/input/event5: No such file or directory
+
+--- dmesg: display, fbcon, consoles, hung tasks ---
+[    0.000000] printk: legacy bootconsole [uart0] enabled
+[    0.000000] Kernel command line: console=ttyS2,1500000n8 earlycon clk_ignore_unused loglevel=7 rdinit=/init panic=0
+[    0.001977] Console: colour dummy device 80x25
+[    0.094849] /dsi@fe060000: Fixed dependency cycle(s) with /vop@fe040000
+[    0.095531] /vop@fe040000: Fixed dependency cycle(s) with /dsi@fe060000
+[    0.096272] /dsi@fe060000/panel@0: Fixed dependency cycle(s) with /dsi@fe060000
+[    0.097008] /dsi@fe060000: Fixed dependency cycle(s) with /dsi@fe060000/panel@0
+[    0.252888] fe650000.serial: ttyS1 MMIO32:0x00000000fe650000 (irq = 25, base_baud = 1500000) is a 16550A
+[    0.255644] fe660000.serial: ttyS2 MMIO32:0x00000000fe660000 (irq = 26, base_baud = 1500000) is a 16550A
+[    0.256705] printk: console [ttyS2] enabled
+[    0.257506] printk: legacy bootconsole [uart0] disabled
+[    0.266700] platform fe040000.vop: Adding to iommu group 2
+[    0.349710] usbcore: registered new interface driver cdc_acm
+[    0.349722] cdc_acm: USB Abstract Control Model driver for USB modems and ISDN adapters
+[    3.769797] rockchip-drm display-subsystem: bound fe040000.vop (ops vop2_component_ops)
+[    3.770268] rockchip-drm display-subsystem: bound fe060000.dsi (ops dw_mipi_dsi_rockchip_ops)
+[    3.771634] [drm] Initialized rockchip 1.0.0 for display-subsystem on minor 0
+[    4.246815] jadard-jd9365da fe060000.dsi.0: p25t: init sequence sent, mode_flags 0x603, result 0
+[    4.301553] Console: switching to colour frame buffer device 100x80
+[    4.351031] rockchip-drm display-subsystem: [drm] fb0: rockchipdrmfb frame buffer device
+[    4.359339] panfrost fde60000.gpu: [drm] Using Transparent Hugepage
+[    4.360015] [drm] Initialized panfrost 1.6.0 for fde60000.gpu on minor 1
+[    4.416220] dw-apb-uart fe660000.serial: forbid DMA for kernel console
+[   29.901278] systemd[1]: Created slice system-getty.slice - Slice /system/getty.
+[   29.925304] systemd[1]: Created slice system-serial\x2dgetty.slice - Slice /system/serial-getty.
+[   29.983805] systemd[1]: Started systemd-ask-password-console.path - Dispatch Password Requests to Console Directory Watch.
+[   30.007139] systemd[1]: Expecting device dev-ttyS2.device - /dev/ttyS2...
+[   30.205926] systemd[1]: Starting keyboard-setup.service - Set the console keyboard layout...
+[   30.268612] systemd[1]: Starting modprobe@drm.service - Load Kernel Module drm...
+[   30.464112] systemd[1]: modprobe@drm.service: Deactivated successfully.
+[   30.465488] systemd[1]: Finished modprobe@drm.service - Load Kernel Module drm.
+[   30.581231] systemd[1]: Finished keyboard-setup.service - Set the console keyboard layout.
+[   38.853786] Bluetooth: RFCOMM TTY layer initialized
+
+=== done ===

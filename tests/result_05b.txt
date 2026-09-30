@@ -1,0 +1,39 @@
+=== Touchscreen (Silead GSL3673, patch 0017) check ===
+Tue 29 Sep 21:46:04 CEST 2026
+
+--- firmware file present on the target? ---
+-rw------- 1 root root 40392 Sep 29 12:20 /lib/firmware/silead/gsl3673-p25t.fw
+
+--- dmesg (silead/touchscreen/gsl related) ---
+[    0.369567] fan53555-regulator 0-0040: FAN53555 Option[8] Rev[1] Detected!
+[    0.459951] silead_ts 1-0040: supply vddio not found, using dummy regulator
+[    0.460127] silead_ts 1-0040: supply avdd not found, using dummy regulator
+[    0.507898] silead_ts 1-0040: Silead chip ID: 0x50910000
+[    0.508257] silead_ts 1-0040: soft reset not ACKed, continuing
+[    0.589754] silead_ts 1-0040: soft reset not ACKed, continuing
+[    0.650674] silead_ts 1-0040: Direct firmware load for silead/gsl3673-p25t.fw failed with error -2
+[    0.650694] silead_ts 1-0040: Firmware request error -2
+[    0.651065] silead_ts 1-0040: probe with driver silead_ts failed with error -2
+
+--- i2c device bound? (silead on i2c1 @0x40) ---
+/sys/bus/i2c/devices/0-0040
+  driver: fan53555-regulator
+/sys/bus/i2c/devices/1-0040
+  driver: (none - not bound)
+(no device at address 0x40 on any bus)
+
+--- input devices ---
+(no touchscreen-looking input device found)
+crw-rw---- 1 root input 13, 64 Sep 29 21:42 /dev/input/event0
+crw-rw---- 1 root input 13, 65 Sep 29 21:42 /dev/input/event1
+crw-rw---- 1 root input 13, 66 Sep 29 21:42 /dev/input/event2
+crw-rw---- 1 root input 13, 67 Sep 29 21:42 /dev/input/event3
+crw-rw---- 1 root input 13, 68 Sep 29 21:42 /dev/input/event4
+
+--- quick interactive check (if a touchscreen event device showed up above) ---
+Run manually, then touch the screen a few times, Ctrl-C to stop:
+  sudo evtest /dev/input/eventN     (install with: sudo apt install evtest)
+Or without evtest, raw event bytes should appear while touching:
+  sudo cat /dev/input/eventN | xxd | head
+
+=== done ===

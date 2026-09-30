@@ -1,0 +1,36 @@
+=== Touchscreen orientation / range (test_09) ===
+Wed Sep 30 09:04:45 2026
+device: /dev/input/event1
+
+--- 1. corners ("top-left" = as you read the console text) ---
+
+>>> Touch the TOP-LEFT corner, as close to the corner as you can, then lift.
+    TOP-LEFT: raw x=23 y=40  (15 samples)
+
+>>> Touch the TOP-RIGHT corner, as close to the corner as you can, then lift.
+    TOP-RIGHT: raw x=877 y=29  (19 samples)
+
+>>> Touch the BOTTOM-RIGHT corner, as close to the corner as you can, then lift.
+    BOTTOM-RIGHT: raw x=874 y=1670  (16 samples)
+
+>>> Touch the BOTTOM-LEFT corner, as close to the corner as you can, then lift.
+    BOTTOM-LEFT: raw x=21 y=1649  (12 samples)
+
+>>> Now slide one finger slowly along ALL FOUR EDGES, right up to the
+    bezel, once around the whole screen. You have 20 s.
+    edge sweep: 396 samples, raw x 14..884, raw y 22..1676
+
+>>> Put 3 fingers on the screen at the same time and hold 3 s.
+    slots seen: [0, 1, 2]  -> multi-touch OK
+
+--- analysis ---
+  right-on-screen moves raw (+854,-11), down-on-screen moves raw (-2,+1609)
+  swap x/y: False   invert raw x: False   invert raw y: False
+
+  Suggested DT properties for touchscreen@40 (replace touchscreen-size-x/-y):
+		touchscreen-size-x = <885>;	/* raw x max 884 + 1 */
+		touchscreen-size-y = <1677>;	/* raw y max 1676 + 1 */
+  (raw minima seen: x 14, y 22 - a finger rarely reaches 0 at the bezel;
+   left at 0 unless they turn out to be far from it)
+
+=== done ===

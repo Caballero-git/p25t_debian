@@ -1,0 +1,24 @@
+=== RK817 LDO9 / touchscreen power (test_08, mode: apply) ===
+mar 29 sep 2026 23:11:11 CEST
+RK817 on bus 0 (fdd40000), chip id 0x81 0x74
+  0xB4 = 0x06  -> LDO9 off, BOOST 1, OTG 1
+  0xDC = 0x30  -> LDO9 set to 1800 mV
+touchscreen /sys/bus/i2c/devices/1-0040: not bound
+  status 0xB0: 0x00 0x00 0x00 0x00
+
+--- APPLY: LDO9 2.8 V on ---
+  0xDC <- 0x58: read back 0x58 (2.8 V)
+  0xB4 <- 0x11: read back 0x07 (LDO9 on, BOOST/OTG unchanged)
+  status 0xB0 with LDO9 on, before probe: 0x00 0x00 0x00 0x00
+
+--- probe the silead driver again (patch 0018 kernel) ---
+[ 5372.503570] silead_ts 1-0040: supply vddio not found, using dummy regulator
+[ 5372.503752] silead_ts 1-0040: supply avdd not found, using dummy regulator
+[ 5372.552730] silead_ts 1-0040: Silead chip ID: 0x50910000
+[ 5372.553093] silead_ts 1-0040: soft reset not ACKed, continuing
+[ 5372.633765] silead_ts 1-0040: soft reset not ACKed, continuing
+[ 5376.032831] silead_ts 1-0040: Initialization error, status: 0x0
+RESULT: still not bound with LDO9 on -> LDO9 is not (the only) missing piece.
+  status 0xB0 now: 0x00 0x00 0x00 0x00
+
+=== done (LDO9 stays on until the next full power-off) ===

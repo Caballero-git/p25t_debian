@@ -269,10 +269,21 @@ if [ "$MODE" = vt ]; then
     sec "state on tty$VTN after 8 s"
     py vtstate
     py vcs "$VTN"
-    ps -eo pid,ppid,sid,tty,stat,wchan:28,comm,args | awk -v t="tty$VTN" 'NR==1 || index($0, t)'
+    # the getty's main process may not own tty$VTN yet, so find it via systemd
+    mp=$(tm systemctl show -p MainPID --value getty@tty$VTN.service 2>/dev/null)
+    if [ -n "$mp" ] && [ "$mp" != 0 ] && [ -d /proc/$mp ]; then
+        echo "getty@tty$VTN main pid $mp: comm=$(cat /proc/$mp/comm)"
+        echo "  wchan=$(cat /proc/$mp/wchan) syscall=$(cat /proc/$mp/syscall 2>/dev/null)"
+        sed 's/^/  stack: /' /proc/$mp/stack 2>/dev/null | head -6
+        ls -l /proc/$mp/fd 2>/dev/null | awk 'NR>1 {print "  fd " $9 " -> " $11}'
+    else
+        echo "getty@tty$VTN: no main process"
+    fi
+    echo "who holds /dev/console open (lock candidates):"
+    py openers | grep '^/dev/console' || echo "  (nobody)"
     tm systemctl status autovt@tty$VTN.service --no-pager -n 20 2>&1
     sec "journal since the switch"
-    journalctl --since "@$since" -o short-monotonic --no-pager 2>&1 | tail -60
+    journalctl -b --since "$(date -d "@$since" '+%Y-%m-%d %H:%M:%S')" -o short-monotonic --no-pager 2>&1 | tail -60
     sec "PID 1 and logind after the switch"
     grep -E '^State' /proc/1/status; echo "PID 1 wchan: $(cat /proc/1/wchan)"
     echo "logind ping: $(tm busctl call org.freedesktop.login1 /org/freedesktop/login1 org.freedesktop.DBus.Peer Ping 2>&1 && echo ok)"

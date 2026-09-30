@@ -1,0 +1,3 @@
+a -> host & no-cable (kb)
+b -> host & cable (power)
+

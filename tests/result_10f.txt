@@ -1,0 +1,112 @@
+=== VT / getty / PID 1 evidence (test_10, mode: vt) ===
+mié 30 sep 2026 14:12:00 CEST
+
+--- before the switch (active: tty1) ---
+active VT 1; VTs open by someone (VT_GETSTATE v_state=0x004f): [1, 2, 3, 6]
+autovt@tty4: inactive / getty@tty4: inactive
+
+>>> switching the panel to tty4 (like Ctrl+Alt+F4)
+  +1s active=tty4 autovt@tty4=active
+  +2s active=tty4 autovt@tty4=active
+  +3s active=tty4 autovt@tty4=active
+  +4s active=tty4 autovt@tty4=active
+  +5s active=tty4 autovt@tty4=active
+  +6s active=tty4 autovt@tty4=active
+  +7s active=tty4 autovt@tty4=active
+  +8s active=tty4 autovt@tty4=active
+
+--- state on tty4 after 8 s ---
+active VT 4; VTs open by someone (VT_GETSTATE v_state=0x005f): [1, 2, 3, 4, 6]
+tty4: 80x64, cursor at column 12 row 3, 2 non-empty lines
+    1| Debian GNU/Linux 13 p25t tty4
+    3| p25t login:
+    PID    PPID     SID TT       STAT WCHAN                        COMMAND         COMMAND
+   1198       1    1198 tty4     Ss+  do_select                    agetty          /sbin/agetty -o -- \u --noreset --noclear - linux
+   1242    1182    1181 pts/1    S    anon_pipe_read               awk             awk -v t=tty4 NR==1 || index($0, t)
+● getty@tty4.service - Getty on tty4
+     Loaded: loaded (/usr/lib/systemd/system/getty@.service; disabled; preset: enabled)
+     Active: active (running) since Wed 2026-09-30 14:12:01 CEST; 8s ago
+ Invocation: 97ffbc315cc34b8fa12e6a73e9903b08
+       Docs: man:agetty(8)
+             man:systemd-getty-generator(8)
+             https://0pointer.de/blog/projects/serial-console.html
+   Main PID: 1198 (agetty)
+      Tasks: 1 (limit: 4702)
+     Memory: 588K (peak: 2.2M)
+        CPU: 50ms
+     CGroup: /system.slice/system-getty.slice/getty@tty4.service
+             └─1198 /sbin/agetty -o "-- \\u" --noreset --noclear - linux
+
+sep 30 14:12:01 p25t systemd[1]: Started getty@tty4.service - Getty on tty4.
+
+--- journal since the switch ---
+[   38.723228] p25t systemd[1]: Reached target bluetooth.target - Bluetooth Support.
+[   38.770933] p25t bluetoothd[419]: profiles/network/bnep.c:bnep_init() kernel lacks bnep-protocol support
+[   38.792371] p25t dbus-daemon[376]: [system] Activating via systemd: service name='org.freedesktop.hostname1' unit='dbus-org.freedesktop.hostname1.service' requested by ':1.6' (uid=0 pid=419 comm="/usr/libexec/bluetooth/bluetoothd")
+[   38.792901] p25t bluetoothd[419]: Bluetooth management interface 1.23 initialized
+[   38.794056] p25t bluetoothd[419]: Battery Provider Manager created
+[   38.799368] p25t kernel: Bluetooth: MGMT ver 1.23
+[   38.809934] p25t systemd[1]: Starting systemd-hostnamed.service - Hostname Service...
+[   38.844188] p25t kernel: Bluetooth: RFCOMM TTY layer initialized
+[   38.844489] p25t kernel: Bluetooth: RFCOMM socket layer initialized
+[   38.844582] p25t kernel: Bluetooth: RFCOMM ver 1.11
+[   38.846751] p25t systemd-fsck[381]: fsck.fat 4.2 (2021-01-31)
+[   38.846751] p25t systemd-fsck[381]: There are differences between boot sector and its backup.
+[   38.846751] p25t systemd-fsck[381]: This is mostly harmless. Differences: (offset:original/backup)
+[   38.846751] p25t systemd-fsck[381]:   65:00/01
+[   38.846751] p25t systemd-fsck[381]:   Not automatically fixing this.
+[   38.846751] p25t systemd-fsck[381]: /dev/mmcblk1p4: 335 files, 471622/516190 clusters
+[   38.874058] p25t systemd[1]: Finished systemd-fsck@dev-disk-by\x2dlabel-P25TBOOT.service - File System Check on /dev/disk/by-label/P25TBOOT.
+[   38.897068] p25t systemd[1]: Mounting boot-firmware.mount - /boot/firmware...
+[   39.272153] p25t sshd[484]: Server listening on 0.0.0.0 port 22.
+[   39.274105] p25t systemd[1]: Started ssh.service - OpenBSD Secure Shell server.
+[   39.272707] p25t sshd[484]: Server listening on :: port 22.
+[   39.319121] p25t systemd[1]: Started systemd-hostnamed.service - Hostname Service.
+[   39.320765] p25t dbus-daemon[376]: [system] Successfully activated service 'org.freedesktop.hostname1'
+[   39.354533] p25t bluetoothd[419]: src/device.c:set_wake_allowed_complete() Set device flags return status: Invalid Parameters
+[   39.357040] p25t kernel: Bluetooth: hci0: Bad flag given (0x1) vs supported (0x6)
+[   39.389646] p25t systemd[1]: Mounted boot-firmware.mount - /boot/firmware.
+[   39.679579] p25t systemd[1]: e2scrub_reap.service: Deactivated successfully.
+[   39.680709] p25t systemd[1]: Finished e2scrub_reap.service - Remove Stale Online ext4 Metadata Check Snapshots.
+[   40.219279] p25t wpa_supplicant[383]: wlan0: Trying to associate with 5c:e9:31:b3:92:58 (SSID='CAMPINARED_TP-Link_9258' freq=2417 MHz)
+[   40.224185] p25t kernel: rwnx_send_sm_connect_req drv_vif_index:0 connect to CAMPINARED_TP-Link_9258(23) channel:2417 auth_type:0
+[   40.350255] p25t systemd-networkd[339]: wlan0: Connected WiFi access point: CAMPINARED_TP-Link_9258 (5c:e9:31:b3:92:58)
+[   40.352233] p25t kernel: get_txpwr_max:txpwr_max:0 
+[   40.352386] p25t wpa_supplicant[383]: wlan0: Associated with 5c:e9:31:b3:92:58
+[   40.352386] p25t wpa_supplicant[383]: wlan0: CTRL-EVENT-SUBNET-STATUS-UPDATE status=0
+[   40.454869] p25t wpa_supplicant[383]: wlan0: WPA: Key negotiation completed with 5c:e9:31:b3:92:58 [PTK=CCMP GTK=CCMP]
+[   40.454869] p25t wpa_supplicant[383]: wlan0: CTRL-EVENT-CONNECTED - Connection to 5c:e9:31:b3:92:58 completed [id=0 id_str=]
+[   40.457115] p25t systemd-networkd[339]: wlan0: Gained carrier
+[   40.524837] p25t systemd-networkd[339]: wlan0: DHCPv4 address 192.168.1.122/24, gateway 192.168.1.1 acquired from 192.168.1.1
+[   40.527115] p25t dbus-daemon[376]: [system] Activating via systemd: service name='org.freedesktop.PolicyKit1' unit='polkit.service' requested by ':1.7' (uid=0 pid=482 comm="/usr/lib/systemd/systemd-hostnamed")
+[   40.540662] p25t systemd-timesyncd[315]: Network configuration changed, trying to establish connection.
+[   40.554695] p25t systemd[1]: Starting polkit.service - Authorization Manager...
+[   40.839725] p25t polkitd[506]: Started polkitd version 126
+[   40.946579] p25t polkitd[506]: Loading rules from directory /etc/polkit-1/rules.d
+[   40.948348] p25t polkitd[506]: Loading rules from directory /run/polkit-1/rules.d
+[   40.948577] p25t polkitd[506]: Error opening rules directory: Error opening directory “/run/polkit-1/rules.d”: No such file or directory (g-file-error-quark, 4)
+[   40.956053] p25t polkitd[506]: Loading rules from directory /usr/local/share/polkit-1/rules.d
+[   40.956222] p25t polkitd[506]: Error opening rules directory: Error opening directory “/usr/local/share/polkit-1/rules.d”: No such file or directory (g-file-error-quark, 4)
+[   40.956517] p25t polkitd[506]: Loading rules from directory /usr/share/polkit-1/rules.d
+[   40.962589] p25t polkitd[506]: Finished loading, compiling and executing 2 rules
+[   40.964194] p25t systemd[1]: Started polkit.service - Authorization Manager.
+[   40.965248] p25t dbus-daemon[376]: [system] Successfully activated service 'org.freedesktop.PolicyKit1'
+[   40.966387] p25t polkitd[506]: Acquired the name org.freedesktop.PolicyKit1 on the system bus
+[   42.465076] p25t systemd-networkd[339]: wlan0: Gained IPv6LL
+[   42.470070] p25t systemd-timesyncd[315]: Network configuration changed, trying to establish connection.
+[   42.486963] p25t systemd[1]: Finished systemd-networkd-wait-online.service - Wait for Network to be Configured.
+[   42.498725] p25t systemd[1]: Reached target network-online.target - Network is Online.
+[   42.524230] p25t systemd[1]: Starting exim4.service - exim Mail Transport Agent...
+[  599.535302] p25t sudo[1178]:     jose : TTY=pts/0 ; PWD=/home/jose/tests ; USER=root ; COMMAND=/usr/bin/bash /home/jose/tests/test_10.sh vt 4
+[  599.537387] p25t sudo[1178]: pam_unix(sudo:session): session opened for user root(uid=0) by jose(uid=1000)
+[  600.014290] p25t systemd[1]: Started getty@tty4.service - Getty on tty4.
+
+--- PID 1 and logind after the switch ---
+State:	S (sleeping)
+PID 1 wchan: do_epoll_wait
+logind ping: ok
+
+>>> switching back to tty1
+active now: tty1
+
+=== done ===

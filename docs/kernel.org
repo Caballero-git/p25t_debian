@@ -559,7 +559,8 @@
     ~CLK_I2S1_8CH_TX~ exactly; ~vccio1-supply~ phandle matches
     ~vccio_acodec~; ~i2s1_8ch~ shows ~status = "okay"~ and
     ~rockchip,trcm-sync-tx-only~).
-  - Test script ~tests/test_05.sh~ written (dmesg/ALSA-card checks + an
+  - Test script ~tests/test_05_audio.sh~ (first written as ~test_05.sh~;
+    the number was later reused for the touchscreen) written (dmesg/ALSA-card checks + an
     audible ~speaker-test~ tone, since this is the first patch in this
     project that needs a human to actually listen rather than just
     read a result file). Its own audible-test guard was buggy (~[ -s

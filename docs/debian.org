@@ -10,7 +10,7 @@
   | Boot partition     | SD partition 4, FAT label ~P25TBOOT~, mounted on ~/boot/firmware~ |
   | Hostname / user    | ~p25t~ / ~jose~ (set in the scripts, see below)            |
   | Network            | Wi-Fi (DHCP, preferred) and USB ~usb0~ 192.168.7.2 (backup)|
-  | Console            | ~tty1~ on the panel (Terminus 16×32), ~ttyGS0~ over USB    |
+  | Console            | ~tty1~-~tty6~ on the panel; no getty on ~ttyGS0~ (masked)  |
   | Kernel             | ~7.3.0-rc4-p25t~ (not from Debian; lives on ~P25TBOOT~)    |
 
   The user name ~jose~ is written in ~debian/build_debian.sh~,
@@ -36,8 +36,8 @@
   - ~p25t-bootlog.timer~: 1 min after boot and every 4 min, writes a status
     report to ~/boot/firmware/logs/boot-N-debian.txt~ (useful when no USB
     cable is connected);
-  - enables networkd, resolved, ssh, the gadget, the timer, gettys on
-    ~ttyGS0~ and ~tty1~.
+  - enables networkd, resolved, ssh, the gadget, the timer and the
+    getty on ~tty1~; masks ~serial-getty@ttyGS0~ (see findings).
   It asks for the tablet user's password at the end.
 
 * 2. Put it on the card (PC)
@@ -182,26 +182,23 @@
   has others, including ~ftp.cica.es~ for anything that only needs
   amd64/i386 (not this tablet).
 
-* Multiple sessions on the panel (~tty1~/~tty2~/~tty3~)
-  Working directly on the tablet with a wired keyboard (see "USB
-  host-mode test" below), Ctrl+left-Alt+F1/F2/F3 switches between
-  three separate login sessions on the panel - handy for a normal
-  user on one and ~sudo -i~/root on another without juggling one
-  shell. ~getty@tty2.service~ and ~getty@tty3.service~ are enabled
-  statically in ~p25t-setup.sh~, the same way ~tty1~ always was.
+* Multiple sessions on the panel (~tty1~-~tty6~)
+  Ctrl+Alt+F1 ... F6 switches between six login sessions on the panel,
+  as on any Debian: ~getty@tty1~ is enabled, and logind starts a getty
+  on tty2-tty6 the first time you switch to one (~NAutoVTs=6~).
+  Logging out gives a fresh prompt on the same VT.
 
-  *Known limitation*: only statically-enabled units that come up as
-  part of the normal boot sequence work reliably. ~systemd-logind~'s
-  own on-demand VT spawning (what would normally start a getty on
-  *any* VT the moment you first switch to it, tty4 and up here) does
-  not reliably acquire a controlling terminal on this system - and
-  neither does restarting/re-enabling a getty unit *after* boot, or
-  a getty's own automatic respawn after you log out of it. In
-  practice: treat ~tty1~-~tty3~ as long-lived sessions you leave
-  logged in, not ones you casually log out of - once you exit a
-  session on any of them, getting back in needs a reboot right now.
-  See "Multiple VT sessions - on-demand getty spawning" in
-  ~docs/todo.org~ for the full investigation.
+  This works since 2026-09-30, when ~serial-getty@ttyGS0~ was masked
+  (see "Console: one getty on a dead tty" in
+  [[file:findings.org][findings]]). Before that, only gettys that won
+  a race at boot worked, which is why tty2/tty3 used to be enabled
+  statically. On a tablet set up before that date:
+  #+begin_src sh
+  sudo systemctl mask serial-getty@ttyGS0.service
+  sudo systemctl disable getty@tty2.service getty@tty3.service
+  #+end_src
+  then *power-cycle* rather than reboot if a ttyGS0 getty is already
+  stuck (a normal reboot hangs on it, see findings).
 
 * USB host-mode test (trying a USB wireless keyboard/mouse receiver)
   Stage 6 item, only needed while the Bluetooth keyboard is unavailable
@@ -258,6 +255,7 @@
   session with ~| tee result_NN.txt~ instead:
   | Script       | What it does                                                     | Run as                     |
   |--------------+------------------------------------------------------------------+----------------------------|
+  | ~test_05_audio.sh~ | audio (patch 0015): codec, ALSA card, test tone; result ~result_05_audio.txt~ | ~bash~ |
   | ~test_05.sh~ | touchscreen: firmware file, dmesg, driver bound, input device    | ~bash~                     |
   | ~test_06.sh~ | touchscreen: replays ~silead_ts_init()~'s writes one by one      | ~sudo bash~                |
   | ~test_07.sh~ | touchscreen: replays the vendor driver's whole start-up by hand  | ~sudo bash~                |

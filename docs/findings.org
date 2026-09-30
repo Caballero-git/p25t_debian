@@ -107,6 +107,35 @@
     (not the touch supply); a longer wait after start-up (the firmware
     wasn't slow, it was wrong).
 
+* Console: one getty on a dead tty (blinking cursor, dead VTs, hung reboot)
+  Symptoms (for months): some boots showed only a blinking cursor on
+  the panel; gettys started after boot (logind's tty4-6, the respawn
+  after a logout) never gave a login; ~systemctl~ sometimes answered
+  "Connection timed out"; a ~reboot~ could hang until power-off.
+  Found 2026-09-30 with ~tests/test_10.sh~ (process stacks, not guesses):
+  - ~p25t-gadget~ creates ~/dev/ttyGS0~ even when the gadget never
+    binds (host mode) and nothing reads it without a USB host (no
+    cable). Writes to it block.
+  - systemd 257 resets a getty's terminal before starting agetty and
+    holds a lock on ~/dev/console~ while doing it. The ~ttyGS0~ child
+    blocked in that ~write()~ for ever, *holding the lock*
+    (~result_10a~: pid 478 in ~n_tty_write~, fd 3 = ~/dev/console~).
+  - Every getty whose child came later waited on the lock
+    (~flock(3, LOCK_EX)~): ~ttyS2~ always, tty1-3 whenever ~ttyGS0~ won
+    the start race by a few ms (the "blinking cursor" boots), and every
+    getty started after boot (tty4 in ~result_10c~: empty screen).
+  - On shutdown PID 1 resets the stopped gettys' terminals itself and
+    got stuck the same way: last message "Stopped getty@tty1", then
+    logind's D-Bus calls to PID 1 time out every 75 s
+    (~result_10_shutdown~). Only a power-off recovered.
+  - Fix: ~systemctl mask serial-getty@ttyGS0.service~ (done by
+    ~p25t-setup.sh~). Verified: no stuck processes, tty1-3 prompts,
+    on-demand tty4/tty6, fresh prompt after logout, clean reboot
+    (~result_10e~-~10h~).
+  - Lesson: never run a getty on a tty nobody reads. Also, a ~mask~
+    only affects the next boot: if the unit is already stuck, the
+    reboot that should apply the mask hangs on it - power-cycle.
+
 * Practical lessons
   - When the kernel log can't say *which* step failed, replay the
     driver's I2C sequence by hand with i2c-tools. Find the bus by its

@@ -1,0 +1,30 @@
+=== Touchscreen init replay (test_06) ===
+mar 29 sep 2026 21:01:10 CEST
+i2c1 (fe5a0000) is bus 1; target /sys/bus/i2c/devices/1-0040
+OK: target is the silead,gsl3673 node, no driver bound
+
+--- A: re-probe via the driver, well after boot ---
+[ 1133.003591] silead_ts 1-0040: supply vddio not found, using dummy regulator
+[ 1133.003807] silead_ts 1-0040: supply avdd not found, using dummy regulator
+[ 1133.053796] silead_ts 1-0040: Silead chip ID: 0x50910000
+[ 1133.054183] silead_ts 1-0040: Registers clear error -6
+RESULT A: re-probe failed too -> deterministic, going on to B.
+
+--- B1: is the chip awake right now? (ID read, reg 0xFC) ---
+  ID bytes: 0x00 0x00 0x91 0x50   (driver saw 0x50910000 = 0x00 0x00 0x91 0x50)
+
+--- B2: first write of silead_ts_init(): soft reset ---
+  write 0xe0 <- 0x88  (RESET <- CMD_RESET): FAILED - Error: Write failed
+
+--- B3: poll ID read every ~10 ms for up to 1 s after the reset ---
+  chip answered again after ~19 ms (0 failed polls before). ID: 0x00 0x00 0x91 0x50
+
+--- B4: rest of silead_ts_init(), 20 ms apart (driver uses 10-20 ms) ---
+  write 0x80 <- 0x0a  (TOUCH_NR <- 10 fingers): OK
+  write 0xe4 <- 0x04  (CLOCK <- 0x04): OK
+  write 0xe0 <- 0x00  (RESET <- CMD_START): OK
+
+--- B5: final ID read ---
+  ID bytes: 0x50 0x50 0x91 0x50
+
+=== done (a reboot puts everything back to normal) ===

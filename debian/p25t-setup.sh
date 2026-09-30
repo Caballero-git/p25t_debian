@@ -59,7 +59,8 @@ if [ -s /root/host-timezone ]; then
 fi
 
 echo "--- console font (large, for the 800x1280 screen)"
-sed -i 's/^FONTFACE=.*/FONTFACE="Terminus"/; s/^FONTSIZE=.*/FONTSIZE="16x32"/' /etc/default/console-setup
+sed -i 's/^FONTFACE=.*/FONTFACE="Terminus"/; s/^FONTSIZE=.*/FONTSIZE="10x20"/' /etc/default/console-setup
+# 10x20 (or 11x22) suits the 800x1280 panel; 16x32 is far too big.
 
 echo "--- USB gadget: serial console (ACM) + network (NCM)"
 cat > /usr/local/sbin/p25t-gadget <<'EOF'
@@ -170,16 +171,18 @@ WantedBy=timers.target
 EOF
 
 echo "--- enable services"
-# getty@tty2/tty3 are enabled explicitly (statically), not left to
-# logind's on-demand autovt spawning - that on-demand path does not
-# reliably acquire a controlling terminal on this system (see
-# "Multiple VT sessions" in docs/todo.org). Only units that are
-# started as part of the normal boot sequence come up clean; enabling
-# a couple more here piggybacks on that same boot-time start.
+# Only getty@tty1 is enabled; logind starts tty2-tty6 on demand
+# (NAutoVTs=6), as on any Debian.
 systemctl enable systemd-networkd.service systemd-resolved.service \
     ssh.service p25t-gadget.service p25t-bootlog.timer \
-    serial-getty@ttyGS0.service getty@tty1.service \
-    getty@tty2.service getty@tty3.service
+    getty@tty1.service
+# No login on the USB gadget serial port. When no USB host reads ttyGS0
+# (no cable, or host mode), systemd's terminal reset before agetty
+# blocks for ever while holding the /dev/console lock; every other
+# getty then waits on that lock (blinking cursor, no VT logins) and a
+# reboot hangs in PID 1. See "Console: one getty on a dead tty" in
+# docs/findings.org. SSH (Wi-Fi or usb0) replaces this console.
+systemctl mask serial-getty@ttyGS0.service
 
 echo "--- clean up"
 apt-get clean

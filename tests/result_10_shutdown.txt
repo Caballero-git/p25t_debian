@@ -1,0 +1,200 @@
+[ 7942.058009] p25t systemd[1]: Starting p25t-bootlog.service - P25T status report onto the SD card...
+[ 7946.898663] p25t systemd[1]: p25t-bootlog.service: Deactivated successfully.
+[ 7946.899638] p25t systemd[1]: Finished p25t-bootlog.service - P25T status report onto the SD card.
+[ 7981.683152] p25t sshd-session[1974]: Accepted password for jose from 192.168.1.186 port 37790 ssh2
+[ 7981.694477] p25t sshd-session[1974]: pam_unix(sshd:session): session opened for user jose(uid=1000) by jose(uid=0)
+[ 7981.724529] p25t systemd-logind[377]: New session 6 of user jose.
+[ 7981.749177] p25t systemd[1]: Started session-6.scope - Session 6 of User jose.
+[ 7982.443998] p25t sshd-session[1982]: Received disconnect from 192.168.1.186 port 37790:11: disconnected by user
+[ 7982.445445] p25t sshd-session[1982]: Disconnected from user jose 192.168.1.186 port 37790
+[ 7982.473686] p25t systemd[1]: session-6.scope: Deactivated successfully.
+[ 7982.452766] p25t sshd-session[1974]: pam_unix(sshd:session): session closed for user jose
+[ 7982.481806] p25t systemd-logind[377]: Session 6 logged out. Waiting for processes to exit.
+[ 7982.487088] p25t systemd-logind[377]: Removed session 6.
+[ 8121.704154] p25t kernel: done=1 retry_required=0 sw_retry_required=0 acknowledged=1
+[ 8242.053523] p25t systemd[1]: Starting p25t-bootlog.service - P25T status report onto the SD card...
+[ 8249.432121] p25t systemd[1]: p25t-bootlog.service: Deactivated successfully.
+[ 8249.433198] p25t systemd[1]: Finished p25t-bootlog.service - P25T status report onto the SD card.
+[ 8325.707314] p25t sshd-session[2015]: Accepted password for jose from 192.168.1.186 port 36592 ssh2
+[ 8325.722355] p25t sshd-session[2015]: pam_unix(sshd:session): session opened for user jose(uid=1000) by jose(uid=0)
+[ 8325.754593] p25t systemd-logind[377]: New session 7 of user jose.
+[ 8325.776972] p25t systemd[1]: Started session-7.scope - Session 7 of User jose.
+[ 8327.094873] p25t sshd-session[2025]: Received disconnect from 192.168.1.186 port 36592:11: disconnected by user
+[ 8327.095219] p25t sshd-session[2025]: Disconnected from user jose 192.168.1.186 port 36592
+[ 8327.125411] p25t systemd[1]: session-7.scope: Deactivated successfully.
+[ 8327.100793] p25t sshd-session[2015]: pam_unix(sshd:session): session closed for user jose
+[ 8327.134607] p25t systemd-logind[377]: Session 7 logged out. Waiting for processes to exit.
+[ 8327.142589] p25t systemd-logind[377]: Removed session 7.
+[ 8421.704156] p25t kernel: done=1 retry_required=0 sw_retry_required=0 acknowledged=1
+[ 8527.638004] p25t sshd-session[2041]: Accepted password for jose from 192.168.1.186 port 42274 ssh2
+[ 8527.651045] p25t sshd-session[2041]: pam_unix(sshd:session): session opened for user jose(uid=1000) by jose(uid=0)
+[ 8527.669961] p25t systemd[1]: Starting p25t-bootlog.service - P25T status report onto the SD card...
+[ 8527.680446] p25t systemd-logind[377]: New session 8 of user jose.
+[ 8527.700741] p25t systemd[1]: Started session-8.scope - Session 8 of User jose.
+[ 8528.405430] p25t sshd-session[2052]: Received disconnect from 192.168.1.186 port 42274:11: disconnected by user
+[ 8528.406459] p25t sshd-session[2052]: Disconnected from user jose 192.168.1.186 port 42274
+[ 8528.413877] p25t sshd-session[2041]: pam_unix(sshd:session): session closed for user jose
+[ 8528.435182] p25t systemd[1]: session-8.scope: Deactivated successfully.
+[ 8528.446340] p25t systemd-logind[377]: Session 8 logged out. Waiting for processes to exit.
+[ 8528.449976] p25t systemd-logind[377]: Removed session 8.
+[ 8535.343612] p25t systemd[1]: p25t-bootlog.service: Deactivated successfully.
+[ 8535.347514] p25t systemd[1]: Finished p25t-bootlog.service - P25T status report onto the SD card.
+[ 8590.900591] p25t sudo[2075]:     jose : TTY=pts/1 ; PWD=/home/jose/tests ; USER=root ; COMMAND=/usr/bin/bash /home/jose/tests/test_10.sh
+[ 8590.903088] p25t sudo[2075]: pam_unix(sudo:session): session opened for user root(uid=0) by jose(uid=1000)
+[ 8596.902089] p25t sudo[2075]: pam_unix(sudo:session): session closed for user root
+[ 8721.708127] p25t kernel: done=1 retry_required=0 sw_retry_required=0 acknowledged=1
+[ 8747.496574] p25t wpa_supplicant[463]: wlan0: WPA: Group rekeying completed with 5c:e9:31:b3:92:58 [GTK=CCMP]
+[ 8782.056897] p25t systemd[1]: Starting p25t-bootlog.service - P25T status report onto the SD card...
+[ 8787.427193] p25t systemd[1]: p25t-bootlog.service: Deactivated successfully.
+[ 8787.428467] p25t systemd[1]: Finished p25t-bootlog.service - P25T status report onto the SD card.
+[ 8972.745799] p25t sshd-session[2332]: Accepted password for jose from 192.168.1.186 port 40260 ssh2
+[ 8972.755951] p25t sshd-session[2332]: pam_unix(sshd:session): session opened for user jose(uid=1000) by jose(uid=0)
+[ 8972.790706] p25t systemd-logind[377]: New session 9 of user jose.
+[ 8973.811789] p25t sshd-session[2341]: Received disconnect from 192.168.1.186 port 40260:11: disconnected by user
+[ 8972.813182] p25t systemd[1]: Started session-9.scope - Session 9 of User jose.
+[ 8973.813806] p25t sshd-session[2341]: Disconnected from user jose 192.168.1.186 port 40260
+[ 8973.842616] p25t systemd[1]: session-9.scope: Deactivated successfully.
+[ 8973.820034] p25t sshd-session[2332]: pam_unix(sshd:session): session closed for user jose
+[ 8973.849885] p25t systemd-logind[377]: Session 9 logged out. Waiting for processes to exit.
+[ 8973.853428] p25t systemd-logind[377]: Removed session 9.
+[ 9021.708189] p25t kernel: done=1 retry_required=0 sw_retry_required=0 acknowledged=1
+[ 9082.053140] p25t systemd[1]: Starting p25t-bootlog.service - P25T status report onto the SD card...
+[ 9086.347903] p25t systemd[1]: p25t-bootlog.service: Deactivated successfully.
+[ 9086.350963] p25t systemd[1]: Finished p25t-bootlog.service - P25T status report onto the SD card.
+[ 9321.712187] p25t kernel: done=1 retry_required=0 sw_retry_required=0 acknowledged=1
+[ 9322.273943] p25t systemd[1]: Starting p25t-bootlog.service - P25T status report onto the SD card...
+[ 9327.244701] p25t systemd[1]: p25t-bootlog.service: Deactivated successfully.
+[ 9327.247792] p25t systemd[1]: Finished p25t-bootlog.service - P25T status report onto the SD card.
+[ 9550.547365] p25t sudo[2383]:     jose : TTY=pts/1 ; PWD=/home/jose/tests ; USER=root ; COMMAND=/usr/bin/bash /home/jose/tests/test_10.sh vt 4
+[ 9550.550154] p25t sudo[2383]: pam_unix(sudo:session): session opened for user root(uid=0) by jose(uid=1000)
+[ 9551.001708] p25t systemd[1]: Started getty@tty4.service - Getty on tty4.
+[ 9563.098049] p25t sudo[2383]: pam_unix(sudo:session): session closed for user root
+[ 9563.118634] p25t systemd[1]: Starting p25t-bootlog.service - P25T status report onto the SD card...
+[ 9571.029171] p25t systemd[1]: p25t-bootlog.service: Deactivated successfully.
+[ 9571.030403] p25t systemd[1]: Finished p25t-bootlog.service - P25T status report onto the SD card.
+[ 9588.334747] p25t sshd-session[2481]: Accepted password for jose from 192.168.1.186 port 59594 ssh2
+[ 9588.345578] p25t sshd-session[2481]: pam_unix(sshd:session): session opened for user jose(uid=1000) by jose(uid=0)
+[ 9588.382209] p25t systemd-logind[377]: New session 10 of user jose.
+[ 9588.409218] p25t systemd[1]: Started session-10.scope - Session 10 of User jose.
+[ 9589.142770] p25t sshd-session[2489]: Received disconnect from 192.168.1.186 port 59594:11: disconnected by user
+[ 9589.143925] p25t sshd-session[2489]: Disconnected from user jose 192.168.1.186 port 59594
+[ 9589.151513] p25t sshd-session[2481]: pam_unix(sshd:session): session closed for user jose
+[ 9589.177510] p25t systemd[1]: session-10.scope: Deactivated successfully.
+[ 9589.182265] p25t systemd-logind[377]: Session 10 logged out. Waiting for processes to exit.
+[ 9589.187419] p25t systemd-logind[377]: Removed session 10.
+[ 9621.716673] p25t kernel: done=1 retry_required=0 sw_retry_required=0 acknowledged=1
+[ 9862.058414] p25t systemd[1]: Starting p25t-bootlog.service - P25T status report onto the SD card...
+[ 9866.145722] p25t systemd[1]: p25t-bootlog.service: Deactivated successfully.
+[ 9866.146832] p25t systemd[1]: Finished p25t-bootlog.service - P25T status report onto the SD card.
+[ 9921.716119] p25t kernel: done=1 retry_required=0 sw_retry_required=0 acknowledged=1
+[10119.138371] p25t sshd-session[2512]: Accepted password for jose from 192.168.1.186 port 38300 ssh2
+[10119.167635] p25t systemd[1]: Starting p25t-bootlog.service - P25T status report onto the SD card...
+[10119.147965] p25t sshd-session[2512]: pam_unix(sshd:session): session opened for user jose(uid=1000) by jose(uid=0)
+[10119.179140] p25t systemd-logind[377]: New session 11 of user jose.
+[10119.874331] p25t sshd-session[2525]: Received disconnect from 192.168.1.186 port 38300:11: disconnected by user
+[10119.196730] p25t systemd[1]: Started session-11.scope - Session 11 of User jose.
+[10119.875336] p25t sshd-session[2525]: Disconnected from user jose 192.168.1.186 port 38300
+[10119.902233] p25t systemd[1]: session-11.scope: Deactivated successfully.
+[10119.881885] p25t sshd-session[2512]: pam_unix(sshd:session): session closed for user jose
+[10119.910773] p25t systemd-logind[377]: Session 11 logged out. Waiting for processes to exit.
+[10119.918703] p25t systemd-logind[377]: Removed session 11.
+[10125.251460] p25t systemd[1]: p25t-bootlog.service: Deactivated successfully.
+[10125.254322] p25t systemd[1]: Finished p25t-bootlog.service - P25T status report onto the SD card.
+[10221.720189] p25t kernel: done=1 retry_required=0 sw_retry_required=0 acknowledged=1
+[10277.433895] p25t sudo[2543]:     jose : TTY=pts/1 ; PWD=/home/jose/tests ; USER=root ; COMMAND=/usr/bin/systemctl mask serial-getty@ttyGS0.service
+[10277.435643] p25t sudo[2543]: pam_unix(sudo:session): session opened for user root(uid=0) by jose(uid=1000)
+[10277.477223] p25t systemd[1]: Reload requested from client PID 2546 ('systemctl') (unit session-4.scope)...
+[10277.477283] p25t systemd[1]: Reloading...
+[10278.242292] p25t systemd[1]: Reloading finished in 763 ms.
+[10278.283367] p25t sudo[2543]: pam_unix(sudo:session): session closed for user root
+[10278.291126] p25t systemd[1]: man-db.service - Daily man-db regeneration skipped, unmet condition check ConditionACPower=true
+[10326.296169] p25t kernel: usb 1-1: USB disconnect, device number 2
+[10326.952106] p25t kernel: usb 1-1: new low-speed USB device number 3 using xhci-hcd
+[10332.472167] p25t kernel: usb 1-1: can't set config #1, error -110
+[10332.473006] p25t kernel: usb 1-1: USB disconnect, device number 3
+[10333.654654] p25t sudo[2588]:     jose : TTY=pts/1 ; PWD=/home/jose/tests ; USER=root ; COMMAND=/usr/sbin/reboot
+[10333.656438] p25t sudo[2588]: pam_unix(sudo:session): session opened for user root(uid=0) by jose(uid=1000)
+[10333.688657] p25t systemd-logind[377]: The system will reboot now!
+[10333.690710] p25t systemd-logind[377]: System is rebooting.
+[10333.703963] p25t sudo[2588]: pam_unix(sudo:session): session closed for user root
+[10333.735124] p25t su[987]: pam_unix(su:session): session closed for user root
+[10333.737553] p25t login[473]: pam_unix(login:session): session closed for user jose
+[10333.739422] p25t systemd[1]: Stopping session-1.scope - Session 1 of User jose...
+[10333.742045] p25t systemd[1]: Stopping session-3.scope - Session 3 of User jose...
+[10333.743296] p25t login[475]: pam_unix(login:session): session closed for user jose
+[10333.746236] p25t sshd-session[1826]: error: mm_reap: preauth child terminated by signal 15
+[10333.746355] p25t systemd[1]: Stopping session-4.scope - Session 4 of User jose...
+[10333.746621] p25t sshd-session[1826]: pam_unix(sshd:session): session closed for user jose
+[10333.749353] p25t systemd[1]: Removed slice system-modprobe.slice - Slice /system/modprobe.
+[10333.750865] p25t systemd[1]: Stopped target bluetooth.target - Bluetooth Support.
+[10333.751842] p25t systemd[1]: Stopped target graphical.target - Graphical Interface.
+[10333.754141] p25t systemd[1]: Stopped target multi-user.target - Multi-User System.
+[10333.755184] p25t systemd[1]: Stopped target getty.target - Login Prompts.
+[10333.757044] p25t systemd[1]: Stopped target sound.target - Sound Card.
+[10333.758116] p25t systemd[1]: Stopped target timers.target - Timer Units.
+[10333.758854] p25t systemd[1]: apt-daily-upgrade.timer: Deactivated successfully.
+[10333.759274] p25t systemd[1]: Stopped apt-daily-upgrade.timer - Daily apt upgrade and clean activities.
+[10333.760657] p25t systemd[1]: apt-daily.timer: Deactivated successfully.
+[10333.761044] p25t systemd[1]: Stopped apt-daily.timer - Daily apt download activities.
+[10333.761745] p25t systemd[1]: dpkg-db-backup.timer: Deactivated successfully.
+[10333.762140] p25t systemd[1]: Stopped dpkg-db-backup.timer - Daily dpkg database backup timer.
+[10333.763005] p25t systemd[1]: e2scrub_all.timer: Deactivated successfully.
+[10333.763409] p25t systemd[1]: Stopped e2scrub_all.timer - Periodic ext4 Online Metadata Check for All Filesystems.
+[10333.764266] p25t systemd[1]: exim4-base.timer: Deactivated successfully.
+[10333.764618] p25t systemd[1]: Stopped exim4-base.timer - Daily exim4-base housekeeping.
+[10333.765282] p25t systemd[1]: fstrim.timer: Deactivated successfully.
+[10333.765633] p25t systemd[1]: Stopped fstrim.timer - Discard unused filesystem blocks once a week.
+[10333.766404] p25t systemd[1]: man-db.timer: Deactivated successfully.
+[10333.766885] p25t systemd[1]: Stopped man-db.timer - Daily man-db regeneration.
+[10333.767556] p25t systemd[1]: p25t-bootlog.timer: Deactivated successfully.
+[10333.767934] p25t systemd[1]: Stopped p25t-bootlog.timer - P25T status report onto the SD card, 1 min after boot and every 4 min.
+[10333.768762] p25t systemd[1]: systemd-tmpfiles-clean.timer: Deactivated successfully.
+[10333.768689] p25t sshd-session[1826]: syslogin_perform_logout: logout() returned an error
+[10333.769130] p25t systemd[1]: Stopped systemd-tmpfiles-clean.timer - Daily Cleanup of Temporary Directories.
+[10333.770332] p25t systemd[1]: Stopped target time-set.target - System Time Set.
+[10333.771395] p25t systemd[1]: systemd-rfkill.socket: Deactivated successfully.
+[10333.772247] p25t systemd[1]: Closed systemd-rfkill.socket - Load/Save RF Kill Switch Status /dev/rfkill Watch.
+[10333.777081] p25t systemd[1]: Unmounting boot-firmware.mount - /boot/firmware...
+[10333.782307] p25t systemd[1]: Stopping alsa-restore.service - Save/Restore Sound Card State...
+[10333.784688] p25t systemd[1]: Stopping exim4.service - exim Mail Transport Agent...
+[10333.786147] p25t systemd[1]: Stopping getty@tty1.service - Getty on tty1...
+[10333.787633] p25t systemd[1]: Stopping getty@tty2.service - Getty on tty2...
+[10333.791489] p25t systemd[1]: Stopping getty@tty3.service - Getty on tty3...
+[10333.793091] p25t systemd[1]: Stopping getty@tty4.service - Getty on tty4...
+[10333.793386] p25t systemd[1]: lm-sensors.service: Deactivated successfully.
+[10333.794261] p25t systemd[1]: Stopped lm-sensors.service - Initialize hardware monitoring sensors.
+[10333.807940] p25t systemd[1]: Stopping p25t-bluetooth.service - P25T: attach the AIC8800 Bluetooth (H4 on ttyS1, 1.5 Mbaud, RTS/CTS)...
+[10333.809344] p25t btattach[374]: Attaching Primary controller to /dev/ttyS1
+[10333.809344] p25t btattach[374]: Switched line discipline from 0 to 15
+[10333.809344] p25t btattach[374]: Device index 0 attached
+[10333.812074] p25t systemd[1]: Stopping polkit.service - Authorization Manager...
+[10333.814361] p25t sshd[490]: Received signal 15; terminating.
+[10333.813461] p25t systemd[1]: Stopping serial-getty@ttyS2.service - Serial Getty on ttyS2...
+[10333.814236] p25t systemd[1]: Stopping ssh.service - OpenBSD Secure Shell server...
+[10333.828193] p25t systemd[1]: Stopping systemd-networkd-persistent-storage.service - Enable Persistent Storage in systemd-networkd...
+[10333.834637] p25t bluetoothd[426]: Battery Provider Manager destroyed
+[10333.840970] p25t systemd[1]: Stopping systemd-random-seed.service - Load/Save OS Random Seed...
+[10333.841463] p25t systemd[1]: systemd-udev-load-credentials.service: Deactivated successfully.
+[10333.842397] p25t systemd[1]: Stopped systemd-udev-load-credentials.service - Load udev Rules from Credentials.
+[10333.922290] p25t systemd[1]: p25t-bluetooth.service: Deactivated successfully.
+[10333.923317] p25t systemd[1]: Stopped p25t-bluetooth.service - P25T: attach the AIC8800 Bluetooth (H4 on ttyS1, 1.5 Mbaud, RTS/CTS).
+[10333.926068] p25t systemd[1]: getty@tty1.service: Deactivated successfully.
+[10333.926985] p25t systemd[1]: Stopped getty@tty1.service - Getty on tty1.
+[10335.742646] p25t sudo[965]: pam_unix(sudo:session): session closed for user root
+[10358.790044] p25t systemd-logind[377]: Failed to abandon session scope, ignoring: Connection timed out
+[10358.790186] p25t systemd-logind[377]: Session 1 logged out. Waiting for processes to exit.
+[10385.120081] p25t kernel: usb 1-1: new low-speed USB device number 4 using xhci-hcd
+[10385.604123] p25t kernel: input: Logitech USB Keyboard as /devices/platform/fcc00000.usb/xhci-hcd.8.auto/usb1/1-1/1-1:1.0/0003:046D:C31C.0003/input/input6
+[10385.700156] p25t kernel: hid-generic 0003:046D:C31C.0003: input: USB HID v1.10 Keyboard [Logitech USB Keyboard] on usb-xhci-hcd.8.auto-1/input0
+[10385.707644] p25t kernel: input: Logitech USB Keyboard Consumer Control as /devices/platform/fcc00000.usb/xhci-hcd.8.auto/usb1/1-1/1-1:1.1/0003:046D:C31C.0004/input/input7
+[10385.762180] p25t kernel: input: Logitech USB Keyboard System Control as /devices/platform/fcc00000.usb/xhci-hcd.8.auto/usb1/1-1/1-1:1.1/0003:046D:C31C.0004/input/input8
+[10385.762582] p25t kernel: hid-generic 0003:046D:C31C.0004: input: USB HID v1.10 Device [Logitech USB Keyboard] on usb-xhci-hcd.8.auto-1/input1
+[10416.728155] p25t kernel: usb 1-1: USB disconnect, device number 4
+[10433.866559] p25t systemd-logind[377]: Failed to abandon session scope, ignoring: Connection timed out
+[10433.866688] p25t systemd-logind[377]: Session 3 logged out. Waiting for processes to exit.
+[10508.946859] p25t systemd-logind[377]: Failed to abandon session scope, ignoring: Connection timed out
+[10508.946994] p25t systemd-logind[377]: Session 4 logged out. Waiting for processes to exit.
+[10521.724188] p25t kernel: done=1 retry_required=0 sw_retry_required=0 acknowledged=1
+[10559.013931] p25t systemd-logind[377]: Failed to open /dev/input/event4: No such file or directory
+[10559.015701] p25t systemd-logind[377]: Failed to open /dev/input/event3: No such file or directory
+[10559.016823] p25t systemd-logind[377]: Failed to open /dev/input/event5: No such file or directory
