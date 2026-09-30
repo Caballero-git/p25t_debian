@@ -84,7 +84,62 @@
     absent); touch GSL3673 at i2c1 0x40; both accelerometer drivers bound
     (SC7A20 0x19 and DA223 0x27), real chip unconfirmed.
 
+* Touchscreen: four problems stacked on top of each other
+  Symptom: "Registers clear error -6", no input device. Each fix revealed
+  the next problem (2026-09-29/30, details in [[file:todo.org][todo]]):
+  - *Reset NACK.* The GSL3673 NACKs the soft-reset byte because it resets
+    before acknowledging. Found by replaying the driver's init writes one
+    at a time with i2c-tools (~tests/test_06.sh~): exactly one write
+    fails, and the chip answers straight after. Patch 0018 tolerates it.
+  - *Wrong firmware.* A GSL3673 table taken from another product's GPL
+    source uploads without a single error but never starts (status ~0xB0~
+    stays 0) - even with the vendor's own start-up sequence replayed byte
+    for byte. The right table was inside the tablet's own stock kernel;
+    it worked first time. Same chip name and same I2C address are *not*
+    enough to share firmware.
+  - *Firmware not there at boot.* A built-in driver probes before the root
+    filesystem exists, so ~/lib/firmware~ is empty for it:
+    ~CONFIG_EXTRA_FIRMWARE~ builds the blob into the kernel.
+  - *Coordinates.* The chip reports in its own rotated coordinate space;
+    measured with a guided script (~tests/test_09.py~), not guessed.
+  - Dead ends, so nobody repeats them: flipping ~power-gpios~ to
+    active-low (made it worse: the chip then stays in reset); RK817 LDO9
+    (not the touch supply); a longer wait after start-up (the firmware
+    wasn't slow, it was wrong).
+
 * Practical lessons
+  - When the kernel log can't say *which* step failed, replay the
+    driver's I2C sequence by hand with i2c-tools. Find the bus by its
+    controller's address (~/sys/bus/i2c/devices/i2c-*~ → ~fe5a0000.i2c~),
+    never by number, and check the DT node's ~compatible~ before
+    writing: 0x40 is the touchscreen on i2c1 but the CPU regulator on i2c0.
+  - Take vendor firmware from *this* device's own stock image
+    (~tools/gsl_fw_from_stock_kernel.py~ for GSL tables), not from a
+    similar product.
+  - A script that switches configurations by copying fixed files
+    (~set-usb-role.sh~) silently undoes every later change unless those
+    copies are refreshed with each change. It also has to keep
+    ~CARD-SHA256SUMS~ in step - it does now.
+  - ~P25TBOOT~ can be changed from the tablet itself (mounted at
+    ~/boot/firmware~ with ~flush~) - no card shuffling for kernel/DT
+    deploys, as long as the new files boot.
+  - 2026-09-29: writes to ~P25TBOOT~ through Claude's remote file bridge
+    went wrong - one landed under a ~-1~ name, and the target ended up
+    with other content (partly the role-switch problem above). Since then
+    card files are written by Jose, locally, and checked with
+    ~sha256sum -c CARD-SHA256SUMS~.
+  - 2026-09-30: the ~-1~ names explained (most likely). The Claude
+    desktop app copies files Claude saves in its session's /outputs/
+    folder into the folders connected to the session, keeping their
+    relative paths, and names a copy ~NAME-1.EXT~ when ~NAME.EXT~ already
+    exists there. Seen in ~~/p25t-backup/p25t-linux/~: ~README-1.org~,
+    ~docs/*-1.org~, ~tests/test_05-1.sh~ appeared before the sync
+    tarball was unpacked, identical to the tarball's copies. ~P25TBOOT~
+    was a connected folder on 2026-09-29 too. Rules since then: Claude
+    keeps its working copy of this tree outside /outputs/ and hands over
+    only tarballs with a checksum manifest; ~P25TBOOT~ stays out of the
+    session's connected folders unless a card write is planned; after
+    unpacking a sync, delete any ~*-1.*~ files once ~sha256sum -c~ passes.
   - Everything that writes to a disk checks first that the target is a
     removable/USB disk, and verifies by checksum afterwards
     (~CARD-SHA256SUMS~ on ~P25TBOOT~).

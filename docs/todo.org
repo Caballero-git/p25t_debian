@@ -111,9 +111,222 @@
     done - nothing else known to be missing for basic Panfrost/Mesa 3D
     acceleration.
 
-* TODO Touchscreen (Silead GSL3673, i2c1 0x40, IRQ GPIO0_B0, reset GPIO0_C2)
-  - Mainline ~silead~ driver; the firmware blob must be extracted from the
-    Android vendor partition and converted to the ~silead~ format.
+* DONE Touchscreen (Silead GSL3673, i2c1 0x40, IRQ GPIO0_B0, reset GPIO0_C2)
+  - *Working 2026-09-30*: touches, 3-finger multi-touch, correct
+    orientation and range, from boot (no manual ~bind~). Patches
+    0017-0020 plus ~CONFIG_EXTRA_FIRMWARE~, see [[file:kernel.org][kernel]].
+    Verified with ~tests/test_05.sh~ (bound at boot, ~input: silead_ts~
+    at 3.5 s) and ~tests/test_09.py~ (after the fix: nothing left to
+    swap or invert, touches reach 14..884 x 22..1676 of 0..895 x 0..1679).
+  - Four separate problems, found one at a time (2026-09-29/30):
+    1. *Soft-reset NACK.* The chip NACKs the ~0xE0 <- 0x88~ reset write
+       (it resets before acknowledging); mainline gave up with
+       "Registers clear error -6". Pinned with ~tests/test_06.sh~, which
+       replays the init writes one by one with i2c-tools: only that one
+       fails, and the chip answers straight after. Patch 0018 tolerates
+       exactly that NACK.
+    2. *Wrong firmware.* The table from ~54shady/qop_kernel~ (source of
+       patch 0017's firmware) uploads fine but never starts: status
+       register ~0xB0~ stays 0, even with the vendor driver's exact
+       start-up sequence replayed byte for byte (~tests/test_07.sh~). The
+       stock kernel contains three GSL tables; the one belonging to
+       ~GSL,GSL3673_800X1280~ (the stock DT's compatible) shares only 6
+       of its 141 pages with the 54shady table. Extracted from
+       ~Firmware/stock-kernel.bin~ with ~tools/gsl_fw_from_stock_kernel.py~,
+       it worked first time.
+    3. *Firmware not reachable at boot.* ~silead_ts~ is built in and
+       probes at ~0.5 s, before the root filesystem is mounted: "Direct
+       firmware load ... failed with error -2". Fixed by building the
+       firmware into the kernel (patch 0020, ~CONFIG_EXTRA_FIRMWARE~).
+    4. *Coordinates.* The chip reports ~0..1660 along the long axis and
+       ~0..880 along the short one, rotated relative to the panel.
+       Measured with ~tests/test_09.py~ (guided corners plus an edge
+       sweep); patch 0019 sets the raw size with a margin (the input core
+       inverts with unsigned ~max - x~, so out-of-range values would wrap,
+       not clamp), both inversions and the swap.
+  - Ruled out on the way: ~power-gpios~ is active-high (active-low made
+    even the ID read fail); IRQ level-low is right; not a timing issue
+    (re-probing long after boot failed the same way); RK817 LDO9 is *not*
+    the touch supply (~tests/test_08.sh~ switched it on, with Jose's OK:
+    no change; touch later worked with LDO9 off). Chip ID reads
+    ~0x50910000~.
+  - Follow-ups (low priority):
+    - Boot delay: the firmware upload takes ~3 s at i2c1's default
+      100 kHz (the vendor driver defines ~WRITE_I2C_SPEED 350000~). Try
+      ~clock-frequency = <400000>~ on ~&i2c1~ (shared with the
+      accelerometer), or asynchronous probing.
+    - DONE 2026-09-30: ~/lib/firmware/silead/gsl3673-p25t.fw.54shady~
+      removed from the tablet; the correct ~gsl3673-p25t.fw~ stays there
+      as a fallback (unused: built-in firmware takes precedence).
+      ~kernel/touchscreen/~ (54shady table and vendor header) and
+      ~tools/gsl3673_fw_convert.py~ deleted, never committed: the
+      correct firmware is in the repo inside patch 0020.
+  - History of the investigation (2026-09-28/29), kept for reference.
+    Where it contradicts the outcome above, the outcome wins. The files
+    it names under ~kernel/touchscreen/~ and ~tools/gsl3673_fw_convert.py~
+    no longer exist (deleted 2026-09-30):
+    - Mainline ~silead~ driver; the firmware blob must be extracted from the
+      Android vendor partition and converted to the ~silead~ format.
+    - Research pass (2026-09-28), no hardware touched, all from the kernel
+      source tree and the web - what's actually needed before this can be
+      built:
+      - *Checked mainline's exact support*: ~drivers/input/touchscreen/silead.c~'s
+        ~of_match_table~ lists exactly five compatibles - ~silead,gsl1680~,
+        ~gsl1688~, ~gsl3670~, ~gsl3675~, ~gsl3692~. ~gsl3673~ is *not* one of
+        them - a plain ~compatible = "silead,gsl3673"~ node would not bind at
+        all.
+      - *Good news, checked directly in the driver source*: the whole
+        register map (~SILEAD_REG_RESET~/~DATA~/~POWER~/~CLOCK~/~STATUS~/~ID~,
+        the 0x5A5A5A5A status-OK value, the I2C protocol) is identical across
+        every compatible in that list - there is no per-chip branching
+        anywhere in the driver. Silead kept one host protocol across the
+        whole GSL family; the compatible list is a tested-devices allowlist,
+        not a functional difference. So the standard two-string DT fallback -
+        ~compatible = "silead,gsl3673", "silead,gsl3670";~ (informational
+        real name first, a listed sibling second so the driver actually
+        binds) - is low-risk here, the same technique already used
+        elsewhere for an unlisted-but-compatible chip.
+      - *Kernel config gap, same pattern as every previous one*:
+        ~CONFIG_TOUCHSCREEN_SILEAD is not set~ in ~kernel/p25t-kernel.config~
+        right now - would need enabling, same as ~CONFIG_SOUND~/~CONFIG_DRM_PANFROST~/
+        ~CONFIG_IIO_ST_ACCEL_3AXIS~ before it.
+      - *The actual hard part*: the firmware blob is a per-panel calibration
+        table (offset/value pairs loaded into the chip's RAM at runtime, not
+        baked into the silicon), so it cannot be borrowed from a different
+        device's GSL3670/3673/etc firmware - it must be *this* P25T panel's
+        own blob, extracted from Teclast's own Android driver.
+      - *The tool for that already exists*:
+        [[https://github.com/onitake/gsl-firmware][onitake/gsl-firmware]] -
+        a community toolchain built for exactly this job. ~fw_extractor~
+        pulls the firmware straight out of a vendor Android kernel module
+        (a ~gslX680*.ko~-style file); ~untscfg~ does the same from a
+        ~GSL_TS_CFG.h~-style vendor config header, if a ~.ko~ isn't found.
+      - *Next concrete step, not yet done*: search the eMMC/Android recovery
+        kit's ~Firmware.img~ (see [[file:hardware.org][hardware]] and
+        [[file:findings.org][findings]]) for a Silead/~gslX680~ kernel module
+        or config header - same read-only unpacking approach already used
+        to identify the real Wi-Fi/BT chip earlier in this project. Needs
+        the PC (large image, best with a real shell there) - couldn't be
+        done from this research pass alone.
+      - No web search turned up a published Teclast P25T (P9A6) GPL kernel
+        source release specifically (other Teclast models do have one, e.g.
+        the MT6753 TPad kernel on GitHub) - worth one more targeted look,
+        but the ~Firmware.img~ module-extraction path doesn't depend on
+        finding one.
+      - *Firmware.img search (2026-09-28), confirms the chip and reveals the
+        real complication*: ~strings~ on ~update/Image/boot.img~ (the actual
+        Android kernel+ramdisk, not a mountable filesystem image) turned up
+        over a dozen GSL3673-specific strings baked directly into the kernel
+        binary itself - ~gsl3673~, ~GSL3673_FW~, ~GSL,GSL3673~,
+        ~GSL,GSL3673_800X1280~, ~gsl3673_800x1280~, plus driver log strings
+        (~"GSL3673 test_i2c error!"~, ~"gsl GSL3673 init failed"~,
+        ~gslX680_ts_init~, ...). ~dtbo.img~ had no matches. A parallel search
+        across every extracted partition (vendor, system, odm, product,
+        vendor_dlkm, odm_dlkm, all ~_a~ slots - ~_b~ slots are all empty on
+        this single-slot device) found no ~.ko~/~.ko.gz~/~.ko.xz~ module and
+        no firmware/config file matching silead/gsl by name or content.
+      - *What this means*: the vendor driver is compiled *directly into the
+        monolithic kernel* (not a loadable module) - which is exactly why
+        it was never found in any partition filesystem; it was never there
+        to find. This is the well-known out-of-tree "gslX680" vendor driver
+        family (widely forked on GitHub by other Chinese tablet vendors off
+        the original Silead SDK) - a different driver from mainline's
+        ~silead.c~, and one that bakes the panel's calibration table into a
+        C header at build time rather than loading it from a separate
+        firmware file at runtime the way mainline does.
+      - The real DT compatible string this vendor used:
+        ~"GSL,GSL3673"~/~"GSL,GSL3673_800X1280"~ (comma-separated, uppercase
+        - not the lowercase ~silead,gsl3673~ mainline convention). ~800x1280~
+        almost certainly names this panel's specific calibration variant
+        among several the vendor driver supports.
+      - Every other content-grep hit in this pass (inside ~pcbtest.apk~,
+        font/cert files, ~libbluetooth.so~, ~.oat~/~.apex~ files, several
+        Google apps' ~.apk~s) is very likely coincidental byte matches
+        inside compressed/compiled binaries, not real touchscreen files - a
+        short pattern like ~gsl3~ turns up this kind of noise when grepped
+        against binary content; none of these are plausible touchscreen
+        locations and none are worth chasing.
+      - *Revised next step*: since there's no separate firmware blob to
+        extract from a partition, the path forward is either (a) find a
+        public ~gslX680~/~GSL3673~ driver fork on GitHub whose embedded
+        calibration table matches this panel (~800x1280~, i2c1 0x40 - the
+        same identifying details already confirmed on real hardware), and
+        feed that table through
+        [[https://github.com/onitake/gsl-firmware][onitake/gsl-firmware]]'s
+        ~untscfg~ to produce the blob mainline's ~silead.c~ expects via
+        ~request_firmware()~; or (b) extract the calibration table directly
+        out of ~boot.img~'s kernel binary (harder - needs locating the raw
+        byte table near these strings, not just reading strings). (a) is
+        much easier if a matching public fork exists - worth a targeted
+        GitHub search (e.g. ~gsl3673 800x1280~) before attempting (b).
+      - *Found and built (2026-09-28), option (a)*: GitHub turned up
+        [[https://github.com/54shady/qop_kernel/blob/master/drivers/input/touchscreen/gsl3673_800x1280.c][54shady/qop_kernel's ~gsl3673_800x1280.c~/~.h~]]
+        (commit ~f016d717b21b38ae115f92a276a58913f1040035~, GPLv2,
+        "Copyright (c) 2012 Shanghai Basewin") - an exact identifying match,
+        not just "a" GSL3673 driver: its I2C address (~0x40~), its DT
+        ~compatible = "GSL,GSL3673_800X1280"~, and its literal error strings
+        (~"GSL3673 test_i2c error!"~, ~"gsl GSL3673 init failed"~) match our
+        ~boot.img~ strings verbatim. Shanghai Basewin is the driver
+        integrator that supplied this exact reference file to many
+        unrelated Chinese tablet OEMs sharing this chip+panel combination -
+        not a byte-for-byte confirmed match (that would still need option
+        (b), pulling the table out of the compiled kernel), but as strong as
+        circumstantial evidence gets, and loading firmware into the touch
+        controller's RAM at runtime is fully non-destructive/reversible
+        either way - nothing here risks the hardware.
+      - *Conversion*: wrote ~tools/gsl3673_fw_convert.py~ - neither of
+        ~gsl-firmware~'s own tools fit this source format (~fw_extractor~
+        needs a compiled ELF ~.ko~, we have C source; ~untscfg~ parses a
+        *Windows* driver's differently-shaped ~GSL_TS_CFG.h~) - so this is a
+        small new parser for the vendor's own ~struct fw_data
+        GSL3673_FW[] = { {0xoffset, 0xvalue}, ... }~ C-array format, packing
+        each entry ~<II~ (offset, val), which matches mainline's own
+        ~struct silead_fw_data { u32 offset; u32 val; }~ *exactly* (checked
+        directly against ~drivers/input/touchscreen/silead.c~'s
+        ~silead_ts_load_fw()~ - flat array, no header, written verbatim over
+        I2C in file order) - the same "legacy binary format"
+        ~gsl-firmware~'s own ~untscfg~ produces, just for this source shape
+        instead. Ran it: 5049 entries, 40392 bytes, output verified
+        register-by-register against the source text (first/last entries
+        byte-identical). Vendored a copy of the source header
+        (~kernel/touchscreen/gsl3673_800x1280.h.vendor-ref~, license notice
+        intact) rather than depending on the upstream repo staying up -
+        we've already been burned by that once this project
+        (~TeeFirefly/rk2918_tools~ going 404).
+      - *DT node added, built, not yet deployed* (same status as patches
+        0013/0014 before their hardware test): ~touchscreen@40~ under
+        ~&i2c1~ in [[file:../kernel/rk3566-teclast-p25t.dts][the DTS]] -
+        the two-string compatible fallback (~"silead,gsl3673",
+        "silead,gsl3670"~), ~firmware-name = "gsl3673-p25t.fw"~ (install the
+        generated blob as ~/lib/firmware/silead/gsl3673-p25t.fw~ on the
+        target), ~touchscreen-size-x/y = 800/1280~. IRQ/reset *pin numbers*
+        (GPIO0_B0/GPIO0_C2) are the ones already confirmed from the stock DT
+        (see hardware.org); the *trigger-type flag*
+        (~IRQ_TYPE_LEVEL_LOW~, matching this DTS's other i2c1 interrupts)
+        and ~power-gpios~' active-high polarity are best-effort
+        placeholders, NOT re-confirmed from a raw stock DT dump this pass -
+        flagged in the DTS itself, same "unconfirmed until tested" pattern
+        already used for the accelerometer's mount-matrix. Also flipped
+        ~CONFIG_TOUCHSCREEN_SILEAD~ on in ~kernel/p25t-kernel.config~.
+        Preprocessed and compiled clean with ~dtc~ against the local kernel
+        tree (no errors/warnings); decompiled the resulting DTB and
+        confirmed every field byte-for-byte (pin 8, flag 0x08, pin 0x12
+        (=18), size 0x320/0x500 (=800/1280)) - the DT side is verified
+        correct, only real hardware can confirm the two flagged polarities
+        and whether this is in fact the right calibration table.
+      - *Deploy checklist (not done this pass, no hardware access from
+        here)*: apply patch 0017 + ~kernel/p25t-kernel.config~, rebuild
+        ~Image~ and ~dtbs~ (config change, same as the
+        accelerometer/GPU/audio patches - needs ~LOCALVERSION=~ empty,
+        see [[file:kernel.org][kernel]]); back up and replace ~Image~ and
+        ~rk3566-teclast-p25t.dtb~ on ~P25TBOOT~ (~.pre-touch-backup~
+        suffix, same pattern as earlier patches); copy
+        ~kernel/touchscreen/gsl3673-p25t.fw~ to
+        ~/lib/firmware/silead/gsl3673-p25t.fw~ on ~p25troot~ (new
+        directory, doesn't exist yet); boot and run
+        ~tests/test_05.sh~. If it doesn't probe cleanly, the two flagged
+        placeholders (IRQ trigger flag, ~power-gpios~ polarity) are the
+        first things to try flipping - see the DTS comment for both.
 
 * DONE Audio (RK817 codec) — headphone jack works
   - Patch 0015 (2026-09-27): wired ~vccio_acodec~ (LDO_REG4, 3.3 V) as
@@ -343,6 +556,31 @@
     sessions as long-lived, not something to casually log out of -
     once you exit a session on any of them, getting back in currently
     needs a full reboot, not just switching VTs again.
+
+  - *Leads (2026-09-30, research + code review, nothing tested yet)*.
+    Evidence script: ~tests/test_10.sh~ (read-only; ~vt 4~ mode switches
+    VT and back). Run it on a blinking-cursor boot, a good boot, with
+    ~vt 4~, and after a logout; note USB-C role and cable each time.
+    - H1, strongest: *PID 1 itself blocks* on a tty. Every symptom fits:
+      no getty (re)start after boot, ~systemctl~ "Connection timed out",
+      ~login~ hanging (pam_systemd → logind → PID 1), ~reboot~ needing
+      ~-f~. Known elsewhere with a serial getty on a port nobody
+      listens to, including USB gadget ~ttyGS0~ - our
+      ~serial-getty@ttyGS0~ in normal mode without a cable, on a gadget
+      that is already flaky. The ~TTYReset~/~TTYVHangup~ clean-up PID 1
+      does when that getty exits is the suspected blocking point. Fits
+      "normal mode: no login".
+    - H2: the getty's ~(agetty)~ child waits for ever in systemd's
+      ~acquire_terminal()~ because another session still owns the VT.
+    - H3: logind skips ~autovt@ttyN~ because the VT looks busy at that
+      instant (systemd #23660, #39462) - explains tty4-6 only.
+    - H4 (blinking cursor only): the prompt is there but not drawn;
+      ~/dev/vcs1~ shows the VT text regardless of the panel.
+    - Why Debian normally has tty1-6: only ~getty@tty1~ is enabled;
+      tty2-6 come from logind's ~NAutoVTs=6~, started on the first
+      switch to that VT - so H1/H3 would explain their absence here.
+    - Cheap cross-check later (a change, needs OK): one boot with
+      ~serial-getty@ttyGS0~ masked, or in host mode (no ttyGS0 at all).
 
 * TODO Repository
   - Publish this folder as a git repository. A web search on 2026-09-25

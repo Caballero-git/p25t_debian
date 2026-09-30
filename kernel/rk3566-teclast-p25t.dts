@@ -563,10 +563,58 @@
  *     different."). No new driver needed.
  *   - sensorda@27 "gs_da223"  0x27 - NOT present (no ACK). Moot now, but
  *     for the record: no mainline driver exists for this chip at all.
- * i2c1 also feeds the touchscreen (Silead GSL3673 @0x40, separate TODO).
+ * i2c1 also feeds the touchscreen (Silead GSL3673 @0x40) - see below.
  */
 &i2c1 {
 	status = "okay";
+
+	/*
+	 * Touchscreen (Silead GSL3673, 2026-09-28). Not in mainline silead.c's
+	 * of_match_table (only gsl1680/1688/3670/3675/3692 are listed) - the
+	 * whole register protocol is identical across that family though
+	 * (checked directly in the driver source, no per-chip branching), so
+	 * this uses the documented two-string DT fallback: our real chip name
+	 * first (informational), a listed sibling second so the driver binds.
+	 * Same technique already used for the SC7A20 accelerometer above.
+	 *
+	 * Firmware: the vendor driver is compiled into the stock kernel with
+	 * its firmware table as C data. tools/gsl_fw_from_stock_kernel.py
+	 * extracts the table that belongs to "GSL,GSL3673_800X1280" (the
+	 * compatible in the stock DT) from the stock kernel Image; it is
+	 * built into our kernel as silead/gsl3673-p25t.fw (CONFIG_EXTRA_FIRMWARE,
+	 * patch 0020), because this driver is built in and probes before the
+	 * root filesystem is mounted. Tested working 2026-09-30.
+	 * (A GSL3673 table taken earlier from an unrelated product's GPL
+	 * source uploaded fine but never started - status 0xB0 stayed 0.)
+	 *
+	 * Pins from the stock DT (irq_gpio_number / rst_gpio_number), all
+	 * confirmed on hardware 2026-09-30: IRQ GPIO0_B0 level-low; GPIO0_C2
+	 * active-high (driving it low holds the chip in reset: tried, the ID
+	 * read then fails). No supply needed beyond what is on at boot:
+	 * works with RK817 LDO9 off.
+	 *
+	 * Coordinates: the chip reports in its own space, raw x along the long
+	 * axis ~0..1660, raw y along the short axis ~0..880 (tests/test_09.py,
+	 * two runs, largest values seen 1658/881). size-x/-y describe these
+	 * RAW axes and leave a small margin: touchscreen_apply_prop_to_x_y()
+	 * inverts with unsigned "max - x", so a raw value above the declared
+	 * maximum would wrap around instead of clamping. Mounting: raw x runs
+	 * bottom->top and raw y right->left (portrait, console text upright),
+	 * so both are inverted, then swapped (the kernel swaps last).
+	 */
+	touchscreen@40 {
+		compatible = "silead,gsl3673", "silead,gsl3670";
+		reg = <0x40>;
+		interrupt-parent = <&gpio0>;
+		interrupts = <8 IRQ_TYPE_LEVEL_LOW>; /* GPIO0_B0 */
+		power-gpios = <&gpio0 RK_PC2 GPIO_ACTIVE_HIGH>; /* GPIO0_C2 */
+		firmware-name = "gsl3673-p25t.fw";
+		touchscreen-size-x = <1680>;	/* raw x max seen 1658 */
+		touchscreen-size-y = <896>;	/* raw y max seen 881 */
+		touchscreen-inverted-x;
+		touchscreen-inverted-y;
+		touchscreen-swapped-x-y;
+	};
 
 	/*
 	 * IRQ: stock DT's irq-gpio = <0x3e 0x02 0x08> (0x3e is gpio@fe760000,

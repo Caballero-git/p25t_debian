@@ -43,7 +43,7 @@
   | Display pipe      | VOP2 vp1 → DSI0 ~fe060000~ + D-PHY ~fe850000~ | 4 lanes                                                    | works                                 |
   | Panel             | Jadard JD9365, 800×1280, 135×216 mm        | enable GPIO3_B1 (act. high), reset GPIO3_C3 (act. low)        | works, ~panel-jadard-jd9365da-h3~ + our table |
   | Backlight         | ~pwm-backlight~ PWM14 (~fe700020~)         | period 25 µs (40 kHz), stock default 77/255                   | works                                 |
-  | Touchscreen       | Silead GSL3673 @ i2c1 0x40                 | IRQ GPIO0_B0, reset GPIO0_C2                                  | todo: ~silead~ + firmware from Android |
+  | Touchscreen       | Silead GSL3673 @ i2c1 0x40                 | IRQ GPIO0_B0 (level-low), power/reset GPIO0_C2 (act. high)    | works (patches 0017–0020, confirmed 2026-09-30); firmware from the stock kernel |
   | Accelerometer     | SC7A20 @ i2c1 0x19 (DA223 @ 0x27 not present)| IRQ GPIO3_A2; swap_xy, revert_y                              | works (patch 0013 + config fix, confirmed 2026-09-26); mount-matrix orientation unverified |
   | Volume keys       | ~adc-keys~ on SARADC ch0                   | idle ≈ 1.8 V (raw 1023); raw < 900 = a key is held            | works                                 |
   | Power key         | RK817 pwrkey                               |                                                               | todo (needs RK817 node)               |
@@ -66,7 +66,9 @@
     | BOOST      | boost        | 4.9–5.4 V   | feeds OTG_SWITCH | host-mode DTB only (patch 0010) |
     | OTG_SWITCH | otg_switch   | (switch)    | USB-C VBUS gate  | on, host-mode DTB only       |
     Turning LDO4/8/9 on was tested ("rails" experiment): irrelevant to the
-    panel. They will matter for audio (LDO4) and cameras.
+    panel. They will matter for audio (LDO4) and cameras. LDO9 is not the
+    touchscreen's supply either (switched on 2026-09-29, ~tests/test_08.sh~:
+    no change; touch works with it off).
   - Our DT uses dummy fixed regulators (~vcc_sys_dummy~, ~vcc_3v3_dummy~,
     ~vcc_1v8_dummy~) so Linux never switches a real rail — *except* BOOST
     and OTG_SWITCH (patch 0008, 2026-09-26): a minimal ~pmic@20~ node under
@@ -156,6 +158,31 @@
     Converted to driver syntax in ~kernel/p25t-panel-init.c.inc~.
   - Delays: prepare/reset/init 20 ms, enable 120 ms, disable/unprepare 20 ms.
   - Pixel clock source: VPLL preset to 1608 MHz in ~&cru~ (1608 / 24 = 67 MHz).
+
+* Touchscreen (Silead GSL3673)
+  - Stock DT: ~ts@40~ on i2c1, ~compatible = "GSL,GSL3673_800X1280"~,
+    ~irq_gpio_number~ GPIO0_B0, ~rst_gpio_number~ GPIO0_C2; no supply
+    listed. Mainline: ~silead,gsl3673~ with ~silead,gsl3670~ as fallback.
+  - GPIO0_C2 is active-high: low holds the chip in reset (then even the
+    ID read fails). IRQ is level-low. Needs no rail beyond what is on at
+    boot (not LDO9).
+  - Chip ID register ~0xFC~ reads ~0x50910000~.
+  - Quirk: the chip NACKs the soft-reset write ~0xE0 <- 0x88~ - it resets
+    before acknowledging, and answers normally right after. Mainline
+    treated that as fatal; patch 0018 tolerates it.
+  - Firmware: the vendor driver is built into the stock kernel with its
+    firmware table as C data; the stock kernel holds three GSL tables
+    (for ~GSL,GSL3673~, ~GSL,GSL3673_800X1280~, ~GSL,GSL_THZY~). Only the
+    ~GSL,GSL3673_800X1280~ one works on this tablet (141 pages, sha256
+    ~163a2a83...~); a GSL3673 table from another product uploads but
+    never starts (status ~0xB0~ stays 0 instead of ~0x5A5A5A5A~).
+    ~tools/gsl_fw_from_stock_kernel.py~ extracts it.
+  - Upload takes ~3 s at i2c1's default 100 kHz (the vendor driver
+    defines 350 kHz for writes).
+  - Coordinates (raw, from the chip): ~0..1660 along the long axis
+    (raw x, runs bottom to top in portrait) and ~0..880 along the short
+    one (raw y, runs right to left). The DT inverts both and swaps
+    (patch 0019). Multi-touch: 3 fingers tested, 10 slots.
 
 * Wi-Fi and Bluetooth (AIC8801)
   - MAC addresses on this unit: Wi-Fi ~8c:35:92:f2:b5:45~,

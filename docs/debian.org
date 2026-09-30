@@ -208,12 +208,15 @@
   or you want to compare it against a USB receiver. See
   [[file:kernel.org][kernel]] for what the DTB change actually is.
 
-  On the PC, card in the PC, from ~usbhost_test/~:
+  Switch the role on the tablet itself with ~set-usb-role.sh~ (see
+  [[file:boot.org][boot]], "Choosing the USB-C role"), then reboot:
   #+begin_src sh
-  bash usbhost_toggle.sh host
+  bash ~/set-usb-role.sh host
   #+end_src
-  Then: card back in the tablet, power on, plug the receiver's USB-C
-  adapter into the tablet (try both before and after power-on), and check
+  (The older PC-side ~usbhost_toggle.sh~, card in the PC, is superseded:
+  it doesn't update ~CARD-SHA256SUMS~.)
+  Then plug the receiver's USB-C adapter into the tablet (try both before
+  and after power-on), and check
   over Wi-Fi/SSH (no gadget console or ~usb0~ in this mode):
   #+begin_src sh
   ssh jose@<TABLET-WIFI-IP>
@@ -225,13 +228,10 @@
   ~evtest~ (install with ~sudo apt install evtest~) if you want to confirm
   key/movement events arrive.
 
-  Card back in the PC, switch back when done:
+  Switch back when done (~status~ shows the current setting):
   #+begin_src sh
-  bash usbhost_toggle.sh normal
+  bash ~/set-usb-role.sh normal
   #+end_src
-  ~usbhost_toggle.sh status~ shows which one is currently on the card.
-  The script keeps a backup of the normal DTB the first time you switch,
-  so "normal" is always a plain file copy, never a rebuild.
 
 * Test scripts (~tests/test_NN.sh~ → ~result_NN.txt~)
   Standing pattern for anything more than a couple of one-line checks:
@@ -245,14 +245,46 @@
   other file in this project. From the PC, card in the tablet and
   reachable over Wi-Fi/SSH:
   #+begin_src sh
-  scp ~/p25t-backup/tests/test_NN.sh jose@p25t:~/
-  ssh jose@p25t 'bash test_NN.sh > result_NN.txt 2>&1'
-  scp jose@p25t:~/result_NN.txt ~/p25t-backup/tests/
+  scp ~/p25t-backup/p25t-linux/tests/test_NN.sh jose@p25t:~/tests/
+  ssh jose@p25t 'bash tests/test_NN.sh > tests/result_NN.txt 2>&1'
+  scp jose@p25t:~/tests/result_NN.txt ~/p25t-backup/p25t-linux/tests/
   #+end_src
   Claude then reads ~result_NN.txt~ back the same way it reads any other
   file here. The scripts themselves are throwaway (not committed to the
   kernel/patches history) - what matters is the numbered result trail
   sitting next to the DTB/patch history for whatever they were checking.
+
+  Some need root, and interactive ones are run directly in the SSH
+  session with ~| tee result_NN.txt~ instead:
+  | Script       | What it does                                                     | Run as                     |
+  |--------------+------------------------------------------------------------------+----------------------------|
+  | ~test_05.sh~ | touchscreen: firmware file, dmesg, driver bound, input device    | ~bash~                     |
+  | ~test_06.sh~ | touchscreen: replays ~silead_ts_init()~'s writes one by one      | ~sudo bash~                |
+  | ~test_07.sh~ | touchscreen: replays the vendor driver's whole start-up by hand  | ~sudo bash~                |
+  | ~test_08.sh~ | RK817 LDO9 state; ~apply~ switches it on (power-chip write: only with Jose's explicit OK) | ~sudo bash~ |
+  | ~test_09.py~ | touchscreen: guided corners/edges → orientation and raw range    | ~sudo python3~, interactive |
+  | ~test_10.sh~ | VT consoles: PID 1 / getty / logind state, VT text; ~vt 4~ tests autovt | ~sudo bash~ |
+  ~test_06~-~test_08~ talk to the chips over I2C; they find each bus by its
+  controller's hardware address, never by bus number (address 0x40 is the
+  touchscreen on i2c1 but the CPU regulator on i2c0), and refuse to run
+  unless the device there is the expected DT node.
+
+* Installed by hand (not in the build's package list)
+  - Python (2026-09-29), for Jose's own use and for ~tests/test_09.py~
+    and ~tests/test_10.sh~. ~apt-mark showmanual | grep -i python~ on
+    the tablet (2026-09-30):
+    #+begin_example
+    python-is-python3
+    python3
+    python3-doc
+    python3-pip
+    python3-textual
+    python3-venv
+    #+end_example
+    The tests need only ~python3~ (standard library). Not yet in
+    ~debian/build_debian.sh~'s package list; add ~python3~ there if a
+    fresh build should run the tests out of the box.
+  (~i2c-tools~ and ~evtest~ are already in the build's package list.)
 
 * Rollback
   - Kernel/DT: copy ~Image.stage5~ / ~.dtb.stage5~ (or ~.stage4~) over the

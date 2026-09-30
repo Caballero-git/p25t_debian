@@ -1,48 +1,47 @@
 #!/bin/bash
-# test_05.sh - check the RK817 audio codec + i2s1_8ch (patch 0015) probed
-# cleanly, an ALSA card showed up, and (if alsa-utils is installed) try an
-# actual audible tone on the speaker/headphone output.
+# test_05.sh - check the touchscreen (Silead GSL3673, patch 0017) probed
+# cleanly, loaded its firmware, and registered an input device. Two
+# things flagged as unconfirmed in the DT (see docs/todo.org) are exactly
+# what a failed/partial probe here would help pin down: the IRQ trigger
+# flag and the power-gpios polarity.
 
-echo "=== Audio (RK817 codec, patch 0015) check ==="
+echo "=== Touchscreen (Silead GSL3673, patch 0017) check ==="
 date
 
 echo
-echo "--- dmesg (audio/codec/i2s/asoc related) ---"
-dmesg | grep -iE "rk817.codec|rockchip-i2s|i2s1_8ch|fe410000|asoc|simple-audio-card|snd_soc|rk817-sound" || echo "(nothing matched)"
+echo "--- firmware file present on the target? ---"
+ls -l /lib/firmware/silead/gsl3673-p25t.fw 2>/dev/null || echo "MISSING - copy it there first, see todo.org"
 
 echo
-echo "--- /proc/asound/cards (ALSA card registered?) ---"
-cat /proc/asound/cards 2>/dev/null || echo "no /proc/asound/cards"
+echo "--- dmesg (silead/touchscreen/gsl related) ---"
+dmesg | grep -iE "silead|gsl3673|touchscreen|i2c.*0040|0-0040|1-0040" || echo "(nothing matched)"
 
 echo
-echo "--- /proc/asound/pcm (playback/capture streams) ---"
-cat /proc/asound/pcm 2>/dev/null || echo "no /proc/asound/pcm"
-
-echo
-echo "--- alsa-utils presence ---"
-for tool in aplay arecord amixer speaker-test; do
-    if command -v "$tool" >/dev/null 2>&1; then
-        echo "$tool: present ($(command -v "$tool"))"
+echo "--- i2c device bound? (silead on i2c1 @0x40) ---"
+found=0
+for bus in /sys/bus/i2c/devices/*-0040; do
+    [ -e "$bus" ] || continue
+    found=$((found + 1))
+    echo "$bus"
+    if [ -L "$bus/driver" ]; then
+        echo "  driver: $(basename "$(readlink -f "$bus/driver")")"
     else
-        echo "$tool: NOT installed"
+        echo "  driver: (none - not bound)"
     fi
 done
+[ "$found" -gt 0 ] || echo "(no device at address 0x40 on any bus)"
 
-if command -v amixer >/dev/null 2>&1 && [ -e /proc/asound/cards ] && [ -s /proc/asound/cards ]; then
-    echo
-    echo "--- amixer -c0 controls (names only, for volume/mute follow-up) ---"
-    amixer -c0 controls 2>&1 || echo "amixer -c0 controls failed"
-fi
+echo
+echo "--- input devices ---"
+cat /proc/bus/input/devices 2>/dev/null | grep -iA 5 "gsl\|silead\|touch" || echo "(no touchscreen-looking input device found)"
+ls -l /dev/input/event* 2>/dev/null
 
-if command -v speaker-test >/dev/null 2>&1 && [ -e /proc/asound/cards ] && [ -s /proc/asound/cards ]; then
-    echo
-    echo "--- speaker-test: 2s sine tone on card 0, both channels ---"
-    echo "(listen to the tablet now - speaker and/or headphone jack if plugged in)"
-    timeout 3 speaker-test -D hw:0,0 -c2 -t sine -f 1000 -l 1 2>&1 | tail -20
-else
-    echo
-    echo "(speaker-test not available or no ALSA card - skipping audible test)"
-fi
+echo
+echo "--- quick interactive check (if a touchscreen event device showed up above) ---"
+echo "Run manually, then touch the screen a few times, Ctrl-C to stop:"
+echo "  sudo evtest /dev/input/eventN     (install with: sudo apt install evtest)"
+echo "Or without evtest, raw event bytes should appear while touching:"
+echo "  sudo cat /dev/input/eventN | xxd | head"
 
 echo
 echo "=== done ==="

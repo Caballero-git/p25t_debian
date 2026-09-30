@@ -13,22 +13,24 @@
   tries the SD card first and loads our U-Boot from a GPT partition named
   ~uboot~ (see [[file:docs/boot.org][docs/boot.org]]).
 
-* Status (2026-09-25)
+* Status (2026-09-30)
   | Area                              | State   | Notes                                              |
   |-----------------------------------+---------+----------------------------------------------------|
   | Boot from microSD                 | works   | stock SPL → mainline U-Boot v2026.10-rc5 → Linux   |
   | Display 800×1280 JD9365 panel     | works   | DSI commands must be sent in HS mode               |
   | Backlight                         | works   | PWM14                                              |
   | USB-C gadget (serial + network)   | flaky   | best with the cable plugged in before power-on    |
+  | USB-C host (keyboard/mouse)       | works   | host-mode DTB, switched with ~set-usb-role.sh~ (patches 0007–0010) |
   | Debian 13 root on the card        | works   | ext4 partition labelled ~p25troot~                 |
   | Wi-Fi AIC8800 (SDIO)              | works   | out-of-tree driver, patched for 7.3                |
   | Bluetooth AIC8800 (UART1)         | works   | ~btattach~, keyboard paired                        |
   | Volume keys (SARADC)              | works   | used to skip the Debian hand-over                  |
-  | Battery / charger (RK817)         | todo    | readable by i2c, no driver bound yet               |
-  | Touchscreen GSL3673               | todo    | ~silead~ driver + firmware blob                    |
-  | Audio RK817 codec                 | todo    |                                                    |
-  | Accelerometer                     | todo    | SC7A20 or DA223, unconfirmed                       |
-  | CPU frequency / GPU (Panfrost)    | todo    | vdd_cpu SYR837 not in the DT yet                   |
+  | Battery / charger (RK817)         | works   | ~rk817_charger~ (patch 0009)                       |
+  | Touchscreen GSL3673               | works   | multi-touch, from boot; firmware from the stock kernel (patches 0017–0020) |
+  | Audio RK817 codec                 | partly  | headphone jack works (patch 0015); built-in speaker silent, mic untested |
+  | Accelerometer SC7A20              | works   | patch 0013; orientation of the mount-matrix unverified |
+  | CPU frequency / GPU (Panfrost)    | works   | DVFS with real vdd_cpu (SYR837) and vdd_gpu (patches 0011, 0014) |
+  | SoC temperature (tsadc)           | works   | patch 0016                                         |
   | Console on screen w/o USB cable   | open    | blinking cursor only, getty did start              |
 
 * Folder map
@@ -41,6 +43,7 @@
   | ~debian/~     | root filesystem builder and card installer                            |
   | ~install/~    | stage scripts: internet via PC, Wi-Fi, Bluetooth                      |
   | ~tools/~      | analysis helpers: firmware unpacker, DT scanners, Android probes      |
+  | ~tests/~      | numbered test scripts run on the tablet, and their results            |
 
   | Document                                  | Read it for                                      |
   |-------------------------------------------+--------------------------------------------------|
@@ -66,10 +69,48 @@
   - Never write to the eMMC. Every script checks that its target is a
     removable/USB disk.
   - Writes to the RK817 power chip only after an explicit, reviewed proposal.
-    The DT deliberately has no RK817 or SYR837 regulator nodes yet, so Linux
-    cannot change rails left on by the bootloader.
+    The DT describes only the rails Linux must control - RK817 BOOST,
+    OTG_SWITCH, DCDC_REG2 (vdd_gpu), LDO4 (vccio_acodec) and the SYR837
+    (vdd_cpu) - each with values copied from the stock DT. Every other rail
+    stays as the bootloader left it.
   - Recovery path for the eMMC is the official firmware image (RKDevTool),
     not our backup (see the backup caveat in [[file:docs/findings.org][findings]]).
+
+* Working pipeline
+  The standing order of operations for any change (a patch, a DT tweak, a
+  script, a config fix) — in order, not skipped or reordered:
+  1. *Make* the change (patch, script, config).
+  2. *Test* it on the real hardware.
+  3. *If it works*, in this order:
+     a. update the relevant doc(s) (~docs/hardware.org~,
+        ~docs/kernel.org~, ~docs/debian.org~, ~docs/todo.org~ — whichever
+        the change touches) — verified by read-back/checksum, as always;
+     b. sync the changed files into this ~p25t-linux/~ tree (PC side);
+     c. commit and push to GitHub (~push_to_github.sh~).
+  4. *Only once 3 is fully done* (docs updated, synced, committed,
+     pushed) — clean up the scratch/one-off files the change used along
+     the way: install tarballs and their extracted folders, one-shot
+     stage scripts and their logs, loose DTB/Image copies left in a home
+     directory, anything that isn't ~tests/test_NN.sh~/~result_NN.txt~
+     (those stay, see "Test scripts" in [[file:docs/debian.org][debian]])
+     or the eMMC/Android recovery kit (never touched by this rule).
+  NEVER DELETE THE LINUX KERNEL CHECKOUT (~linux/~, the ~git clone~ from
+  "Get the source and apply" in [[file:docs/kernel.org][kernel]]) OR ANY
+  OTHER PERSISTENT BUILD TREE AS PART OF STEP 4. Unlike the one-shot
+  items step 4 targets, it is not scratch left over from a single
+  change — it is reused, patch after patch, for every future one, and
+  every patch already applied to it lives there only as uncommitted
+  git history until the next ~format-patch~. Lost 2026-09-28 in a
+  general cleanup pass that didn't carve out this exception; recovered
+  only because every patch was also saved separately under
+  ~kernel/patches/~, letting the tree be rebuilt from a fresh clone
+  plus ~git am kernel/patches/*.patch~ - do not rely on that safety net
+  a second time.
+  If a change *doesn't* work, none of step 4 applies - keep everything
+  around until it's diagnosed, exactly as this project has done so far.
+  The point of step 4 coming *last*: nothing gets deleted before it's
+  both working and safely saved in at least two places (docs + git
+  history), so a cleanup can never be the reason something is lost.
 
 * Conventions in these documents
   - Plain src blocks are literal: type them as they are.

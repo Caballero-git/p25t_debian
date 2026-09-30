@@ -1,0 +1,111 @@
+From 379bbbb9851f0e669fc7bdb661c8a8414aa28859 Mon Sep 17 00:00:00 2001
+From: Jose <josemcaballeroguerrero@gmail.com>
+Date: Wed, 30 Sep 2026 07:45:30 +0200
+Subject: [PATCH 19/20] arm64: dts: rockchip: P25T: touchscreen orientation,
+ range and confirmed pins
+
+The GSL3673 works with the tablet's own firmware (patch 0020) and patch
+0018. It reports in its own coordinate space: raw x along the long axis
+up to ~1660, raw y along the short axis up to ~880 (two guided runs of
+tests/test_09.py, largest values seen 1658 and 881), with raw x running
+bottom->top and raw y right->left in portrait. Describe the raw axes with
+a small margin (the core inverts with unsigned "max - x", so values above
+the declared maximum would wrap), invert both and swap.
+
+Also record what was confirmed on hardware: IRQ GPIO0_B0 level-low,
+power GPIO0_C2 active-high (active-low holds the chip in reset: the ID
+read then fails), no extra supply needed (works with RK817 LDO9 off),
+and where the firmware now comes from.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_0156c5MfQpFxaYWNNLMrcym9
+---
+ .../boot/dts/rockchip/rk3566-teclast-p25t.dts | 64 +++++++++----------
+ 1 file changed, 29 insertions(+), 35 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/rockchip/rk3566-teclast-p25t.dts b/arch/arm64/boot/dts/rockchip/rk3566-teclast-p25t.dts
+index 0f92d8617..36da5cf29 100644
+--- a/arch/arm64/boot/dts/rockchip/rk3566-teclast-p25t.dts
++++ b/arch/arm64/boot/dts/rockchip/rk3566-teclast-p25t.dts
+@@ -577,49 +577,43 @@ &i2c1 {
+ 	 * first (informational), a listed sibling second so the driver binds.
+ 	 * Same technique already used for the SC7A20 accelerometer above.
+ 	 *
+-	 * Firmware: this board's own stock kernel has the vendor's GSL3673
+-	 * driver compiled directly into boot.img (not a loadable module, no
+-	 * separate firmware file in any Android partition - confirmed by an
+-	 * exhaustive search, see docs/todo.org), so there was no blob to
+-	 * extract. tools/gsl3673_fw_convert.py instead converts the
+-	 * GSL3673_FW[] register table straight from a public reference
+-	 * driver source (54shady/qop_kernel's gsl3673_800x1280.c/.h - GPLv2,
+-	 * "Shanghai Basewin") into the flat binary silead.c's
+-	 * request_firmware() expects. Matching evidence for using THIS table
+-	 * on THIS board: our boot.img contains the exact strings
+-	 * "GSL,GSL3673_800X1280", "GSL3673 test_i2c error!" and "gsl GSL3673
+-	 * init failed" verbatim, and the source's I2C address (0x40) matches
+-	 * hardware. Not a byte-for-byte confirmed match (would need pulling
+-	 * the table out of the compiled boot.img kernel itself) - see
+-	 * docs/todo.org for the full writeup. Loading firmware into the
+-	 * touch controller's RAM at runtime is non-destructive either way;
+-	 * worst case if it's wrong is the touchscreen just doesn't work.
+-	 * Install the generated kernel/touchscreen/gsl3673-p25t.fw as
+-	 * /lib/firmware/silead/gsl3673-p25t.fw on the target.
++	 * Firmware: the vendor driver is compiled into the stock kernel with
++	 * its firmware table as C data. tools/gsl_fw_from_stock_kernel.py
++	 * extracts the table that belongs to "GSL,GSL3673_800X1280" (the
++	 * compatible in the stock DT) from the stock kernel Image; it is
++	 * built into our kernel as silead/gsl3673-p25t.fw (CONFIG_EXTRA_FIRMWARE,
++	 * patch 0020), because this driver is built in and probes before the
++	 * root filesystem is mounted. Tested working 2026-09-30.
++	 * (A GSL3673 table taken earlier from an unrelated product's GPL
++	 * source uploaded fine but never started - status 0xB0 stayed 0.)
+ 	 *
+-	 * IRQ: GPIO0_B0, reset/power: GPIO0_C2 - both pin NUMBERS confirmed
+-	 * from the stock DT (see hardware.org). The trigger-type flag below
+-	 * (IRQ_TYPE_LEVEL_LOW, matching this DTS's other i2c1 interrupt) and
+-	 * power-gpios' active-high polarity are NOT re-confirmed from a raw
+-	 * stock DT dump in this pass - best-effort placeholders, same
+-	 * "unconfirmed until tested" caveat already used for the
+-	 * accelerometer's mount-matrix above. Verify against hardware (or a
+-	 * fresh stock DT pull, tools/pull_live_dt.sh) before relying on them.
++	 * Pins from the stock DT (irq_gpio_number / rst_gpio_number), all
++	 * confirmed on hardware 2026-09-30: IRQ GPIO0_B0 level-low; GPIO0_C2
++	 * active-high (driving it low holds the chip in reset: tried, the ID
++	 * read then fails). No supply needed beyond what is on at boot:
++	 * works with RK817 LDO9 off.
+ 	 *
+-	 * touchscreen-size-x/y: 800x1280, taken from the vendor source
+-	 * filename/macros (GSL3673_800X1280) - matches this panel's known
+-	 * resolution. touchscreen-swapped-x-y/inverted-*, if needed for the
+-	 * panel's mounted orientation, are not set here - add once tested.
++	 * Coordinates: the chip reports in its own space, raw x along the long
++	 * axis ~0..1660, raw y along the short axis ~0..880 (tests/test_09.py,
++	 * two runs, largest values seen 1658/881). size-x/-y describe these
++	 * RAW axes and leave a small margin: touchscreen_apply_prop_to_x_y()
++	 * inverts with unsigned "max - x", so a raw value above the declared
++	 * maximum would wrap around instead of clamping. Mounting: raw x runs
++	 * bottom->top and raw y right->left (portrait, console text upright),
++	 * so both are inverted, then swapped (the kernel swaps last).
+ 	 */
+ 	touchscreen@40 {
+ 		compatible = "silead,gsl3673", "silead,gsl3670";
+ 		reg = <0x40>;
+ 		interrupt-parent = <&gpio0>;
+-		interrupts = <8 IRQ_TYPE_LEVEL_LOW>; /* GPIO0_B0 - flag unconfirmed */
+-		power-gpios = <&gpio0 RK_PC2 GPIO_ACTIVE_HIGH>; /* GPIO0_C2 - polarity unconfirmed */
++		interrupts = <8 IRQ_TYPE_LEVEL_LOW>; /* GPIO0_B0 */
++		power-gpios = <&gpio0 RK_PC2 GPIO_ACTIVE_HIGH>; /* GPIO0_C2 */
+ 		firmware-name = "gsl3673-p25t.fw";
+-		touchscreen-size-x = <800>;
+-		touchscreen-size-y = <1280>;
++		touchscreen-size-x = <1680>;	/* raw x max seen 1658 */
++		touchscreen-size-y = <896>;	/* raw y max seen 881 */
++		touchscreen-inverted-x;
++		touchscreen-inverted-y;
++		touchscreen-swapped-x-y;
+ 	};
+ 
+ 	/*
+-- 
+2.43.0
+

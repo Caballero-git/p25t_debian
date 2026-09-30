@@ -15,12 +15,49 @@
 #
 # P25TBOOT is mounted at /boot/firmware in Debian (see docs/debian.org).
 # Usage: set-usb-role.sh [host|normal|status]
+#
+# host/normal also update the rk3566-teclast-p25t.dtb line in
+# CARD-SHA256SUMS and re-check the whole file, so a role switch never
+# leaves the card's checksum list stale (2026-09-29: a switch did, and a
+# stale role copy silently rolled the DT back to before patch 0017).
+# IMPORTANT: -normal.dtb and -usbhost.dtb must be refreshed on every DT
+# change - this script copies whatever is in them, old or new.
 
 set -euo pipefail
-BOOT=/boot/firmware
+BOOT=${BOOT:-/boot/firmware}   # overridable only for testing
 NORMAL="$BOOT/rk3566-teclast-p25t-normal.dtb"
 HOST="$BOOT/rk3566-teclast-p25t-usbhost.dtb"
 ACTIVE="$BOOT/rk3566-teclast-p25t.dtb"
+SUMS="$BOOT/CARD-SHA256SUMS"
+
+# Copy a role variant over the active DTB, verify, update CARD-SHA256SUMS.
+set_role() {
+    local src=$1
+    sudo cp "$src" "$ACTIVE"
+    sync
+    if ! cmp -s "$src" "$ACTIVE"; then
+        echo "ERROR: $ACTIVE does not match $src after copying - CARD-SHA256SUMS not touched." >&2
+        exit 1
+    fi
+    if [ ! -f "$SUMS" ]; then
+        echo "WARNING: $SUMS not found - checksum list NOT updated." >&2
+        return
+    fi
+    if ! grep -q '^[0-9a-f]\{64\}  rk3566-teclast-p25t\.dtb$' "$SUMS"; then
+        echo "WARNING: no rk3566-teclast-p25t.dtb line in $SUMS - NOT updated, fix by hand." >&2
+        return
+    fi
+    local new
+    new=$(sha256sum "$ACTIVE" | cut -d' ' -f1)
+    sudo sed -i "s/^[0-9a-f]\{64\}  rk3566-teclast-p25t\.dtb\$/$new  rk3566-teclast-p25t.dtb/" "$SUMS"
+    sync
+    if (cd "$BOOT" && sha256sum -c --quiet CARD-SHA256SUMS); then
+        echo "CARD-SHA256SUMS updated ($new) - all entries verified OK."
+    else
+        echo "ERROR: CARD-SHA256SUMS check failed after update - see lines above." >&2
+        exit 1
+    fi
+}
 
 usage() {
     echo "Usage: $0 [host|normal|status]"
@@ -38,7 +75,7 @@ done
 
 case "$1" in
     host)
-        sudo cp "$HOST" "$ACTIVE"
+        set_role "$HOST"
         echo "Set: host mode (USB-C keyboard/mouse) will be active on the next boot."
         echo "Reboot now with: sudo reboot"
         echo "Note: while in host mode the USB-C port sources power for the attached"
@@ -46,7 +83,7 @@ case "$1" in
         echo "same cable may change - keep an eye on the battery level."
         ;;
     normal)
-        sudo cp "$NORMAL" "$ACTIVE"
+        set_role "$NORMAL"
         echo "Set: normal mode (USB-C console/network) will be active on the next boot."
         echo "Reboot now with: sudo reboot"
         ;;

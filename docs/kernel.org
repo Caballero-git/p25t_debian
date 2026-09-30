@@ -24,6 +24,10 @@
     | 0014 | DT: wire vdd_gpu (RK817 DCDC_REG2) for GPU DVFS                |
     | 0015 | DT: wire RK817 audio codec + i2s1_8ch                          |
     | 0016 | DT: enable tsadc SoC thermal sensor                            |
+    | 0017 | DT: add Silead GSL3673 touchscreen node on i2c1                |
+    | 0018 | silead: tolerate a missing ACK on the soft-reset command       |
+    | 0019 | DT: touchscreen orientation, range and confirmed pins          |
+    | 0020 | add the GSL3673 firmware for ~CONFIG_EXTRA_FIRMWARE~ (binary)  |
   - Also needs a kernel *config* change (not a DT patch): ~CONFIG_USB_XHCI_HCD=y~
     and ~CONFIG_USB_XHCI_PLATFORM=y~, both already set in
     ~kernel/p25t-kernel.config~. Without them the ~dwc3~ glue driver still
@@ -58,8 +62,16 @@
   | File                                                 | Goes to                          |
   |------------------------------------------------------+----------------------------------|
   | ~arch/arm64/boot/Image~                              | ~P25TBOOT/Image~                 |
-  | ~arch/arm64/boot/dts/rockchip/rk3566-teclast-p25t.dtb~ | ~P25TBOOT/rk3566-teclast-p25t.dtb~ |
+  | ~arch/arm64/boot/dts/rockchip/rk3566-teclast-p25t.dtb~ | ~P25TBOOT/rk3566-teclast-p25t-normal.dtb~ |
+  | ~arch/arm64/boot/dts/rockchip/rk3566-teclast-p25t-usbhost.dtb~ | ~P25TBOOT/rk3566-teclast-p25t-usbhost.dtb~ |
   | modules (~make modules_install INSTALL_MOD_PATH=<STAGING-DIR>~) | ~/usr/lib/modules/7.3.0-rc4-p25t/~ on ~p25troot~ |
+
+  Both DTBs go to their *role* copies, never straight to the active
+  ~rk3566-teclast-p25t.dtb~: U-Boot loads that one name, and
+  ~set-usb-role.sh~ fills it from ~-normal.dtb~ or ~-usbhost.dtb~ (see
+  [[file:boot.org][boot]]). Refresh *both* role copies on every DT change, then run
+  ~set-usb-role.sh~ for the role you want - a stale role copy silently
+  brings an old DT back on the next switch (happened 2026-09-29).
 
   Debian trixie has ~/lib~ → ~/usr/lib~, so package everything under ~usr/~.
 
@@ -85,6 +97,8 @@
   | ~SND_SOC_RK817~                          | y     | RK817 codec driver (patch 0015; ~MFD_RK8XX~ dependency already satisfied) |
   | ~SND_SIMPLE_CARD~ (+ ~_UTILS~)           | y     | machine driver for the ~rk817-sound~ simple-audio-card node (patch 0015) |
   | ~ROCKCHIP_THERMAL~, ~THERMAL_HWMON~      | y     | already on by default - tsadc (patch 0016) just needed ~status = "okay"~, no config change |
+  | ~TOUCHSCREEN_SILEAD~                     | y     | GSL3673 touchscreen (patch 0017's DT node needs this - off by default, enabled proactively before deploying) |
+  | ~EXTRA_FIRMWARE~, ~EXTRA_FIRMWARE_DIR~   | ~"silead/gsl3673-p25t.fw"~, ~"p25t-firmware"~ | touchscreen firmware built into the kernel (patch 0020): ~silead_ts~ is built in and probes before the root fs is mounted; a relative dir is relative to the source tree |
 
 * Device tree notes
   - Real rails are *not* described: dummy fixed regulators stand in, so
@@ -676,6 +690,70 @@
     standard ~sensors~ command once ~lm-sensors~ (the package, not its
     ~sensors-detect~ probing tool) is installed - no probing needed or
     used.
+
+* Touchscreen (Silead GSL3673, patches 0017-0020 + config) — working
+  - Confirmed on hardware 2026-09-30: bound at boot, touches with correct
+    orientation and range, 3-finger multi-touch. The investigation trail
+    is in [[file:todo.org][todo.org]], the chip's facts in [[file:hardware.org][hardware]].
+  - Patch 0017 (DT): ~touchscreen@40~ under ~&i2c1~.
+    - Two-string ~compatible~ fallback, same technique as the SC7A20
+      accelerometer: ~"silead,gsl3673", "silead,gsl3670"~ - ~gsl3673~
+      isn't in mainline ~silead.c~'s ~of_match_table~, but the register
+      protocol is identical across the family (no per-chip branching).
+    - ~firmware-name = "gsl3673-p25t.fw"~, so the fallback compatible
+      doesn't make it look for the generic ~gsl3670.fw~.
+  - Patch 0018 (driver, ~drivers/input/touchscreen/silead.c~): the chip
+    NACKs the soft-reset write ~0xE0 <- 0x88~ (it resets before
+    acknowledging). A new ~silead_ts_send_reset()~, used by
+    ~silead_ts_init()~ and ~silead_ts_reset()~, treats ~-ENXIO~ on that one
+    write as success and logs "soft reset not ACKed, continuing" (twice
+    per probe). Every other write still fails hard, and so does the
+    driver's final status check.
+  - Patch 0019 (DT): pins confirmed on hardware (IRQ GPIO0_B0 level-low,
+    power GPIO0_C2 active-high) and the coordinate properties:
+    #+begin_example
+    touchscreen-size-x = <1680>;   /* raw x max seen 1658 */
+    touchscreen-size-y = <896>;    /* raw y max seen 881 */
+    touchscreen-inverted-x;
+    touchscreen-inverted-y;
+    touchscreen-swapped-x-y;
+    #+end_example
+    ~touchscreen-size-x/-y~ describe the chip's *raw* axes (measured with
+    ~tests/test_09.py~). ~touchscreen_apply_prop_to_x_y()~ inverts first,
+    with ~max - x~ on unsigned values - a raw value above the declared
+    maximum wraps around instead of clamping, hence the margin - and
+    swaps last. Userspace then sees X 0..895, Y 0..1679.
+  - Patch 0020 + config: the firmware is built into the kernel, because
+    ~silead_ts~ is built in and probes ~0.5 s into boot, before the root
+    filesystem (and ~/lib/firmware~) is mounted - it failed with "Direct
+    firmware load ... failed with error -2". The patch adds
+    ~p25t-firmware/silead/gsl3673-p25t.fw~ (binary inside the git patch)
+    and a README to the source tree; ~CONFIG_EXTRA_FIRMWARE~ /
+    ~CONFIG_EXTRA_FIRMWARE_DIR~ (see the config table) link it in. The
+    firmware loader checks built-in blobs before the filesystem. Check
+    after a build:
+    #+begin_src sh
+    grep gsl3673 System.map
+    #+end_src
+    must list ~_fw_silead_gsl3673_p25t_fw_bin~.
+  - The firmware is the tablet's own table, extracted from the stock
+    kernel Image (the one inside the stock ~boot.img~):
+    #+begin_src sh
+    python3 tools/gsl_fw_from_stock_kernel.py <STOCK-KERNEL> GSL,GSL3673_800X1280 gsl3673-p25t.fw
+    #+end_src
+    ~<STOCK-KERNEL>~ is ~~/p25t-backup/Firmware/stock-kernel.bin~.
+    Expected: 141 pages, 37224 bytes, sha256
+    ~163a2a8384b0cb550bb1e61f07bc5eee94d2aa59fa6fa9e86b656959e68e2573~.
+    The earlier table from ~54shady/qop_kernel~
+    (~drivers/input/touchscreen/gsl3673_800x1280.h~, commit
+    ~f016d717b21b38ae115f92a276a58913f1040035~, converted with a helper
+    script) does *not* work on this tablet: it uploads, but the chip
+    never starts it. That table, its vendor header and the converter
+    were deleted on 2026-09-30 and never committed.
+  - Config: ~CONFIG_TOUCHSCREEN_SILEAD=y~ (was off) and the two
+    ~EXTRA_FIRMWARE~ options.
+  - Boot cost: the firmware upload takes ~3 s at i2c1's default 100 kHz
+    (~input: silead_ts~ appears at 3.5 s). See the follow-ups in todo.org.
 
 * AIC8800 Wi-Fi/Bluetooth driver (out of tree)
   Source: [[https://github.com/radxa-pkg/aic8800][radxa-pkg/aic8800]], commit ~516e3b0~

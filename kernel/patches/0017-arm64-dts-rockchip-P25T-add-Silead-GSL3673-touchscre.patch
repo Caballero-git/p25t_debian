@@ -1,0 +1,104 @@
+From 8bf2332ae5e667844285df89800b7b552b9cc937 Mon Sep 17 00:00:00 2001
+From: Jose <josemcaballeroguerrero@gmail.com>
+Date: Mon, 28 Sep 2026 12:27:37 +0200
+Subject: [PATCH] arm64: dts: rockchip: P25T: add Silead GSL3673 touchscreen
+ node on i2c1
+
+Adds touchscreen@40 under &i2c1 using mainline silead.c's two-string
+DT compatible fallback (silead,gsl3673 / silead,gsl3670 - gsl3673 is
+not in of_match_table but the register protocol is identical across
+the whole family, checked directly in the driver source).
+
+Firmware: the panel's calibration table was not extractable from any
+Android partition (the vendor driver is compiled directly into
+boot.img, not a loadable module or a separate firmware file). Instead
+converted from a public reference driver source with matching I2C
+address, DT compatible string and error strings
+(54shady/qop_kernel's gsl3673_800x1280.c/.h, GPLv2) via the new
+tools/gsl3673_fw_convert.py. See docs/todo.org for the full research
+writeup.
+
+IRQ (GPIO0_B0) and reset (GPIO0_C2) pin numbers are confirmed from
+the stock DT; the interrupt trigger-type flag and power-gpios
+polarity are best-effort placeholders, not yet confirmed on hardware.
+
+Also needs CONFIG_TOUCHSCREEN_SILEAD=y (kernel/p25t-kernel.config,
+not part of this patch).
+---
+ .../boot/dts/rockchip/rk3566-teclast-p25t.dts | 56 ++++++++++++++++++-
+ 1 file changed, 55 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm64/boot/dts/rockchip/rk3566-teclast-p25t.dts b/arch/arm64/boot/dts/rockchip/rk3566-teclast-p25t.dts
+index 7444fd3ae..0f92d8617 100644
+--- a/arch/arm64/boot/dts/rockchip/rk3566-teclast-p25t.dts
++++ b/arch/arm64/boot/dts/rockchip/rk3566-teclast-p25t.dts
+@@ -563,11 +563,65 @@ &cpu3 {
+  *     different."). No new driver needed.
+  *   - sensorda@27 "gs_da223"  0x27 - NOT present (no ACK). Moot now, but
+  *     for the record: no mainline driver exists for this chip at all.
+- * i2c1 also feeds the touchscreen (Silead GSL3673 @0x40, separate TODO).
++ * i2c1 also feeds the touchscreen (Silead GSL3673 @0x40) - see below.
+  */
+ &i2c1 {
+ 	status = "okay";
+ 
++	/*
++	 * Touchscreen (Silead GSL3673, 2026-09-28). Not in mainline silead.c's
++	 * of_match_table (only gsl1680/1688/3670/3675/3692 are listed) - the
++	 * whole register protocol is identical across that family though
++	 * (checked directly in the driver source, no per-chip branching), so
++	 * this uses the documented two-string DT fallback: our real chip name
++	 * first (informational), a listed sibling second so the driver binds.
++	 * Same technique already used for the SC7A20 accelerometer above.
++	 *
++	 * Firmware: this board's own stock kernel has the vendor's GSL3673
++	 * driver compiled directly into boot.img (not a loadable module, no
++	 * separate firmware file in any Android partition - confirmed by an
++	 * exhaustive search, see docs/todo.org), so there was no blob to
++	 * extract. tools/gsl3673_fw_convert.py instead converts the
++	 * GSL3673_FW[] register table straight from a public reference
++	 * driver source (54shady/qop_kernel's gsl3673_800x1280.c/.h - GPLv2,
++	 * "Shanghai Basewin") into the flat binary silead.c's
++	 * request_firmware() expects. Matching evidence for using THIS table
++	 * on THIS board: our boot.img contains the exact strings
++	 * "GSL,GSL3673_800X1280", "GSL3673 test_i2c error!" and "gsl GSL3673
++	 * init failed" verbatim, and the source's I2C address (0x40) matches
++	 * hardware. Not a byte-for-byte confirmed match (would need pulling
++	 * the table out of the compiled boot.img kernel itself) - see
++	 * docs/todo.org for the full writeup. Loading firmware into the
++	 * touch controller's RAM at runtime is non-destructive either way;
++	 * worst case if it's wrong is the touchscreen just doesn't work.
++	 * Install the generated kernel/touchscreen/gsl3673-p25t.fw as
++	 * /lib/firmware/silead/gsl3673-p25t.fw on the target.
++	 *
++	 * IRQ: GPIO0_B0, reset/power: GPIO0_C2 - both pin NUMBERS confirmed
++	 * from the stock DT (see hardware.org). The trigger-type flag below
++	 * (IRQ_TYPE_LEVEL_LOW, matching this DTS's other i2c1 interrupt) and
++	 * power-gpios' active-high polarity are NOT re-confirmed from a raw
++	 * stock DT dump in this pass - best-effort placeholders, same
++	 * "unconfirmed until tested" caveat already used for the
++	 * accelerometer's mount-matrix above. Verify against hardware (or a
++	 * fresh stock DT pull, tools/pull_live_dt.sh) before relying on them.
++	 *
++	 * touchscreen-size-x/y: 800x1280, taken from the vendor source
++	 * filename/macros (GSL3673_800X1280) - matches this panel's known
++	 * resolution. touchscreen-swapped-x-y/inverted-*, if needed for the
++	 * panel's mounted orientation, are not set here - add once tested.
++	 */
++	touchscreen@40 {
++		compatible = "silead,gsl3673", "silead,gsl3670";
++		reg = <0x40>;
++		interrupt-parent = <&gpio0>;
++		interrupts = <8 IRQ_TYPE_LEVEL_LOW>; /* GPIO0_B0 - flag unconfirmed */
++		power-gpios = <&gpio0 RK_PC2 GPIO_ACTIVE_HIGH>; /* GPIO0_C2 - polarity unconfirmed */
++		firmware-name = "gsl3673-p25t.fw";
++		touchscreen-size-x = <800>;
++		touchscreen-size-y = <1280>;
++	};
++
+ 	/*
+ 	 * IRQ: stock DT's irq-gpio = <0x3e 0x02 0x08> (0x3e is gpio@fe760000,
+ 	 * i.e. gpio3) decodes to GPIO3_A2 (bank 3, pin 2), flags 0x08 =
+-- 
+2.43.0
+

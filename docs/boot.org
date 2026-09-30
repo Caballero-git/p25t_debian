@@ -30,10 +30,11 @@
   | File                          | Purpose                                                 |
   |-------------------------------+---------------------------------------------------------|
   | ~Image~                       | kernel (current)                                        |
-  | ~rk3566-teclast-p25t.dtb~     | device tree (current)                                   |
+  | ~rk3566-teclast-p25t.dtb~     | device tree (current) - the *active* copy, set by ~set-usb-role.sh~ |
+  | ~rk3566-teclast-p25t-normal.dtb~, ~-usbhost.dtb~ | role copies (USB-C device / host), see "Choosing the USB-C role" |
   | ~initramfs.cpio.gz~           | stage-1 system                                          |
   | ~*.stage4~, ~*.stage5~        | previous kernel/DTB, for rollback                       |
-  | ~CARD-SHA256SUMS~             | checksums of the files above                            |
+  | ~CARD-SHA256SUMS~             | checksums of ~Image~, the active DTB, ~initramfs.cpio.gz~, ~diag-display.sh~ (check: ~sha256sum -c CARD-SHA256SUMS~) |
   | ~boot-debian~ (empty flag)    | present → hand over to Debian                           |
   | ~no-usb-tuning~ (empty flag)  | present → skip the USB PHY tuning                       |
   | ~autorun.sh~ (optional)       | run in background by stage 1 (experiments only)         |
@@ -131,14 +132,27 @@
   chosen for the boot that hasn't happened yet, by deciding which DTB
   variant's *content* sits at that exact filename.
 
-  ~tools/set-usb-role.sh~ (copied onto the card, run from an SSH session
+  ~tools/set-usb-role.sh~ does exactly that. It lives in the tablet's home
+  directory (copied there with ~scp~, not installed as a command) and runs
   on the tablet itself - ~P25TBOOT~ is mounted at ~/boot/firmware~, see
-  debian.org) does exactly that:
+  debian.org. Run it without ~sudo~; it calls ~sudo~ itself:
   #+begin_example
-  set-usb-role.sh host    # next boot: USB-C as host (wired keyboard/mouse)
-  set-usb-role.sh normal  # next boot: USB-C as device (console/network - default)
-  set-usb-role.sh status  # which one is currently set
+  bash ~/set-usb-role.sh host    # next boot: USB-C as host (wired keyboard/mouse)
+  bash ~/set-usb-role.sh normal  # next boot: USB-C as device (console/network - default)
+  bash ~/set-usb-role.sh status  # which one is currently set
   #+end_example
+  Since 2026-09-29, ~host~ and ~normal~ also update the
+  ~rk3566-teclast-p25t.dtb~ line in ~CARD-SHA256SUMS~ and re-check every
+  entry (~sha256sum -c~), stopping with an error if anything fails.
+
+  *The role copies must be refreshed on every DT change.* The script copies
+  whatever ~-normal.dtb~ / ~-usbhost.dtb~ contain. On 2026-09-29 both
+  predated patch 0017, so a role switch silently put back a DT without
+  the touchscreen node - and a checksum list that no longer matched. So
+  a DT deploy is: copy the new ~rk3566-teclast-p25t.dtb~ build to
+  ~-normal.dtb~ and ~-usbhost.dtb~ build to ~-usbhost.dtb~, then run the
+  script for the wanted role (check ~status~ *before* replacing the role
+  copies - afterwards the active DTB matches neither).
   It copies either ~rk3566-teclast-p25t-usbhost.dtb~ or the permanent
   ~rk3566-teclast-p25t-normal.dtb~ (a copy of the working "normal" DTB
   kept under its own name specifically so the rollback-backup pruning
