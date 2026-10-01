@@ -403,6 +403,15 @@
 	panel@0 {
 		compatible = "teclast,p25t-panel";
 		reg = <0>;
+		/*
+		 * Landscape use (patch 0023): the device is held with the
+		 * panel's right edge up. rotation = 90 -> DRM panel orientation
+		 * "Right Side Up" -> the console (fbcon, needs
+		 * CONFIG_FRAMEBUFFER_CONSOLE_ROTATION) and Wayland compositors
+		 * rotate the picture by themselves. The panel still scans out
+		 * 800x1280; the touchscreen keeps reporting panel coordinates.
+		 */
+		rotation = <90>;
 		backlight = <&backlight>;
 		reset-gpios = <&gpio3 RK_PC3 GPIO_ACTIVE_LOW>;
 		vdd-supply = <&vcc_lcd>;

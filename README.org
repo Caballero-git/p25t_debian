@@ -17,7 +17,7 @@
   | Area                              | State   | Notes                                              |
   |-----------------------------------+---------+----------------------------------------------------|
   | Boot from microSD                 | works   | stock SPL → mainline U-Boot v2026.10-rc5 → Linux   |
-  | Display 800×1280 JD9365 panel     | works   | DSI commands must be sent in HS mode               |
+  | Display 800×1280 JD9365 panel     | works   | DSI commands in HS mode; console landscape (patch 0023) |
   | Backlight                         | works   | PWM14                                              |
   | USB-C gadget (serial + network)   | flaky   | best with the cable plugged in before power-on    |
   | USB-C host (keyboard/mouse)       | works   | host-mode DTB, switched with ~set-usb-role.sh~ (patches 0007–0010) |

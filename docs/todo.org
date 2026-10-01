@@ -642,6 +642,14 @@
     capture a raw frame. The supplies (LDO8, vcc_camera) are already on
     since patch 0022; check LDO9 ~vcc2v8_dvp~ (2.8 V, likely AVDD).
 
+* DONE Landscape console (patch 0023)
+  - ~rotation = <90>~ on the panel + ~CONFIG_FRAMEBUFFER_CONSOLE_ROTATION~;
+    console 128x40, confirmed 2026-10-01. Runtime override:
+    ~/sys/class/graphics/fbcon/rotate_all~ (see kernel.org).
+  - Still to do for a graphical session: rotate the touchscreen to
+    match (DT ~touchscreen-swapped-x-y~ / ~touchscreen-inverted-x/y~, or a
+    libinput calibration matrix) - test it once a compositor runs.
+
 * TODO Repository
   - Publish this folder as a git repository. A web search on 2026-09-25
     found no Linux project for the P25T, only Android-modding threads

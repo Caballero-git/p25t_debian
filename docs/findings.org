@@ -192,6 +192,9 @@
     silently matches nothing (2026-10-01, ~CARD-SHA256SUMS~). Commands
     for Jose avoid depending on repeated spaces; e.g. replace the bare
     64-character hash instead.
+    The same can happen to ~$~: ~H=$(...)~ arrived as ~H=(...)~ (a bash
+    syntax error, nothing ran). For critical files give the literal
+    values, no shell variables.
   - Everything that writes to a disk checks first that the target is a
     removable/USB disk, and verifies by checksum afterwards
     (~CARD-SHA256SUMS~ on ~P25TBOOT~).

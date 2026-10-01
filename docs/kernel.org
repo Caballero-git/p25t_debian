@@ -790,6 +790,27 @@
   - No config change: ~LEDS_GPIO~, ~REGULATOR_FIXED_VOLTAGE~,
     ~ROCKCHIP_IODOMAIN~ were already built in.
 
+* Landscape console (patch 0023 + config) — working
+  - Confirmed on hardware 2026-10-01: the console comes up in landscape
+    (128x40 with the 10x20 font), the panel's right edge (portrait
+    view) on top.
+  - DT: ~rotation = <90>;~ in ~panel@0~. The JD9365 driver reads it as
+    the DRM panel orientation ~right_up~; fbcon turns that into
+    ~FB_ROTATE_CW~ (rotate = 1). Wayland compositors read the same
+    property; a bare DRM/KMS program or X11 must rotate by itself.
+  - Config: ~CONFIG_FRAMEBUFFER_CONSOLE_ROTATION=y~ (without it fbcon
+    ignores the orientation). Compiling is needed once, for this option;
+    the direction is in the DTB.
+  - Change at runtime, without rebuilding: ~0~ portrait, ~1~ landscape
+    (this), ~2~ upside down, ~3~ landscape the other way:
+    #+begin_src sh
+    echo 0 | sudo tee /sys/class/graphics/fbcon/rotate_all
+    #+end_src
+    The change lasts until reboot; for a permanent one change the DT
+    value (~0~, ~90~, ~180~, ~270~) and rebuild only the DTB.
+  - The touchscreen is not rotated: the console does not use it, but a
+    future graphical session needs a touch transformation (see todo).
+
 * AIC8800 Wi-Fi/Bluetooth driver (out of tree)
   Source: [[https://github.com/radxa-pkg/aic8800][radxa-pkg/aic8800]], commit ~516e3b0~
   ("fix aic8800 sdio firmware load issue").
