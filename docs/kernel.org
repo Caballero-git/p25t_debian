@@ -756,6 +756,40 @@
   - Boot cost: the firmware upload takes ~3 s at i2c1's default 100 kHz
     (~input: silead_ts~ appears at 3.5 s). See the follow-ups in todo.org.
 
+* Speaker amplifier, headphone detect, polled accelerometer (patch 0021 + config) — working
+  - Confirmed on hardware 2026-10-01 (~tests/test_12.sh~): tone on the
+    built-in speaker, speaker switch mutes it, headphone detect follows
+    the plug, accelerometer still reads, no more "irq 61: nobody cared".
+  - Stock: rk817 codec ~use-ext-amplifier~ + ~spk-ctl-gpios~ GPIO3_A2.
+    The codec's headphone stage feeds an external amplifier; its enable
+    is GPIO3_A2. Patch 0013 had given that pin to the SC7A20 as a
+    level-low IRQ (copied from the stock node's ~irq-gpio~, but stock
+    has ~irq_enable = <0>~); the low enable line made it fire 100000
+    times at boot.
+  - DT: ~spk_amp: audio-amplifier~ (~simple-audio-amplifier~, enable
+    GPIO3_A2) as ~simple-audio-card,aux-devs~, routed from HPOL/HPOR;
+    widgets "Headphones" and "Internal Speakers"; pin switch "Internal
+    Speakers"; ~hp-det-gpios~ GPIO3_A1 active low (stock ~rk-headset~,
+    pull-down). Same pattern as ~rk3326-gameforce-chi.dts~ (RK817 +
+    external amp). Accelerometer: interrupt removed.
+  - Config: ~CONFIG_SND_SOC_SIMPLE_AMPLIFIER=y~.
+  - The kernel does not mute the speaker on plug-in: a sound server
+    does that from the jack event; on the console use the switch (see
+    debian.org).
+
+* Camera IO bank supply and rear torch (patch 0022) — working
+  - Confirmed on hardware 2026-10-01 (~tests/test_13.sh~ by hand, then
+    ~tests/test_12.sh~ with the patched kernel): the torch lights.
+  - RK817 LDO_REG8 ~vcc1v8_dvp~, 1.8 V, always-on (stock values
+    verbatim; power-chip change approved by Jose) as
+    ~&pmu_io_domains~ ~vccio6-supply~. Without it the GPIO4 bank has no
+    supply, so the torch enable could not drive anything.
+  - ~vcc_camera~: ~regulator-fixed~ on GPIO4_A7, always-on as in stock.
+  - Torch: ~gpio-leds~ ~white:flash~ on GPIO4_A6 (stock
+    ~flash-rgb13h~ uses only that enable pin, no PWM).
+  - No config change: ~LEDS_GPIO~, ~REGULATOR_FIXED_VOLTAGE~,
+    ~ROCKCHIP_IODOMAIN~ were already built in.
+
 * AIC8800 Wi-Fi/Bluetooth driver (out of tree)
   Source: [[https://github.com/radxa-pkg/aic8800][radxa-pkg/aic8800]], commit ~516e3b0~
   ("fix aic8800 sdio firmware load issue").

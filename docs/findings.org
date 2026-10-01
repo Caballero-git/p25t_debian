@@ -136,6 +136,24 @@
     only affects the next boot: if the unit is already stuck, the
     reboot that should apply the mask hangs on it - power-cycle.
 
+* Speaker and torch: two pins the stock DT really meant (2026-10-01)
+  - The stock DT is Rockchip's generic SDK file: it lists alternatives,
+    and two nodes can name the same pin. GPIO3_A2 appears as the
+    speaker-amp enable *and* as the accelerometer IRQ; the deciding
+    detail was ~irq_enable = <0>~ on the sensor node. We took the wrong
+    one in patch 0013: the speaker stayed off, and the IRQ fired 100000
+    times at every boot until the kernel disabled it. Read *all*
+    properties of a stock node, not only the pin.
+  - A GPIO in an unpowered IO domain does nothing, without any error.
+    The torch pin (GPIO4_A6) sits in vccio6, supplied by RK817 LDO8,
+    which our boot left off. ~gpioset~ reported "output, high" and the
+    LED stayed dark. Check the IO-domain supply before suspecting the
+    pin.
+  - Android is a cheap reference: booting it (card out) showed the
+    torch, cameras, microphone and headphone detect all work, and adb
+    (over Wi-Fi when USB isn't seen) gave the fitted sensors, their
+    resolutions and the headphone IRQ pin without root.
+
 * Practical lessons
   - When the kernel log can't say *which* step failed, replay the
     driver's I2C sequence by hand with i2c-tools. Find the bus by its
@@ -169,6 +187,11 @@
     only tarballs with a checksum manifest; ~P25TBOOT~ stays out of the
     session's connected folders unless a card write is planned; after
     unpacking a sync, delete any ~*-1.*~ files once ~sha256sum -c~ passes.
+  - Commands copied from the chat can lose a run of spaces: a pattern
+    with the two spaces of a ~sha256sum~ line (~hash  name~) then
+    silently matches nothing (2026-10-01, ~CARD-SHA256SUMS~). Commands
+    for Jose avoid depending on repeated spaces; e.g. replace the bare
+    64-character hash instead.
   - Everything that writes to a disk checks first that the target is a
     removable/USB disk, and verifies by checksum afterwards
     (~CARD-SHA256SUMS~ on ~P25TBOOT~).

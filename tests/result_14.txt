@@ -1,0 +1,82 @@
+=== volume keys / headphone jack events (test_14) ===
+jue 01 oct 2026 13:15:20 CEST
+7.3.0-rc4-p25t
+
+--- input devices (name, handlers, event types) ---
+N: Name="rk805 pwrkey"
+   H: Handlers=kbd event0 
+   B: EV=3
+N: Name="silead_ts"
+   H: Handlers=event1 
+   B: EV=b
+N: Name="adc-keys"
+   H: Handlers=kbd event2 
+   B: EV=3
+N: Name="Analog RK817 Headphones"
+   H: Handlers=event3 
+   B: EV=21
+N: Name="Logitech USB Receiver"
+   H: Handlers=sysrq kbd leds event4 
+   B: EV=120013
+N: Name="Logitech USB Receiver Mouse"
+   H: Handlers=event5 
+   B: EV=17
+N: Name="Logitech USB Receiver Consumer Control"
+   H: Handlers=kbd event6 
+   B: EV=1f
+N: Name="Logitech USB Receiver System Control"
+   H: Handlers=kbd event7 
+   B: EV=13
+
+--- mixer: playback volume control ---
+Simple mixer control 'Master',0
+  Capabilities: pvolume cvolume
+  Playback channels: Front Left - Front Right
+  Capture channels: Front Left - Front Right
+  Limits: Playback 0 - 255 Capture 0 - 255
+  Front Left: Playback 201 [79%] [-20.12dB] Capture 255 [100%] [0.00dB]
+  Front Right: Playback 201 [79%] [-20.12dB] Capture 255 [100%] [0.00dB]
+
+--- triggerhappy package and service ---
+ii  triggerhappy   0.5.0-1.1+b4 arm64        global hotkey daemon for Linux
+[Unit]
+Description=triggerhappy global hotkey daemon
+After=local-fs.target
+[Service]
+Type=notify
+ExecStart=/usr/sbin/thd --triggers /etc/triggerhappy/triggers.d/ --socket /run/thd.socket --user nobody --deviceglob /dev/input/event*
+[Install]
+WantedBy=multi-user.target
+active
+total 0
+
+>>> 15 s: press volume UP, volume DOWN, plug headphones IN, then OUT
+EV_KEY	KEY_VOLUMEUP	1	/dev/input/event2
+# KEY_VOLUMEUP	1	command
+EV_KEY	KEY_VOLUMEUP	0	/dev/input/event2
+# KEY_VOLUMEUP	0	command
+EV_KEY	KEY_VOLUMEUP	1	/dev/input/event2
+# KEY_VOLUMEUP	1	command
+EV_KEY	KEY_VOLUMEUP	0	/dev/input/event2
+# KEY_VOLUMEUP	0	command
+EV_KEY	KEY_VOLUMEUP	1	/dev/input/event2
+# KEY_VOLUMEUP	1	command
+EV_KEY	KEY_VOLUMEUP	0	/dev/input/event2
+# KEY_VOLUMEUP	0	command
+EV_KEY	KEY_VOLUMEDOWN	1	/dev/input/event2
+# KEY_VOLUMEDOWN	1	command
+EV_KEY	KEY_VOLUMEDOWN	0	/dev/input/event2
+# KEY_VOLUMEDOWN	0	command
+EV_KEY	KEY_VOLUMEDOWN	1	/dev/input/event2
+# KEY_VOLUMEDOWN	1	command
+EV_KEY	KEY_VOLUMEDOWN	0	/dev/input/event2
+# KEY_VOLUMEDOWN	0	command
+EV_KEY	KEY_VOLUMEDOWN	1	/dev/input/event2
+# KEY_VOLUMEDOWN	1	command
+EV_KEY	KEY_VOLUMEDOWN	0	/dev/input/event2
+# KEY_VOLUMEDOWN	0	command
+EV_SW	SW_HEADPHONE_INSERT	1	/dev/input/event3
+# SW_HEADPHONE_INSERT	1	command
+<<< end of capture
+
+=== done ===

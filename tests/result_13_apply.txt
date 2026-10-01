@@ -1,0 +1,22 @@
+=== RK817 LDO8 (vccio6) / torch (test_13, mode: apply) ===
+jue 01 oct 2026 09:29:07 CEST
+RK817 on bus 0 (fdd40000), chip id 0x81 0x74
+  0xB3 = 0x07 -> LDO5 1, LDO6 1, LDO7 1, LDO8 0
+  0xDA = 0x30 -> LDO8 set to 1800 mV
+gpio4 = gpiochip4
+gpiochip4 6	unnamed         	input
+gpiochip4 7	unnamed         	input
+gpiochip4 8	unnamed         	input
+gpiochip4 10	unnamed         	input
+gpiochip4 11	unnamed         	input
+
+--- APPLY: LDO8 1.8 V on ---
+  0xDA <- 0x30: read back 0x30 (1.8 V)
+  0xB3 <- 0x88: read back 0x0f (LDO8 on, LDO5/6/7 unchanged)
+
+>>> GPIO4_A7 + GPIO4_A6 high for 3 s - look at the rear LED
+gpiochip4 6	unnamed         	output
+gpiochip4 7	unnamed         	output
+Did the LED light? Write yes/no next to the result.
+
+=== done (LDO8 stays on until the next full power-off) ===

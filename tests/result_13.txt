@@ -1,0 +1,13 @@
+=== RK817 LDO8 (vccio6) / torch (test_13, mode: check) ===
+jue 01 oct 2026 09:27:01 CEST
+RK817 on bus 0 (fdd40000), chip id 0x81 0x74
+  0xB3 = 0x07 -> LDO5 1, LDO6 1, LDO7 1, LDO8 0
+  0xDA = 0x30 -> LDO8 set to 1800 mV
+gpio4 = gpiochip4
+gpiochip4 6	unnamed         	input
+gpiochip4 7	unnamed         	input
+gpiochip4 8	unnamed         	input
+gpiochip4 10	unnamed         	input
+gpiochip4 11	unnamed         	input
+
+=== check done - nothing was written ===

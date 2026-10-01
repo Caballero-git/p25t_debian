@@ -15,6 +15,7 @@
 
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/input/input.h>
+#include <dt-bindings/leds/common.h>
 #include <dt-bindings/pinctrl/rockchip.h>
 #include <dt-bindings/soc/rockchip,vop2.h>
 #include "rk3566.dtsi"
@@ -162,11 +163,91 @@
 	 * cpu-side controller. See the pmic@20/rk817 node comment above and
 	 * &i2s1_8ch below for the clock/pin details.
 	 */
+	/*
+	 * Rear camera torch (patch 0022). Stock "flash-rgb13h": enable-gpio
+	 * GPIO4_A6, active high, no PWM ("Unable to get pwm device" in the
+	 * Android log) - a plain on/off LED here:
+	 *   echo 1 > /sys/class/leds/white:flash/brightness
+	 * Needs vcc1v8_dvp (vccio6) and vcc_camera, both below.
+	 */
+	leds {
+		compatible = "gpio-leds";
+		pinctrl-names = "default";
+		pinctrl-0 = <&flash_led_en>;
+
+		led-flash {
+			color = <LED_COLOR_ID_WHITE>;
+			function = LED_FUNCTION_FLASH;
+			gpios = <&gpio4 RK_PA6 GPIO_ACTIVE_HIGH>;
+			default-state = "off";
+		};
+	};
+
+	/*
+	 * Stock "vcc_camera": fixed regulator switched by GPIO4_A7, always on
+	 * in Android. Kept the same here (patch 0022); the cameras will be
+	 * its consumers later.
+	 */
+	vcc_camera: regulator-vcc-camera {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc_camera";
+		gpio = <&gpio4 RK_PA7 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		pinctrl-names = "default";
+		pinctrl-0 = <&vcc_camera_en>;
+		regulator-always-on;
+		regulator-boot-on;
+		vin-supply = <&vcc1v8_dvp>;
+	};
+
+	/*
+	 * Built-in speaker (2026-10-01). Stock: rk817 codec "use-ext-amplifier"
+	 * with spk-ctl-gpios = GPIO3_A2 (active high): the codec's headphone
+	 * stage feeds an external amplifier whose enable pin is GPIO3_A2; the
+	 * internal class-D stage (Playback Mux "SPK") is not used. Confirmed by
+	 * tests/test_11.sh: GPIO3_A2 high + Playback Mux "HP" plays on the
+	 * speaker. Same pattern as rk3326-gameforce-chi.dts (RK817 + ext amp).
+	 */
+	spk_amp: audio-amplifier {
+		compatible = "simple-audio-amplifier";
+		enable-gpios = <&gpio3 RK_PA2 GPIO_ACTIVE_HIGH>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&spk_amp_enable_h>;
+		sound-name-prefix = "Speaker Amp";
+	};
+
 	rk817-sound {
 		compatible = "simple-audio-card";
 		simple-audio-card,name = "Analog RK817";
+		simple-audio-card,aux-devs = <&spk_amp>;
 		simple-audio-card,format = "i2s";
+		/*
+		 * Headphone detect: stock rk-headset headset_gpio = GPIO3_A1,
+		 * active low, pin pulled down. Measured: 1 unplugged, 0 with
+		 * headphones in (gpioget, 2026-10-01). Same pin Android names
+		 * "headset_input" in /proc/interrupts.
+		 */
+		simple-audio-card,hp-det-gpios = <&gpio3 RK_PA1 GPIO_ACTIVE_LOW>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&hp_det>;
 		simple-audio-card,mclk-fs = <256>;
+		simple-audio-card,widgets =
+			"Headphone", "Headphones",
+			"Speaker", "Internal Speakers";
+		simple-audio-card,routing =
+			"Headphones", "HPOL",
+			"Headphones", "HPOR",
+			"Speaker Amp INL", "HPOL",
+			"Speaker Amp INR", "HPOR",
+			"Internal Speakers", "Speaker Amp OUTL",
+			"Internal Speakers", "Speaker Amp OUTR";
+		/*
+		 * The jack switches the "Headphones" pin by itself. The speaker
+		 * is not muted by the kernel when headphones go in: a sound
+		 * server (PipeWire/PulseAudio) does that from the jack event;
+		 * on the console: amixer cset name='Internal Speakers Switch' off
+		 */
+		simple-audio-card,pin-switches = "Internal Speakers";
 
 		simple-audio-card,cpu {
 			sound-dai = <&i2s1_8ch>;
@@ -220,6 +301,7 @@
 &pmu_io_domains {
 	vccio1-supply = <&vccio_acodec>;
 	vccio4-supply = <&vcc_1v8_dummy>;
+	vccio6-supply = <&vcc1v8_dvp>;	/* patch 0022: GPIO4 camera/torch pins */
 	status = "okay";
 };
 
@@ -431,17 +513,10 @@
 		 * rockchip,i2s-tdm.yaml's own worked example, which uses the
 		 * identical &i2s1_8ch + i2s1m0 + trcm-sync-tx-only combination.
 		 *
-		 * spk-ctl-gpios deliberately NOT carried over: stock's value
-		 * (<&gpio3 2 ...>, GPIO3_A2) is the exact same physical pin
-		 * already confirmed on real hardware to be the SC7A20
-		 * accelerometer's IRQ line (patch 0013) - a single pin cannot
-		 * serve both. The quartz64-a reference board doesn't wire any
-		 * speaker-amp GPIO either, so this is omitted rather than
-		 * guessed. Practical effect, unconfirmed until tested: the
-		 * built-in speaker's amplifier may need to be enabled some
-		 * other way (or may default on/off in hardware) - headphone
-		 * jack output should be unaffected either way. See
-		 * hardware.org/todo.org.
+		 * spk-ctl-gpios: mainline rk817_codec has no such property. The
+		 * pin it names (GPIO3_A2) is the external speaker amplifier's
+		 * enable - see spk_amp at the top of this file (2026-10-01;
+		 * patch 0013 had wrongly taken it for the accelerometer IRQ).
 		 */
 		assigned-clocks = <&cru I2S1_MCLKOUT_TX>;
 		assigned-clock-parents = <&cru CLK_I2S1_8CH_TX>;
@@ -506,6 +581,26 @@
 				regulator-name = "vccio_acodec";
 				regulator-min-microvolt = <3300000>;
 				regulator-max-microvolt = <3300000>;
+				regulator-always-on;
+				regulator-boot-on;
+
+				regulator-state-mem {
+					regulator-off-in-suspend;
+				};
+			};
+
+			/*
+			 * Camera-side IO bank supply (patch 0022). Stock LDO_REG8
+			 * "vcc1v8_dvp", values verbatim: 1.8 V, always-on. It is
+			 * the vccio6-supply of &pmu_io_domains: without it the
+			 * GPIO4 pins of the torch, vcc_camera and the camera
+			 * sensors cannot drive anything. Confirmed by hand with
+			 * tests/test_13.sh (LDO8 on -> torch lights).
+			 */
+			vcc1v8_dvp: LDO_REG8 {
+				regulator-name = "vcc1v8_dvp";
+				regulator-min-microvolt = <1800000>;
+				regulator-max-microvolt = <1800000>;
 				regulator-always-on;
 				regulator-boot-on;
 
@@ -617,7 +712,8 @@
 	};
 
 	/*
-	 * IRQ: stock DT's irq-gpio = <0x3e 0x02 0x08> (0x3e is gpio@fe760000,
+	 * IRQ (superseded 2026-10-01, interrupt removed - see the node below):
+	 * stock DT's irq-gpio = <0x3e 0x02 0x08> (0x3e is gpio@fe760000,
 	 * i.e. gpio3) decodes to GPIO3_A2 (bank 3, pin 2), flags 0x08 =
 	 * IRQ_TYPE_LEVEL_LOW - same
 	 * raw-cells style already used for RK817's interrupt above (bank's
@@ -643,8 +739,12 @@
 	accelerometer@19 {
 		compatible = "silan,sc7a20";
 		reg = <0x19>;
-		interrupt-parent = <&gpio3>;
-		interrupts = <2 8>; /* GPIO3_A2, IRQ_TYPE_LEVEL_LOW - matches stock */
+		/*
+		 * No interrupt: GPIO3_A2 is the speaker amplifier enable (see
+		 * spk_amp). Stock polls this sensor (irq_enable = <0>); as an
+		 * IRQ the pin fired 100000 times at boot ("irq 61: nobody
+		 * cared", tests/result_11_speaker2.txt). Polled sysfs reads work.
+		 */
 		mount-matrix = "0", "1", "0",
 				"-1", "0", "0",
 				"0", "0", "1";
@@ -700,4 +800,28 @@
 	rockchip,hw-tshut-mode = <1>; /* tshut via GPIO, not CRU */
 	rockchip,hw-tshut-polarity = <0>; /* GPIO active-low */
 	status = "okay";
+};
+
+&pinctrl {
+	camera {
+		flash_led_en: flash-led-en {
+			rockchip,pins = <4 RK_PA6 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+
+		vcc_camera_en: vcc-camera-en {
+			rockchip,pins = <4 RK_PA7 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
+
+	headphone {
+		hp_det: hp-det {
+			rockchip,pins = <3 RK_PA1 RK_FUNC_GPIO &pcfg_pull_down>;
+		};
+	};
+
+	audio-amplifier {
+		spk_amp_enable_h: spk-amp-enable-h {
+			rockchip,pins = <3 RK_PA2 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
 };

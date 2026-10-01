@@ -1,0 +1,23 @@
+=== speaker amp / torch pins (test_11, mode: check) ===
+Wed 30 Sep 23:05:20 CEST 2026
+gpio3 (fe760000) = gpiochip3, gpio4 (fe770000) = gpiochip4
+
+--- GPIO3_A2 (line 2) and GPIO4_A6 (line 6) owners ---
+gpiochip3 2	unnamed         	input
+gpiochip4 6	unnamed         	input
+
+--- accelerometer ---
+device: /sys/bus/i2c/devices/1-0019  driver: st-accel-i2c
+  61:     100001          0          0          0  rockchip_gpio_irq    2 Level     sc7a20-trigger
+
+--- sound card / mux ---
+ 0 [RK817          ]: simple-card - Analog RK817
+                      Analog RK817
+Playback Mux numid: 4
+numid=4,iface=MIXER,name='Playback Mux'
+  ; type=ENUMERATED,access=rw------,values=1,items=2
+  ; Item #0 'HP'
+  ; Item #1 'SPK'
+  : values=1
+
+=== done ===

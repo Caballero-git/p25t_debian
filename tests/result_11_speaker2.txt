@@ -1,0 +1,45 @@
+=== speaker amp / torch pins (test_11, mode: speaker) ===
+Thu  1 Oct 07:45:19 CEST 2026
+gpio3 (fe760000) = gpiochip3, gpio4 (fe770000) = gpiochip4
+
+--- GPIO3_A2 (line 2) and GPIO4_A6 (line 6) owners ---
+gpiochip3 2	unnamed         	input
+gpiochip4 6	unnamed         	input
+
+--- accelerometer ---
+device: /sys/bus/i2c/devices/1-0019  driver: st-accel-i2c
+  61:     100001          0          0          0  rockchip_gpio_irq    2 Level     sc7a20-trigger
+spurious-IRQ reports this boot (a level-low IRQ on a pin that is really an
+output held low would fire 100000 times and then be disabled):
+[    4.796611] irq 61: nobody cared (try booting with the "irqpoll" option)
+[    4.796624] CPU: 0 UID: 0 PID: 89 Comm: irq/61-sc7a20-t Not tainted 7.3.0-rc4-p25t #3 PREEMPT 
+[    4.796631] Hardware name: Teclast P25T (P9A6) (DT)
+[    4.796635] Call trace:
+
+--- sound card / mux ---
+ 0 [RK817          ]: simple-card - Analog RK817
+                      Analog RK817
+Playback Mux numid: 4
+numid=4,iface=MIXER,name='Playback Mux'
+  ; type=ENUMERATED,access=rw------,values=1,items=2
+  ; Item #0 'HP'
+  ; Item #1 'SPK'
+  : values=0
+
+>>> unbind 1-0019 from st-accel-i2c
+>>> GPIO3_A2 high
+>>> tone for about 3 s, Playback Mux=HP - listen to the built-in speaker
+Stream parameters are 48000Hz, S16_LE, 2 channels
+Sine wave rate is 440.0000Hz
+Rate set to 48000Hz (requested 48000Hz)
+>>> restore: mux HP, release pin, re-bind accel
+WARNING: re-bind failed (a reboot restores it):
+[ 1107.586351] gpio gpiochip3: (gpio3): unable to lock HW IRQ 2 for IRQ
+[ 1107.586356] genirq: Failed to request resources for sc7a20-trigger (irq 61) on irqchip rockchip_gpio_irq
+[ 1107.586399] st-accel-i2c 1-0019: error -EIO: request_irq(61) st_sensors_irq_handler st_sensors_irq_thread sc7a20-trigger
+[ 1107.586822] st-accel-i2c 1-0019: probe with driver st-accel-i2c failed with error -5
+  : values=0
+gpiochip3 2	unnamed         	output
+Did you hear the tone from the built-in speaker? Write yes/no next to the result.
+
+=== done ===

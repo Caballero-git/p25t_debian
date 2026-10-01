@@ -13,7 +13,7 @@
   tries the SD card first and loads our U-Boot from a GPT partition named
   ~uboot~ (see [[file:docs/boot.org][docs/boot.org]]).
 
-* Status (2026-09-30)
+* Status (2026-10-01)
   | Area                              | State   | Notes                                              |
   |-----------------------------------+---------+----------------------------------------------------|
   | Boot from microSD                 | works   | stock SPL → mainline U-Boot v2026.10-rc5 → Linux   |
@@ -27,8 +27,10 @@
   | Volume keys (SARADC)              | works   | used to skip the Debian hand-over                  |
   | Battery / charger (RK817)         | works   | ~rk817_charger~ (patch 0009)                       |
   | Touchscreen GSL3673               | works   | multi-touch, from boot; firmware from the stock kernel (patches 0017–0020) |
-  | Audio RK817 codec                 | partly  | headphone jack works (patch 0015); built-in speaker silent, mic untested |
-  | Accelerometer SC7A20              | works   | patch 0013; orientation of the mount-matrix unverified |
+  | Audio RK817 codec                 | works   | headphones, speaker, jack detect, volume buttons (0015, 0021, ~p25t-audio-keys.sh~); mic silent - todo |
+  | Torch (rear camera LED)           | works   | ~/sys/class/leds/white:flash~ (patch 0022)          |
+  | Cameras GC5035 / GC02M2           | open    | identified; no mainline sensor drivers yet         |
+  | Accelerometer SC7A20              | works   | patch 0013, polled (0021); mount-matrix orientation unverified |
   | CPU frequency / GPU (Panfrost)    | works   | DVFS with real vdd_cpu (SYR837) and vdd_gpu (patches 0011, 0014) |
   | SoC temperature (tsadc)           | works   | patch 0016                                         |
   | Console on screen, tty1-tty6      | works   | fixed by masking the ttyGS0 getty (see findings)   |

@@ -328,7 +328,23 @@
         placeholders (IRQ trigger flag, ~power-gpios~ polarity) are the
         first things to try flipping - see the DTS comment for both.
 
-* DONE Audio (RK817 codec) — headphone jack works
+* DONE Audio (RK817 codec) — headphones, built-in speaker, jack detect
+  - *Update 2026-10-01 (patch 0021)*: the speaker works. Stock's
+    ~spk-ctl-gpios~ (GPIO3_A2) is the external amplifier's enable; the
+    accelerometer never used that pin as an IRQ (stock ~irq_enable = 0~),
+    so our patch 0013 had it wrong and caused an IRQ storm at every boot
+    ("irq 61: nobody cared"). The amp is fed from the headphone stage
+    (Playback Mux ~HP~), as Rockchip's driver does with
+    ~use-ext-amplifier~. Headphone detect on GPIO3_A1 (active low).
+    Tests ~test_11~ (by hand), ~test_12~ (patched kernel). The notes
+    below are the history; where they say otherwise, this wins.
+  - Volume buttons and automatic speaker mute on plug-in: user space,
+    ~debian/p25t-audio-keys.sh~ (triggerhappy), confirmed 2026-10-01
+    (~tests/test_14.sh~ shows the events). See debian.org.
+  - Still open: the microphone. Android records (low level), so it
+    exists; here capture is silent. Next step when picked up: compare
+    the stock codec's mic settings (~rockchip,mic-in-differential~,
+    capture volume) with mainline's controls.
   - Patch 0015 (2026-09-27): wired ~vccio_acodec~ (LDO_REG4, 3.3 V) as
     ~pmu_io_domains~' ~vccio1-supply~, the codec's ~mclk~ (~&cru
     I2S1_MCLKOUT_TX~, no BSP-only ~codec {}~ subnode - mainline's
@@ -387,7 +403,9 @@
     ~CONFIG_THERMAL_HWMON=y~ was already set - no ~sensors-detect~
     probing needed or used.
 
-* DONE Accelerometer (SC7A20 @ i2c1 0x19, IRQ GPIO3_A2)
+* DONE Accelerometer (SC7A20 @ i2c1 0x19, polled)
+  - 2026-10-01: the IRQ on GPIO3_A2 was removed (patch 0021): that pin
+    is the speaker amplifier's enable; stock polls the sensor too.
   - Identified on hardware 2026-09-26 (patch 0012 + ~tests/test_02.sh~):
     0x19 answers, 0x27 (DA223) does not - the chip is the SC7A20. WHOAMI
     read back ~0x11~, which turns out to be an exact match for a
@@ -410,7 +428,10 @@
     not yet confirmed they move the *correct* way. Revisit once there
     is an actual consumer to test against (e.g. screen rotation).
 
-* OPEN Power button doesn't wake it from off unless USB cable is plugged in
+* DONE Power button doesn't wake it from off unless USB cable is plugged in
+  - *Closed 2026-10-01, not reproducible*: under Android, without any
+    cable, the power button starts the tablet normally. The earlier
+    observation fits the drained battery found on 2026-09-26.
   - Found 2026-09-25, reported 2026-09-26 (unrelated to the USB host-mode
     DTB, patch 0007): with the tablet fully off and no cable, pressing the
     power button does nothing. Plugging a USB-C cable into the PC makes it
@@ -451,6 +472,10 @@
     Wi-Fi rail.
 
 * OPEN USB gadget is intermittent
+  - 2026-10-01: under *Android* the PC did not see the tablet over the
+    same cable either (adb had to go over Wi-Fi). Part of this may be
+    physical (cable, port, connector), not our kernel. Next time: watch
+    ~sudo dmesg -w~ on the PC while plugging in.
   - Works best with the cable plugged in before power-on. Compare DWC3
     and PHY registers of a good and a bad boot; consider a role-switch /
     VBUS detection (usb2phy extcon) instead of the fixed peripheral mode.
@@ -592,6 +617,30 @@
       switch to that VT - so H1/H3 would explain their absence here.
     - Cheap cross-check later (a change, needs OK): one boot with
       ~serial-getty@ttyGS0~ masked, or in host mode (no ttyGS0 at all).
+
+* DONE Rear camera torch (patch 0022)
+  - Android: the flashlight lights the rear LED. Stock ~flash-rgb13h~:
+    only ~enable-gpio~ GPIO4_A6 (no PWM). Driving it did nothing
+    (~test_11~) until RK817 LDO8 ~vcc1v8_dvp~ was on (~test_13~): LDO8
+    is the vccio6 IO-domain supply, stock keeps it always on, our boot
+    had left it off. Patch 0022: LDO8 1.8 V always-on as vccio6-supply,
+    ~vcc_camera~ (GPIO4_A7) always-on, torch as a GPIO LED
+    ~white:flash~. Confirmed with ~test_12~ (2026-10-01).
+
+* TODO Cameras (rear GC5035 5 MP + DW9714 focus, front GC02M2 2 MP)
+  - Identified 2026-10-01 from the Android boot log (only these two of
+    the stock DT's 12 candidates answer) and ~dumpsys media.camera~:
+    | Camera | Sensor | i2c2 | Lanes | Pins | Pixels |
+    | rear   | GC5035 | 0x37 | 2     | pwdn GPIO4_B2 | 2592x1944, RGGB, AF to 10 cm (DW9714 @0x0c) |
+    | front  | GC02M2 | 0x10 | 1     | reset GPIO4_B0, pwdn GPIO4_B3 (low) | 1600x1200 |
+  - Mainline 7.3 has the RK3568 capture path (VICAP ~rkcif~, MIPI CSI-2
+    receiver, CSI D-PHY) and ~dw9714~; it has no driver for either
+    sensor and no ISP for RK3568 (raw Bayer only; libcamera's software
+    ISP can process it).
+  - Plan: port the GC5035 driver from Rockchip's GPL kernel, describe
+    the pipeline in the DT (sensor -> csi2-dphy -> mipi-csi2 -> vicap),
+    capture a raw frame. The supplies (LDO8, vcc_camera) are already on
+    since patch 0022; check LDO9 ~vcc2v8_dvp~ (2.8 V, likely AVDD).
 
 * TODO Repository
   - Publish this folder as a git repository. A web search on 2026-09-25

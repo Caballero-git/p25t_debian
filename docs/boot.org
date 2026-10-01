@@ -33,7 +33,7 @@
   | ~rk3566-teclast-p25t.dtb~     | device tree (current) - the *active* copy, set by ~set-usb-role.sh~ |
   | ~rk3566-teclast-p25t-normal.dtb~, ~-usbhost.dtb~ | role copies (USB-C device / host), see "Choosing the USB-C role" |
   | ~initramfs.cpio.gz~           | stage-1 system                                          |
-  | ~*.stage4~, ~*.stage5~        | previous kernel/DTB, for rollback                       |
+  | ~Image.pre-NNNN-backup~, ~*.dtb.pre-NNNN-backup~ | the 2 previous working kernels + DTBs, for rollback (see "Rescue and rollback") |
   | ~CARD-SHA256SUMS~             | checksums of ~Image~, the active DTB, ~initramfs.cpio.gz~, ~diag-display.sh~ (check: ~sha256sum -c CARD-SHA256SUMS~) |
   | ~boot-debian~ (empty flag)    | present → hand over to Debian                           |
   | ~no-usb-tuning~ (empty flag)  | present → skip the USB PHY tuning                       |
@@ -171,6 +171,22 @@
   | Situation                           | Action                                                              |
   |-------------------------------------+---------------------------------------------------------------------|
   | Debian does not come up             | hold a volume key while powering on → stage-1 shell over USB        |
-  | New kernel does not boot            | on the PC, copy ~Image.stage5~ over ~Image~ and the ~.dtb.stage5~ over the DTB |
+  | New kernel does not boot            | on the PC, copy the newest ~Image.pre-NNNN-backup~ over ~Image~ and its ~*.dtb.pre-NNNN-backup~ over ~rk3566-teclast-p25t.dtb~ |
   | Want Android back                   | power off, remove the card                                          |
   | Nothing boots at all                | read the status note (above) and ~logs/~ on the PC                  |
+
+  Backup rule (since 2026-10-01): ~P25TBOOT~ (253 MB) keeps the running
+  kernel plus the *2 previous working* kernels, each as
+  ~Image.pre-NNNN-backup~ with its DTB(s), where NNNN is the first patch
+  the newer kernel added. A deploy first copies the outgoing ~Image~ and
+  active DTB to ~/home/jose/boot-backups/~ on ~p25troot~ (ext4, plenty of
+  space, readable from the PC); older backups go to
+  ~/home/jose/boot-backups/old/~. Before a deploy, check ~df -h
+  /boot/firmware~: a new ~Image~ is ~33 MB.
+  State 2026-10-01: ~Image~ (patches up to 0022), ~Image.pre-0021-backup~
+  (0020), ~Image.pre-touch-fw-backup~ (0019). Note:
+  ~rk3566-teclast-p25t.dtb.pre-0021-backup~ is the *host-mode* DTB of
+  0020 (~b5246dbb…~; the tablet was in host mode at that deploy) - a
+  rollback with it boots with USB-C as host (Wi-Fi/SSH unaffected). The
+  normal-mode DTB of 0020 (~14815f26…~) is not kept; rebuild it from the
+  git tree at patch 0020 if needed. Lesson: back up both role copies.

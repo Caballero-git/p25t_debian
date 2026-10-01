@@ -1,0 +1,37 @@
+=== speaker amp + accelerometer after patch 0021 (test_12) ===
+jue 01 oct 2026 10:50:32 CEST
+7.3.0-rc4-p25t
+
+--- 1. the IRQ storm is gone (expect: nothing) ---
+(no 'nobody cared' - good)
+(no sc7a20 interrupt line - expected, it is polled now)
+
+--- 2. amplifier device and pin ---
+/sys/bus/platform/devices/audio-amplifier
+driver: simple-amplifier
+gpiochip3 2	unnamed         	output consumer=enable
+
+--- 3. accelerometer still reads (polled) ---
+/sys/bus/iio/devices/iio:device0: sc7a20  x=976 y=160 z=96
+
+--- 4. mixer controls ---
+numid=1,iface=CARD,name='Headphones Jack'
+numid=6,iface=MIXER,name='Playback Mux'
+numid=5,iface=MIXER,name='Internal Speakers Switch'
+
+--- 4b. headphone jack (GPIO3_A1) - run once without and once with headphones ---
+ gpio-1   (                    |Headphone detection ) in  lo IRQ ACTIVE LOW
+
+--- 5. tone 1: Internal Speakers Switch ON - listen to the speaker ---
+--- tone 2: Internal Speakers Switch OFF - speaker should be silent ---
+switch back ON:   : values=on
+Write next to the result: tone 1 heard? tone 2 silent?
+
+--- 6. patch 0022: rails and torch ---
+    vcc1v8_dvp                    2    2      0 unknown  1800mV     0mA  1800mV  1800mV 
+       vcc_camera                 1    0      0 unknown  1800mV     0mA     0mV     0mV 
+>>> torch ON for 3 s - look at the rear LED
+torch off again (brightness 0)
+Write next to the result: torch lit?
+
+=== done ===

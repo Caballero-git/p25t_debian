@@ -1,0 +1,34 @@
+=== speaker amp / torch pins (test_11, mode: torch) ===
+Thu  1 Oct 07:45:50 CEST 2026
+gpio3 (fe760000) = gpiochip3, gpio4 (fe770000) = gpiochip4
+
+--- GPIO3_A2 (line 2) and GPIO4_A6 (line 6) owners ---
+gpiochip3 2	unnamed         	output
+gpiochip4 6	unnamed         	input
+
+--- accelerometer ---
+device: /sys/bus/i2c/devices/1-0019  driver: none
+(no accel line in /proc/interrupts)
+spurious-IRQ reports this boot (a level-low IRQ on a pin that is really an
+output held low would fire 100000 times and then be disabled):
+[    4.796611] irq 61: nobody cared (try booting with the "irqpoll" option)
+[    4.796624] CPU: 0 UID: 0 PID: 89 Comm: irq/61-sc7a20-t Not tainted 7.3.0-rc4-p25t #3 PREEMPT 
+[    4.796631] Hardware name: Teclast P25T (P9A6) (DT)
+[    4.796635] Call trace:
+
+--- sound card / mux ---
+ 0 [RK817          ]: simple-card - Analog RK817
+                      Analog RK817
+Playback Mux numid: 4
+numid=4,iface=MIXER,name='Playback Mux'
+  ; type=ENUMERATED,access=rw------,values=1,items=2
+  ; Item #0 'HP'
+  ; Item #1 'SPK'
+  : values=0
+
+>>> GPIO4_A7 high (vcc_camera), then GPIO4_A6 high for 3 s - look at the rear camera LED
+gpiochip4 6	unnamed         	output
+gpiochip4 7	unnamed         	output
+Did the LED light? Write yes/no next to the result.
+
+=== done ===

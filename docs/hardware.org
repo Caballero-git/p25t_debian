@@ -37,19 +37,21 @@
   | PMIC              | RK817 @ i2c0 0x20                          | regulators, RTC, 32k clock, charger, fuel gauge, codec        | minimal node (patches 0008–0009): BOOST/OTG_SWITCH, charger+battery |
   | vdd_cpu           | SYR837 @ i2c0 0x40 (~silergy,syr827~)      | vin = vccsys, 0.712–1.5 V                                     | works (patch 0011, confirmed 2026-09-26) |
   | Battery           | 5300 mAh design (qmax 5800), sense 10 mΩ   | OCV 3400–4313 mV                                              | works (patch 0009, confirmed 2026-09-26) |
-  | Audio codec       | RK817 codec + simple-audio-card (i2s1_8ch) | vccio_acodec=LDO_REG4; Playback Mux HP/SPK; no spk-ctl-gpios (pin taken by accel IRQ) | headphone jack works (patch 0015, confirmed 2026-09-27); built-in speaker silent (needs real amp-enable pin, unknown); mic capture untested/no sound; headset detect ~rk-headset~ still todo |
+  | Audio codec       | RK817 codec + simple-audio-card (i2s1_8ch) | vccio_acodec=LDO_REG4; HP stage feeds an external speaker amp, enable GPIO3_A2 (act. high); headphone detect GPIO3_A1 (act. low) | headphones + built-in speaker + jack detect work (patches 0015, 0021, confirmed 2026-10-01); mic present (Android records) but silent here - todo |
   | GPU               | Mali-G52 (~arm,mali-bifrost~)              |                                                               | works (patch 0014, confirmed 2026-09-27); vdd_gpu = RK817 DCDC_REG2, DVFS 200-800 MHz |
   | Thermal sensor    | ~tsadc@fe710000~ (~rockchip,rk3568-tsadc~) | on-die, cpu+gpu thermal-zones already in base dtsi           | works (patch 0016, confirmed 2026-09-27); cpu-thermal 41.9°C, gpu-thermal 40.0°C idle |
   | Display pipe      | VOP2 vp1 → DSI0 ~fe060000~ + D-PHY ~fe850000~ | 4 lanes                                                    | works                                 |
   | Panel             | Jadard JD9365, 800×1280, 135×216 mm        | enable GPIO3_B1 (act. high), reset GPIO3_C3 (act. low)        | works, ~panel-jadard-jd9365da-h3~ + our table |
   | Backlight         | ~pwm-backlight~ PWM14 (~fe700020~)         | period 25 µs (40 kHz), stock default 77/255                   | works                                 |
   | Touchscreen       | Silead GSL3673 @ i2c1 0x40                 | IRQ GPIO0_B0 (level-low), power/reset GPIO0_C2 (act. high)    | works (patches 0017–0020, confirmed 2026-09-30); firmware from the stock kernel |
-  | Accelerometer     | SC7A20 @ i2c1 0x19 (DA223 @ 0x27 not present)| IRQ GPIO3_A2; swap_xy, revert_y                              | works (patch 0013 + config fix, confirmed 2026-09-26); mount-matrix orientation unverified |
+  | Accelerometer     | SC7A20 @ i2c1 0x19 (DA223 @ 0x27 not present)| polled, no IRQ (GPIO3_A2 is the speaker amp); swap_xy, revert_y | works (patch 0013, IRQ dropped in 0021); mount-matrix orientation unverified |
   | Volume keys       | ~adc-keys~ on SARADC ch0                   | idle ≈ 1.8 V (raw 1023); raw < 900 = a key is held            | works                                 |
   | Power key         | RK817 pwrkey                               |                                                               | todo (needs RK817 node)               |
   | USB-C             | DWC3 ~fcc00000~, HS only, OTG              | USB2 PHY0 ~fe8a0000~; stock quirks + PHY tuning needed        | gadget works, intermittently          |
   | HDMI              | enabled in stock DT                        | not wired on this tablet                                      | ignored                               |
-  | Cameras           | 12 candidates on i2c2                      | front 2 MP, rear 5 MP                                         | skipped                               |
+  | Rear camera       | GalaxyCore GC5035, 5 MP (2592x1944, RGGB) @ i2c2 0x37 | 2 MIPI lanes, pwdn GPIO4_B2; focus DW9714 @ 0x0c; module KYT-4877-V01 | not yet: no mainline sensor driver; VICAP/CSI-2 present, no RK3568 ISP |
+  | Front camera      | GalaxyCore GC02M2, 2 MP (1600x1200) @ i2c2 0x10 | 1 MIPI lane, reset GPIO4_B0, pwdn GPIO4_B3 (act. low)       | not yet: no mainline sensor driver    |
+  | Torch (rear)      | GPIO LED, enable GPIO4_A6 (act. high)      | needs LDO8 (vccio6) and vcc_camera (GPIO4_A7)                 | works (patch 0022, confirmed 2026-10-01) |
 
 * Power (RK817 and SYR837)
   - RK817 enable registers have per-bit write-enable masks (high nibble =
@@ -61,12 +63,14 @@
     | RK817 rail | stock name   | stock V     | stock user       | state in our boot            |
     |------------+--------------+-------------+------------------+-------------------------------|
     | LDO9       | vcc2v8_dvp   | 2.8 V       | none listed      | off                           |
-    | LDO8       | vcc1v8_dvp   | 1.8 V       | IO domain vccio6 | off                           |
-    | LDO4       | vccio_acodec | 3.3 V       | IO domain vccio1 | off                           |
+    | LDO8       | vcc1v8_dvp   | 1.8 V       | IO domain vccio6 | on since patch 0022 (always-on, as stock) |
+    | LDO4       | vccio_acodec | 3.3 V       | IO domain vccio1 | on since patch 0015           |
     | BOOST      | boost        | 4.9–5.4 V   | feeds OTG_SWITCH | host-mode DTB only (patch 0010) |
     | OTG_SWITCH | otg_switch   | (switch)    | USB-C VBUS gate  | on, host-mode DTB only       |
     Turning LDO4/8/9 on was tested ("rails" experiment): irrelevant to the
-    panel. They will matter for audio (LDO4) and cameras. LDO9 is not the
+    panel. They matter for audio (LDO4, patch 0015) and the camera side:
+    LDO8 feeds IO domain vccio6, and without it no GPIO4 pin can drive
+    anything (torch, vcc_camera, camera reset/pwdn) - patch 0022. LDO9 is not the
     touchscreen's supply either (switched on 2026-09-29, ~tests/test_08.sh~:
     no change; touch works with it off).
   - Our DT uses dummy fixed regulators (~vcc_sys_dummy~, ~vcc_3v3_dummy~,

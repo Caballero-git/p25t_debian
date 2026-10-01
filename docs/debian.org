@@ -230,6 +230,37 @@
   bash ~/set-usb-role.sh normal
   #+end_src
 
+* Sound and torch
+  - *Volume buttons and automatic speaker mute* (2026-10-01): installed
+    once with ~debian/p25t-audio-keys.sh~ (run on the tablet with
+    ~sudo bash~; also on a fresh build, after the first boot). It sets up
+    the small ~triggerhappy~ daemon:
+    - volume buttons: ~Master~ playback volume +/- 5 % per press (held =
+      repeats);
+    - headphones in: speaker off; headphones out: speaker on; at boot the
+      speaker follows the jack state.
+    The kernel only reports these as input events (~adc-keys~,
+    "Analog RK817 Headphones"); without a desktop sound server nothing
+    else acts on them. Files: ~/usr/local/sbin/p25t-audio~,
+    ~/etc/triggerhappy/triggers.d/p25t-audio.conf~,
+    ~/etc/systemd/system/triggerhappy.service.d/p25t.conf~ (runs ~thd~
+    as root: Debian's ~--user nobody~ cannot open the sound card). Log:
+    ~journalctl -u triggerhappy~.
+  - By hand (or without the daemon), the same actions:
+    #+begin_src sh
+    amixer cset name='Internal Speakers Switch' off   # speaker off
+    amixer cset name='Internal Speakers Switch' on    # speaker on
+    amixer -c RK817 sset Master 5%+                   # volume up (5%- down)
+    #+end_src
+  - Keep ~Playback Mux~ at ~HP~ (the default): the speaker amplifier is
+    fed from the headphone stage. ~SPK~ selects the codec's internal
+    class-D stage, which is not connected here.
+  - Rear torch:
+    #+begin_src sh
+    echo 1 | sudo tee /sys/class/leds/white:flash/brightness   # on
+    echo 0 | sudo tee /sys/class/leds/white:flash/brightness   # off
+    #+end_src
+
 * Test scripts (~tests/test_NN.sh~ → ~result_NN.txt~)
   Standing pattern for anything more than a couple of one-line checks:
   a numbered script instead of pasting commands into the SSH session
@@ -262,6 +293,10 @@
   | ~test_08.sh~ | RK817 LDO9 state; ~apply~ switches it on (power-chip write: only with Jose's explicit OK) | ~sudo bash~ |
   | ~test_09.py~ | touchscreen: guided corners/edges → orientation and raw range    | ~sudo python3~, interactive |
   | ~test_10.sh~ | VT consoles: PID 1 / getty / logind state, VT text; ~vt 4~ tests autovt | ~sudo bash~ |
+  | ~test_11.sh~ | speaker amp / torch pins by hand (GPIO3_A2, GPIO4_A6/A7)        | ~sudo bash~ (needs gpiod)  |
+  | ~test_12.sh~ | patches 0021+0022: amp, jack detect, accel, LDO8, torch          | ~sudo bash~                |
+  | ~test_14.sh~ | volume keys / headphone jack as input events (~thd --dump~)      | ~sudo bash~ (needs triggerhappy) |
+  | ~test_13.sh~ | RK817 LDO8 state; ~apply~ switches it on + torch (power-chip write: only with Jose's explicit OK) | ~sudo bash~ |
   ~test_06~-~test_08~ talk to the chips over I2C; they find each bus by its
   controller's hardware address, never by bus number (address 0x40 is the
   touchscreen on i2c1 but the CPU regulator on i2c0), and refuse to run
@@ -285,8 +320,11 @@
   (~i2c-tools~ and ~evtest~ are already in the build's package list.)
 
 * Rollback
-  - Kernel/DT: copy ~Image.stage5~ / ~.dtb.stage5~ (or ~.stage4~) over the
-    current ones on ~P25TBOOT~ (card in the PC).
+  - Kernel/DT: copy the newest ~Image.pre-NNNN-backup~ and its
+    ~*.dtb.pre-NNNN-backup~ over the current ones on ~P25TBOOT~ (card in
+    the PC). Older kernels are in ~/home/jose/boot-backups/~ on
+    ~p25troot~. Rule and current state: "Rescue and rollback" in
+    [[file:boot.org][boot]].
   - Network: ~50-usb0.network.stage4~ is the pre-Wi-Fi version.
   - Stage 1 instead of Debian: hold a volume key at power-on, or delete the
     ~boot-debian~ flag file on ~P25TBOOT~.
