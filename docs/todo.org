@@ -674,7 +674,11 @@
     match (DT ~touchscreen-swapped-x-y~ / ~touchscreen-inverted-x/y~, or a
     libinput calibration matrix) - test it once a compositor runs.
 
-* TODO Console edges in landscape (seen 2026-10-02)
+* DONE Console edges in landscape (patches 0024, 0025)
+  - Fixed 2026-10-02: panel line timing hfp 21 / hsync 18 / hbp 15
+    (stock 18/18/18 showed every line 3 px late). test_18 with 21/15:
+    all edges complete, no wrap, right colours. See kernel.org and
+    findings ("every line 3 px late"). History below.
   - The top ~5 px of the first console line are cut off and appear at
     the *bottom* of the screen instead (the image wraps around).
   - The left edge: the bezel covers ~5 px, so the first character of
@@ -694,7 +698,64 @@
     bezel part, if it is physical, can only be worked around (e.g. a
     console with a margin is not possible in fbcon; ~stty cols~ does
     not move the origin), so measure first.
-  - Probably also present in portrait (as a right/left wrap), unnoticed.
+  - Jose (2026-10-02): in portrait the right edge (where the wrap
+    lands) is rarely used, so it went unnoticed; but the portrait *top*
+    (= landscape left, panel y = 0) was always poor - in aptitude the
+    blue background visibly lacked its top rows. So both panel axes
+    may be affected: x wraps, y loses its first rows.
+  - Measure: ~tests/test_18.sh~ draws coloured bars at each panel edge
+    on ~/dev/fb0~ (tty7) and dumps the DRM mode/plane state.
+  - Result 2026-10-02 (~test_18~, by eye; 4 bars of 3 px per edge):
+    | landscape edge | panel edge | bars seen                         |
+    | top            | x = 799    | 3 green                           |
+    | bottom         | x = 0      | 4 red, plus 1 green beyond them   |
+    | left           | y = 0      | 4 blue (2nd bar blinks blue/white) |
+    | right          | y = 1279   | 4 yellow                          |
+    So: the line (panel x) is shifted by 3-6 px and its last pixels
+    wrap to the start of the next line; nothing is lost along y (the
+    left edge is only partly under the bezel).
+    Details (Jose): the wrapped green bar at the bottom is the full
+    3 px wide, so the shift is 3-6 px. The blinking is *not* the
+    cursor: panel rows y = 6 and 7 (the first two pixel rows of the
+    2nd blue bar; row 8 steady) blink blue/white along their whole
+    length - in landscape, a full-height line 6-7 px from the left
+    edge, right where the first character column is hard to read.
+    ~test_18.sh black~ / ~blue~ show whether it blinks on a plain
+    field too (i.e. by itself, not from the pattern).
+    Plain fields (Jose, 2026-10-02): on *black* nothing blinks; on
+    *blue* the same blinking as with the bars, maybe also rows 3-5.
+    And in the bars run the first ~4 panel rows (landscape: the 4
+    leftmost pixel columns) are shifted ~3 px toward x = 0 (landscape:
+    down) relative to the rest. Reading: the first rows of each frame
+    are timed differently from the others (~3 px, the same as the
+    wrap), and rows a few lines into the frame vary from frame to frame
+    (invisible on black, flicker on colour). All points at the line
+    timing at frame start, which is what patch 0024 changes.
+  - First 0024 attempt (2026-10-02): continuous DSI clock (flags
+    0x203) *and* negative hsync/vsync -> panel black, backlight on;
+    kernel booted (SSH fine), ~p25t: init sequence sent, mode_flags
+    0x203, result 0~, no DSI/DRM errors (~tests/result_0024_dmesg.txt~).
+    Rolled back to 0023. One of the two changes breaks the picture;
+    the continuous clock is the prime suspect (never tried during
+    bring-up, where 0x603 worked at once).
+  - Second 0024 attempt (2026-10-02): negative hsync/vsync only. Picture
+    up, no blinking any more, but the colour channels rotated by one
+    byte (blue -> red, red -> green, green -> blue, yellow -> cyan) and
+    all 4 top bars wrapped to the bottom (shift > 20 px). So the sync
+    polarity moves where the DSI host picks up the pixel data; the
+    default positive polarity is the right one here.
+  - With negative sync, in emacs the whole first character row
+    (~20 px) wrapped to the bottom - consistent with test_18 (all top
+    bars wrapped). A build with hbp 15 / hfp 21 was prepared but never
+    deployed: tuning the porch one kernel build at a time is too slow.
+  - Now: patch 0024 lets the jadard driver take its mode from an
+    optional DT ~panel-timing~ node; patch 0025 adds that node with the
+    stock values (= 0023 behaviour). ~tests/tune_panel.sh set <HFP>
+    <HBP>~ edits the DTB on the card (fdtput) and fixes
+    CARD-SHA256SUMS; one reboot per try, no rebuild. Keep hfp + hbp =
+    36. First try ~set 21 15~ (hfp 21, hbp 15: data 3 px earlier), then
+    adjust until test_18 shows 4 green bars at the top and none at the
+    bottom; then the values go into the DTS.
 
 * TODO Repository
   - Publish this folder as a git repository. A web search on 2026-09-25

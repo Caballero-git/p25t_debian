@@ -315,6 +315,11 @@
   | ~test_12.sh~ | patches 0021+0022: amp, jack detect, accel, LDO8, torch          | ~sudo bash~                |
   | ~test_14.sh~ | volume keys / headphone jack as input events (~thd --dump~)      | ~sudo bash~ (needs triggerhappy) |
   | ~test_13.sh~ | RK817 LDO8 state; ~apply~ switches it on + torch (power-chip write: only with Jose's explicit OK) | ~sudo bash~ |
+  | ~test_15.sh~ | microphone: three clips at rising gain, levels per channel, codec registers | ~sudo bash~ |
+  | ~test_16.sh~ | microphone: QUIET vs TALK pair (~apply~ = LDO9 on; never needed)  | ~sudo bash~ |
+  | ~test_17.sh~ | microphone channel order: 12 short clips + one talk clip         | ~sudo bash~ |
+  | ~test_18.sh~ | display edges: coloured bars at each panel edge (~black~/~blue~: plain fields) | ~sudo bash~ |
+  | ~tune_panel.sh~ | panel line timing in the DTB on the card (~show~ / ~set <HFP> <HBP>~ / ~restore~) | ~sudo bash~ (needs device-tree-compiler) |
   ~test_06~-~test_08~ talk to the chips over I2C; they find each bus by its
   controller's hardware address, never by bus number (address 0x40 is the
   touchscreen on i2c1 but the CPU regulator on i2c0), and refuse to run

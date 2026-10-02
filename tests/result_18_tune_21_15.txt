@@ -1,0 +1,76 @@
+=== display edges test pattern (test_18, mode: bars) ===
+vie 02 oct 2026 15:11:50 CEST
+7.3.0-rc4-p25t
+
+--- framebuffer ---
+name: rockchipdrmfb 
+virtual_size: 800,1280 
+bits_per_pixel: 32 
+stride: 3200 
+pan: 0,0 
+rotate: 0 
+mode: 
+modes: U:800x1280p-0 
+fbcon rotate: 1
+
+--- DRM connector modes ---
+card0-DSI-1: status connected modes 800x1280 
+
+--- DRM state (debugfs): crtc mode and plane positions ---
+/sys/kernel/debug/dri/0/state
+plane[35]: Smart0-win0
+	fb=57
+	crtc-pos=800x1280+0+0
+	src-pos=800.000000x1280.000000+0.000000+0.000000
+	rotation=1
+plane[41]: Esmart0-win0
+	fb=0
+	crtc-pos=0x0+0+0
+	src-pos=0.000000x0.000000+0.000000+0.000000
+	rotation=1
+plane[47]: Cluster0-win0
+	fb=0
+	crtc-pos=0x0+0+0
+	src-pos=0.000000x0.000000+0.000000+0.000000
+	rotation=1
+crtc[53]: video_port1
+	enable=1
+	active=1
+	self_refresh_active=0
+	mode: "800x1280": 60 67000 800 821 839 854 1280 1292 1296 1304 0x48 0x0
+connector[55]: DSI-1
+/sys/kernel/debug/dri/display-subsystem/state
+plane[35]: Smart0-win0
+	fb=57
+	crtc-pos=800x1280+0+0
+	src-pos=800.000000x1280.000000+0.000000+0.000000
+	rotation=1
+plane[41]: Esmart0-win0
+	fb=0
+	crtc-pos=0x0+0+0
+	src-pos=0.000000x0.000000+0.000000+0.000000
+	rotation=1
+plane[47]: Cluster0-win0
+	fb=0
+	crtc-pos=0x0+0+0
+	src-pos=0.000000x0.000000+0.000000+0.000000
+	rotation=1
+crtc[53]: video_port1
+	enable=1
+	active=1
+	self_refresh_active=0
+	mode: "800x1280": 60 67000 800 821 839 854 1280 1292 1296 1304 0x48 0x0
+connector[55]: DSI-1
+
+drawing on 800x1280, 32 bpp, stride 3200
+pattern drawn
+
+>>> The tablet shows the pattern. Look at all four edges (landscape:
+>>> top GREEN, bottom RED, left BLUE, right YELLOW; 4 bars each).
+>>> Press Enter here when done (or wait 3 minutes).
+back on tty1
+
+Write next to the result: for each colour, bars seen (0-4), and any
+bar of a wrong colour (which colour, at which edge).
+
+=== done ===

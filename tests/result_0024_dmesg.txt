@@ -1,0 +1,21 @@
+#6 SMP PREEMPT Fri Oct  2 12:28:25 CEST 2026
+[    0.000000] Linux version 7.3.0-rc4-p25t (jose@hp240) (aarch64-linux-gnu-gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0, GNU ld (GNU Binutils for Ubuntu) 2.42) #6 SMP PREEMPT Fri Oct  2 12:28:25 CEST 2026
+[    0.000000] Machine model: Teclast P25T (P9A6)
+[    0.095398] /dsi@fe060000: Fixed dependency cycle(s) with /vop@fe040000
+[    0.096082] /vop@fe040000: Fixed dependency cycle(s) with /dsi@fe060000
+[    0.096873] /dsi@fe060000/panel@0: Fixed dependency cycle(s) with /dsi@fe060000
+[    0.097610] /dsi@fe060000: Fixed dependency cycle(s) with /dsi@fe060000/panel@0
+[    0.270990] platform fe040000.vop: Adding to iommu group 2
+[    3.784726] rockchip-drm display-subsystem: bound fe040000.vop (ops vop2_component_ops)
+[    3.785194] rockchip-drm display-subsystem: bound fe060000.dsi (ops dw_mipi_dsi_rockchip_ops)
+[    3.786184] [drm] Initialized rockchip 1.0.0 for display-subsystem on minor 0
+[    4.264474] jadard-jd9365da fe060000.dsi.0: p25t: init sequence sent, mode_flags 0x203, result 0
+[    4.351041] rockchip-drm display-subsystem: [drm] fb0: rockchipdrmfb frame buffer device
+[    4.358798] panfrost fde60000.gpu: [drm] Using Transparent Hugepage
+[    4.359469] [drm] Initialized panfrost 1.6.0 for fde60000.gpu on minor 1
+[    4.582149] [init] P25T stage-1 initramfs starting
+[   10.714981] systemd[1]: Hostname set to <p25t>.
+[   11.973166] systemd[1]: Expecting device dev-disk-by\x2dlabel-P25TBOOT.device - /dev/disk/by-label/P25TBOOT...
+[   12.229681] systemd[1]: Starting modprobe@drm.service - Load Kernel Module drm...
+[   12.428107] systemd[1]: modprobe@drm.service: Deactivated successfully.
+[   12.430082] systemd[1]: Finished modprobe@drm.service - Load Kernel Module drm.

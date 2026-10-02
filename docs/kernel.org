@@ -125,6 +125,9 @@
     (see [[file:findings.org][findings]]).
   - After the init table the driver only logs
     ~p25t: init sequence sent...~.
+  - Patch 0024: if the panel node has a ~panel-timing~ child, the driver
+    uses it instead of the built-in mode (dmesg: ~mode from DT
+    panel-timing: ...~). The P25T DT has one since patch 0025.
 
 * USB-C host-mode test variant (patches 0007, 0008) — working
   - Adds a *second* board file, ~kernel/rk3566-teclast-p25t-usbhost.dts~,
@@ -810,6 +813,26 @@
     value (~0~, ~90~, ~180~, ~270~) and rebuild only the DTB.
   - The touchscreen is not rotated: the console does not use it, but a
     future graphical session needs a touch transformation (see todo).
+
+* Panel line timing from the DT (patches 0024, 0025) — working
+  - Confirmed on hardware 2026-10-02 (~tests/test_18.sh~): all four
+    edges complete, no wrap, no flicker, right colours.
+  - Problem: with the stock timing every panel line showed 3 px late
+    (the line end wrapped to the next line start; in landscape the top
+    of the first console row appeared at the bottom) and rows near the
+    frame top flickered on coloured backgrounds. See findings.
+  - 0024 (driver, generic): optional ~panel-timing~ child node
+    (~panel-timing.yaml~; ~width-mm~/~height-mm~ in the panel node) read
+    with ~of_get_drm_panel_display_mode()~ replaces the built-in mode.
+  - 0025 (DT): that node with the stock values except hfp 21 / hbp 15
+    (stock 18/18): the data goes out 3 px earlier, line length 854 and
+    60 Hz unchanged. No polarity properties.
+  - Tuning on the tablet without a rebuild: ~tests/tune_panel.sh set
+    <HFP> <HBP>~ edits the active DTB with ~fdtput~ and updates
+    ~CARD-SHA256SUMS~; reboot to try. 21/15 was right at the first try.
+  - Rejected on the way (kernel builds, one each): continuous DSI clock
+    + negative sync -> black panel; negative sync alone -> colour
+    channels rotated, ~20 px wrap.
 
 * AIC8800 Wi-Fi/Bluetooth driver (out of tree)
   Source: [[https://github.com/radxa-pkg/aic8800][radxa-pkg/aic8800]], commit ~516e3b0~

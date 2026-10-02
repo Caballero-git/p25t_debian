@@ -41,7 +41,7 @@
   | GPU               | Mali-G52 (~arm,mali-bifrost~)              |                                                               | works (patch 0014, confirmed 2026-09-27); vdd_gpu = RK817 DCDC_REG2, DVFS 200-800 MHz |
   | Thermal sensor    | ~tsadc@fe710000~ (~rockchip,rk3568-tsadc~) | on-die, cpu+gpu thermal-zones already in base dtsi           | works (patch 0016, confirmed 2026-09-27); cpu-thermal 41.9°C, gpu-thermal 40.0°C idle |
   | Display pipe      | VOP2 vp1 → DSI0 ~fe060000~ + D-PHY ~fe850000~ | 4 lanes                                                    | works                                 |
-  | Panel             | Jadard JD9365, 800×1280, 135×216 mm        | enable GPIO3_B1 (act. high), reset GPIO3_C3 (act. low)        | works, ~panel-jadard-jd9365da-h3~ + our table; mounted portrait, used landscape (~rotation = <90>~, patch 0023) |
+  | Panel             | Jadard JD9365, 800×1280, 135×216 mm        | enable GPIO3_B1 (act. high), reset GPIO3_C3 (act. low)        | works, ~panel-jadard-jd9365da-h3~ + our table; mounted portrait, used landscape (~rotation = <90>~, patch 0023); line timing 21/18/15 (0025) |
   | Backlight         | ~pwm-backlight~ PWM14 (~fe700020~)         | period 25 µs (40 kHz), stock default 77/255                   | works                                 |
   | Touchscreen       | Silead GSL3673 @ i2c1 0x40                 | IRQ GPIO0_B0 (level-low), power/reset GPIO0_C2 (act. high)    | works (patches 0017–0020, confirmed 2026-09-30); firmware from the stock kernel |
   | Accelerometer     | SC7A20 @ i2c1 0x19 (DA223 @ 0x27 not present)| polled, no IRQ (GPIO3_A2 is the speaker amp); swap_xy, revert_y | works (patch 0013, IRQ dropped in 0021); mount-matrix orientation unverified |
@@ -151,11 +151,15 @@
   <RAW> = 0xee16 = 60950 → V = 4 280 500 µV ≈ 4.28 V.
 
 * Panel
-  - Timings: pixel clock 67 MHz; horizontal 800 active, 18/18/18
-    (front/sync/back); vertical 1280 active, 12/4/8.
+  - Timings: pixel clock 67 MHz; horizontal 800 active, *21/18/15*
+    (front/sync/back; stock 18/18/18 shows every line 3 px late, see
+    findings); vertical 1280 active, 12/4/8. Positive sync (the stock
+    negative polarity rotates the colour channels). In the DT as a
+    ~panel-timing~ node (patches 0024, 0025).
   - Stock ~dsi,flags = 0xa03~ (VIDEO | BURST | NO_EOT | LPM). *On mainline
     use 0x603* (VIDEO | BURST | NO_EOT | CLOCK_NON_CONTINUOUS, no LPM),
-    see [[file:findings.org][findings]].
+    see [[file:findings.org][findings]]. A continuous clock (0x203)
+    leaves the panel black (2026-10-02).
   - Init sequence: 202 two-byte DCS writes. Page select ~E0 xx~, unlock
     ~E1 93 / E2 65 / E3 F8~ (the JD9365 signature), then Sleep Out ~11~
     (+120 ms) and Display On ~29~ (+100 ms). Exit: ~28~ (+1 ms), ~10~ (+3 ms).

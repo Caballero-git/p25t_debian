@@ -183,12 +183,12 @@
   space, readable from the PC); older backups go to
   ~/home/jose/boot-backups/old/~. Before a deploy, check ~df -h
   /boot/firmware~: a new ~Image~ is ~33 MB.
-  State 2026-10-01 (after the 0023 deploy): ~Image~ (patches up to
-  0023), ~Image.pre-0023-backup~ (0022, with both role DTBs as
-  ~*.pre-0023-backup~), ~Image.pre-0021-backup~ (0020). The 0019 set
-  (~*.pre-touch-fw-backup~) is in ~/home/jose/boot-backups/old/~. Note:
-  ~rk3566-teclast-p25t.dtb.pre-0021-backup~ is the *host-mode* DTB of
-  0020 (~b5246dbb…~; the tablet was in host mode at that deploy) - a
-  rollback with it boots with USB-C as host (Wi-Fi/SSH unaffected). The
-  normal-mode DTB of 0020 (~14815f26…~) is not kept; rebuild it from the
-  git tree at patch 0020 if needed. Lesson: back up both role copies.
+  State 2026-10-02 (after the 0024/0025 deploy): ~Image~ (patches up to
+  0025) with both role DTBs; ~Image.pre-0024-backup~ (0023) with both
+  role DTBs as ~*.pre-0024-backup~; ~Image.pre-0023-backup~ (0022) with
+  both role DTBs as ~*.pre-0023-backup~. The 0020 set
+  (~*.pre-0021-backup~) and the 0019 set (~*.pre-touch-fw-backup~) are in
+  ~/home/jose/boot-backups/old/~. Lesson: back up both role copies.
+  Tuning leftover: ~tests/tune_panel.sh~ keeps
+  ~rk3566-teclast-p25t.dtb.pre-tune~ on the card until ~restore~ (or
+  delete it once the tuned values are in the DTS).

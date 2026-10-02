@@ -416,6 +416,32 @@
 		reset-gpios = <&gpio3 RK_PC3 GPIO_ACTIVE_LOW>;
 		vdd-supply = <&vcc_lcd>;
 		vccio-supply = <&vcc_1v8_dummy>;
+		width-mm = <135>;
+		height-mm = <216>;
+
+		/*
+		 * Patch 0025: the timing as a DT node, read by the jadard driver
+		 * (patch 0024) instead of its built-in mode; it can be tuned on
+		 * the tablet with fdtput (tests/tune_panel.sh). Stock values
+		 * except the horizontal porches: with the stock hfp 18 / hbp 18
+		 * each line showed 3 px late (the line end wrapped to the next
+		 * line start) and rows near the frame top flickered
+		 * (tests/test_18.sh); hfp 21 / hbp 15 sends the data 3 px
+		 * earlier, same line length (confirmed 2026-10-02). No polarity
+		 * properties: the default (positive) is right here, the stock
+		 * negative ones rotate the colour channels.
+		 */
+		panel-timing {
+			clock-frequency = <67000000>;
+			hactive = <800>;
+			vactive = <1280>;
+			hfront-porch = <21>;
+			hsync-len = <18>;
+			hback-porch = <15>;
+			vfront-porch = <12>;
+			vsync-len = <4>;
+			vback-porch = <8>;
+		};
 
 		port {
 			mipi_in_panel: endpoint {

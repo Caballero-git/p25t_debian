@@ -41,6 +41,32 @@
   - Comparing D-PHY settings with the stock kernel: equal once the clock
     was right; the difference was only LP vs HS.
 
+* Display: every line 3 px late (porch, not polarity or clock)
+  Symptom (seen in landscape, 2026-10-02): the top of the first console
+  row missing and shown at the bottom; first character column hard to
+  read; in portrait the top rows of aptitude's blue background looked
+  wrong. ~tests/test_18.sh~ (coloured bars at each panel edge) made it
+  measurable: along the panel line (portrait x) the last 3 px of a line
+  appeared at the start of the next; rows near the frame top flickered
+  on colour (not on black).
+  - The timing values were already the stock ones. Two other stock
+    settings were tried first, each a kernel build:
+    - continuous DSI clock lane (stock ~dsi,flags~ minus LPM, 0x203)
+      plus negative sync: panel black, init "result 0", no errors;
+    - negative hsync/vsync alone: picture up, flicker gone, but colour
+      channels rotated by one byte (blue -> red, red -> green, green ->
+      blue) and a ~20 px wrap. The sync polarity moves where the DSI
+      host picks up the pixel data; positive is right on this board.
+  - Fix: 3 px from the back porch to the front porch (hfp 21, hbp 15).
+  - Method that ended the guessing: let the driver read the timing from
+    a DT ~panel-timing~ node (patch 0024) and edit the DTB on the card
+    (~tests/tune_panel.sh~, ~fdtput~) - one reboot per try instead of a
+    kernel build. Right at the first try.
+  - Mistake to avoid: an observation (emacs, whole row wrapped) was
+    taken for the result of a build that had not been deployed yet.
+    Always tie each observation to the kernel that was running
+    (~uname -v~).
+
 * USB gadget: DWC3 quirks and PHY tuning
   Symptom: "failed to enable ep0out" on the tablet, ~-71~ (EPROTO) on the PC,
   no enumeration.
