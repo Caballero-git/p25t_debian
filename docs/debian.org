@@ -200,6 +200,25 @@
   then *power-cycle* rather than reboot if a ttyGS0 getty is already
   stuck (a normal reboot hangs on it, see findings).
 
+* Softer console colours and backlight
+  The console has 16 colours (8 + 8 bright). The default palette is
+  harsh: pure black background, white for bold text.
+  ~debian/p25t-console-colors.sh~ replaces the palette (not the number of
+  colours) and sets the backlight. Palettes: ~dim~ (usual colours toned
+  down, background ~#1c1c1c~, bold ~#d0d0d0~), ~gruvbox~ (warm, background
+  ~#282828~, cream instead of white), ~nord~ (cool blue-grey). Run on the
+  tablet with ~sudo bash~:
+  | ~list~                    | show the three palettes                     |
+  | ~try <PALETTE>~           | apply now, until reboot                     |
+  | ~vga~                     | default colours back now                    |
+  | ~bright <N>~              | backlight now (0-248, boot default 120)     |
+  | ~install <PALETTE> <N>~   | both now and at every boot (~/etc/p25t-vtrgb~ + ~p25t-console-colors.service~) |
+  | ~remove~                  | undo ~install~                              |
+  All consoles change at once, also when run over SSH. The command
+  ~reset~ puts the default palette back on that console. Jose's
+  comfortable backlight: 80. More than 16 colours would need a
+  framebuffer terminal such as ~fbterm~ (256 colours) - not tried.
+
 * USB host-mode test (trying a USB wireless keyboard/mouse receiver)
   Stage 6 item, only needed while the Bluetooth keyboard is unavailable
   or you want to compare it against a USB receiver. See
