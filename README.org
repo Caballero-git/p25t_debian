@@ -27,7 +27,7 @@
   | Volume keys (SARADC)              | works   | used to skip the Debian hand-over                  |
   | Battery / charger (RK817)         | works   | ~rk817_charger~ (patch 0009)                       |
   | Touchscreen GSL3673               | works   | multi-touch, from boot; firmware from the stock kernel (patches 0017–0020) |
-  | Audio RK817 codec                 | works   | headphones, speaker, jack detect, volume buttons (0015, 0021, ~p25t-audio-keys.sh~); mic silent - todo |
+  | Audio RK817 codec                 | works   | headphones, speaker, jack detect, volume buttons (0015, 0021, ~p25t-audio-keys.sh~); mic on the left channel |
   | Torch (rear camera LED)           | works   | ~/sys/class/leds/white:flash~ (patch 0022)          |
   | Cameras GC5035 / GC02M2           | open    | identified; no mainline sensor drivers yet         |
   | Accelerometer SC7A20              | works   | patch 0013, polled (0021); mount-matrix orientation unverified |

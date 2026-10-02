@@ -341,10 +341,34 @@
   - Volume buttons and automatic speaker mute on plug-in: user space,
     ~debian/p25t-audio-keys.sh~ (triggerhappy), confirmed 2026-10-01
     (~tests/test_14.sh~ shows the events). See debian.org.
-  - Still open: the microphone. Android records (low level), so it
-    exists; here capture is silent. Next step when picked up: compare
-    the stock codec's mic settings (~rockchip,mic-in-differential~,
-    capture volume) with mainline's controls.
+  - Microphone: *works* with the kernel as it is (2026-10-02,
+    ~tests/test_16.sh~ check mode, no RK817 writes, LDO9 off): counting
+    aloud gives L rms -16 dBFS against -53 dBFS quiet (+37 dB), with a
+    speech-like envelope; R stays at -82 dBFS. The mic is single-ended
+    on MIC1P and comes in on the *left* channel only (as in the vendor
+    driver); the right channel carries nothing. Usable levels: digital
+    ~Master Capture Volume~ 255 (0 dB), ~Mic Capture Gain~ 6 (0 dB); the
+    driver adds +30 dB left boost itself. Small DC offset on L (~412,
+    about -38 dBFS), harmless. See debian.org for recording.
+    - Why it looked dead before: 2026-09-27 nobody measured; in
+      ~test_15~ (2026-10-02) the saved mixer had digital capture at 216
+      (-14.6 dB) and clips A/B show quiet-level noise only (probably no
+      speech during the 5 s window), and clip C (+27 dB PGA on top of
+      +30 dB boost) clipped on the DC offset - the crackle. The LDO9
+      "missing bias" theory (written after test_15) was wrong: LDO9 is
+      not needed; the mic's bias comes from elsewhere on the board.
+    - Channel order checked (~tests/test_17.sh~, 2026-10-02): the mic
+      channel carries a DC offset of ~400 (a fingerprint that needs no
+      speech); 12 of 12 short captures and the talk clip had it on *L*
+      (talk +18 dB over quiet), as did ~test_16~. Only ~test_15~ looked
+      different (a constant ~437 on R, and 29 % exact zeros on L) - one
+      odd capture, not reproduced; if a recording ever has the voice on
+      the right, note it here.
+    - Datasheet facts that still hold (RK817 V1.7 p. 59-60, PDF in
+      ~~/p25t-backup~): one input pair MIC1P/MIC1N, no MICBIAS pin;
+      ~AMIC_CFG1~ (0x28) = chopping only; ~AMIC_CFG0~ bits 3:2 = left
+      boost, 1:0 = right boost (mainline's "Mic Boost R1/R2" both use
+      bit 3 - harmless here, the right channel is unused).
   - Patch 0015 (2026-09-27): wired ~vccio_acodec~ (LDO_REG4, 3.3 V) as
     ~pmu_io_domains~' ~vccio1-supply~, the codec's ~mclk~ (~&cru
     I2S1_MCLKOUT_TX~, no BSP-only ~codec {}~ subnode - mainline's
@@ -649,6 +673,28 @@
   - Still to do for a graphical session: rotate the touchscreen to
     match (DT ~touchscreen-swapped-x-y~ / ~touchscreen-inverted-x/y~, or a
     libinput calibration matrix) - test it once a compositor runs.
+
+* TODO Console edges in landscape (seen 2026-10-02)
+  - The top ~5 px of the first console line are cut off and appear at
+    the *bottom* of the screen instead (the image wraps around).
+  - The left edge: the bezel covers ~5 px, so the first character of
+    each line is hard to read.
+  - In panel terms (rotation 90, panel's portrait right edge up):
+    console top = panel x = 799 side, console left = panel y = 0 (the
+    portrait top). The wrap is along the panel's x axis, i.e. the
+    horizontal (line) timing; the left edge is along y.
+  - Timing values match the stock DT exactly (67 MHz, h 800+18+18+18,
+    v 1280+12+4+8), but our mode has no sync flags, while stock has
+    ~hsync-active = <0>~, ~vsync-active = <0>~ (negative) and
+    ~pixelclk-active = <1>~. Wrong polarity between VOP and DSI host
+    is a known cause of a few-pixel horizontal shift. Candidate fix:
+    ~DRM_MODE_FLAG_NHSYNC | DRM_MODE_FLAG_NVSYNC~ in our panel mode.
+  - Plan: a test pattern on ~/dev/fb0~ (lines at 0, 4, 8 px from each
+    panel edge) to measure the offsets exactly, then the flags. The
+    bezel part, if it is physical, can only be worked around (e.g. a
+    console with a margin is not possible in fbcon; ~stty cols~ does
+    not move the origin), so measure first.
+  - Probably also present in portrait (as a right/left wrap), unnoticed.
 
 * TODO Repository
   - Publish this folder as a git repository. A web search on 2026-09-25

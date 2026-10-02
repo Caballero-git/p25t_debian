@@ -1,0 +1,82 @@
+=== microphone capture (test_15) ===
+vie 02 oct 2026 08:26:21 CEST
+7.3.0-rc4-p25t
+mixer state saved to /tmp/p25t-mic/mixer-before.state
+
+--- 1. capture controls as they are ---
+numid=3,iface=MIXER,name='Master Capture Volume'
+  ; type=INTEGER,access=rw---R--,values=2,min=0,max=255,step=0
+  : values=216,216
+  | dBminmax-min=-95.00dB,max=0.00dB
+numid=4,iface=MIXER,name='Mic Capture Gain'
+  ; type=INTEGER,access=rw---R--,values=2,min=0,max=15,step=0
+  : values=6,6
+  | dBminmax-min=-18.00dB,max=27.00dB
+
+--- 2. codec registers, idle ---
+12: 03 13: f4 14: 00 15: 00 16: 00 17: 06 18: c8 19: 00 1a: 27 1b: 27 1c: 00 1d: 00 1e: 02 1f: 0
+0 20: 00 21: 00 22: 00 23: ff 24: ff 25: 00 26: 00 27: 70 28: 00 29: 66 2a: 00 2b: 00 2c: 00 2d:
+ 00 2e: 00 2f: 0f 30: 02 31: 27 32: 27 33: 00 34: a5 35: 02 36: 00 37: 00 38: 21 39: ff 3a: ff 3
+b: 00 3c: 00 3d: e0 3e: 0f 3f: 09 40: 65 41: 4c 42: 04 43: 58 44: 2d 45: 0c 46: a5 47: 01 48: 00
+ 49: 00 4a: 00 4b: 17 4c: 00 4d: 00 4e: 17 4f: 00 
+
+--- 2b. RK817 LDO9 (vcc2v8_dvp, possible mic bias supply) - read only ---
+0xB4 = 0x06 -> LDO9 0 (1 = on);  0xDC = 0x30 -> LDO9 set to 1800 mV
+
+>>> clip A: current mixer settings
+>>> recording starts in 3 s and lasts 5 s - talk, count aloud, tap near the tablet edges
+>>> RECORDING
+--- codec registers during clip A (hex reg: value) ---
+12: 03 13: f4 14: 00 15: f0 16: 00 17: 40 18: 08 19: 00 1a: 27 1b: 27 1c: 00 1d: 00 1e: 02 1f: 0
+0 20: 00 21: 00 22: 00 23: 27 24: 27 25: 00 26: 00 27: 0c 28: 00 29: 66 2a: 00 2b: 00 2c: 00 2d:
+ 00 2e: 00 2f: 0f 30: 02 31: 27 32: 27 33: 00 34: a5 35: 02 36: 00 37: 00 38: 21 39: ff 3a: ff 3
+b: 00 3c: 00 3d: e0 3e: 0f 3f: 09 40: 65 41: 4c 42: 04 43: 58 44: 2d 45: 0c 46: a5 47: 00 48: 00
+ 49: 00 4a: 00 4b: 0f 4c: 20 4d: 00 4e: 0f 4f: 88 
+>>> stop
+  L: peak    37 ( -58.9 dBFS)  rms  -69.1 dBFS  exact zeros  36.6 %
+  R: peak    84 ( -51.8 dBFS)  rms  -52.1 dBFS  exact zeros   0.0 %
+
+--- 3. digital volume to 0 dB (Master Capture Volume max) ---
+  : values=255,255
+  | dBminmax-min=-95.00dB,max=0.00dB
+
+>>> clip B: Master Capture 0 dB, mic gain unchanged
+>>> recording starts in 3 s and lasts 5 s - talk, count aloud, tap near the tablet edges
+>>> RECORDING
+--- codec registers during clip B (hex reg: value) ---
+12: 03 13: f4 14: 00 15: f0 16: 00 17: 40 18: 08 19: 00 1a: 00 1b: 00 1c: 00 1d: 00 1e: 02 1f: 0
+0 20: 00 21: 00 22: 00 23: 00 24: 00 25: 00 26: 00 27: 0c 28: 00 29: 66 2a: 00 2b: 00 2c: 00 2d:
+ 00 2e: 00 2f: 0f 30: 02 31: 27 32: 27 33: 00 34: a5 35: 02 36: 00 37: 00 38: 21 39: ff 3a: ff 3
+b: 00 3c: 00 3d: e0 3e: 0f 3f: 09 40: 65 41: 4c 42: 04 43: 58 44: 2d 45: 0c 46: a5 47: 00 48: 00
+ 49: 00 4a: 00 4b: 0f 4c: 20 4d: 00 4e: 0f 4f: 88 
+>>> stop
+  L: peak   240 ( -42.7 dBFS)  rms  -53.8 dBFS  exact zeros  28.7 %
+  R: peak   455 ( -37.1 dBFS)  rms  -37.5 dBFS  exact zeros   0.0 %
+
+--- 4. plus analog PGA gain to +27 dB (Mic Capture Gain max) ---
+  : values=15,15
+  | dBminmax-min=-18.00dB,max=27.00dB
+
+>>> clip C: Master Capture 0 dB, Mic Capture Gain +27 dB
+>>> recording starts in 3 s and lasts 5 s - talk, count aloud, tap near the tablet edges
+>>> RECORDING
+--- codec registers during clip C (hex reg: value) ---
+12: 03 13: f4 14: 00 15: f0 16: 00 17: 40 18: 08 19: 00 1a: 00 1b: 00 1c: 00 1d: 00 1e: 02 1f: 0
+0 20: 00 21: 00 22: 00 23: 00 24: 00 25: 00 26: 00 27: 0c 28: 00 29: ff 2a: 00 2b: 00 2c: 00 2d:
+ 00 2e: 00 2f: 0f 30: 02 31: 27 32: 27 33: 00 34: a5 35: 02 36: 00 37: 00 38: 21 39: ff 3a: ff 3
+b: 00 3c: 00 3d: e0 3e: 0f 3f: 09 40: 65 41: 4c 42: 04 43: 58 44: 2d 45: 0c 46: a5 47: 00 48: 00
+ 49: 00 4a: 00 4b: 0f 4c: 20 4d: 00 4e: 0f 4f: 88 
+>>> stop
+  L: peak 32768 (   0.0 dBFS)  rms   -2.3 dBFS  exact zeros   0.0 %
+  R: peak 32768 (   0.0 dBFS)  rms   -7.1 dBFS  exact zeros   0.0 %
+
+--- 5. restore mixer ---
+restored
+  | dBminmax-min=-18.00dB,max=27.00dB
+  | dBminmax-min=-95.00dB,max=0.00dB
+
+--- 6. play clip C back ---
+>>> listen - speaker or headphones, whichever is active
+Write next to the result: anything heard in clip C playback? where is the mic hole on the tablet, if you know?
+
+=== done ===

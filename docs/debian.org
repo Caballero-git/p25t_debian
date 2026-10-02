@@ -255,6 +255,24 @@
   - Keep ~Playback Mux~ at ~HP~ (the default): the speaker amplifier is
     fed from the headphone stage. ~SPK~ selects the codec's internal
     class-D stage, which is not connected here.
+  - *Microphone* (2026-10-02): mono, on the *left* channel of the
+    stereo capture (13 of 13 captures in ~test_16~/~test_17~); the
+    right channel is empty. Levels that work for
+    speech close to the tablet (store them once so they survive reboot):
+    #+begin_src sh
+    amixer -c RK817 cset name='Master Capture Volume' 255,255
+    amixer -c RK817 cset name='Mic Capture Gain' 6,6
+    sudo alsactl store
+    #+end_src
+    Record and play back (Ctrl+C stops ~arecord~):
+    #+begin_src sh
+    arecord -D plughw:RK817 -f S16_LE -r 48000 -c 2 test.wav
+    aplay test.wav
+    #+end_src
+    The voice is on the left side only; in headphones, expect it in
+    the left ear. For a mono file, ~sox test.wav mono.wav remix 1~
+    (package ~sox~) keeps just the left channel. Do not raise ~Mic Capture Gain~ much above 6: the driver
+    already adds +30 dB, and at 15 (+27 dB) the input clips.
   - Rear torch:
     #+begin_src sh
     echo 1 | sudo tee /sys/class/leds/white:flash/brightness   # on

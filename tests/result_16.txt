@@ -1,0 +1,28 @@
+=== microphone bias / RK817 LDO9 (test_16, mode: check) ===
+vie 02 oct 2026 09:18:49 CEST
+7.3.0-rc4-p25t
+RK817 on bus 0, chip id 0x81 0x74
+  0xB4 = 0x06 -> LDO9 0 (1 = on), BOOST 1, OTG 1;  0xDC = 0x30 -> 1800 mV
+
+--- pair ldo9_as_is (digital 0 dB, PGA 0 dB) ---
+>>> QUIET: say nothing, keep still - starts in 3 s, lasts 4 s
+>>> RECORDING
+>>> stop
+>>> TALK: count aloud, close to the tablet - starts in 3 s, lasts 4 s
+>>> RECORDING
+>>> stop
+  ldo9_as_is_quiet.wav   L: DC    412.0  AC rms  -53.3 dBFS  peak  -34.0 dBFS  envelope spread   2.0 dB  clipped  0.0 %
+  ldo9_as_is_quiet.wav   R: DC    -35.7  AC rms  -81.7 dBFS  peak  -56.9 dBFS  envelope spread   1.1 dB  clipped  0.0 %
+  ldo9_as_is_talk.wav    L: DC    412.8  AC rms  -16.2 dBFS  peak   -2.4 dBFS  envelope spread  29.4 dB  clipped  0.0 %
+  ldo9_as_is_talk.wav    R: DC    -35.1  AC rms  -81.6 dBFS  peak  -57.1 dBFS  envelope spread   1.2 dB  clipped  0.0 %
+  TALK vs QUIET ldo9_as_is L: +37.1 dB
+  TALK vs QUIET ldo9_as_is R:  +0.1 dB
+
+--- restore mixer ---
+mixer restored
+
+clips in /home/jose/p25t-mic:
+-rw-r--r-- 1 jose jose 768044 oct  2 09:18 /home/jose/p25t-mic/ldo9_as_is_quiet.wav
+-rw-r--r-- 1 jose jose 768044 oct  2 09:19 /home/jose/p25t-mic/ldo9_as_is_talk.wav
+
+=== done ===

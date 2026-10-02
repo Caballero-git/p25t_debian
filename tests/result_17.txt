@@ -1,0 +1,31 @@
+=== microphone channel order (test_17) ===
+vie 02 oct 2026 09:50:59 CEST
+7.3.0-rc4-p25t
+
+--- 12 quiet clips of 1 s (nothing to do) ---
+  order_01.wav   L: DC   437.2 AC  -56.8 dBFS   R: DC   -36.8 AC  -81.3 dBFS   -> mic on L
+  order_02.wav   L: DC   413.2 AC  -59.0 dBFS   R: DC   -36.8 AC  -81.6 dBFS   -> mic on L
+  order_03.wav   L: DC   402.5 AC  -58.8 dBFS   R: DC   -36.7 AC  -81.6 dBFS   -> mic on L
+  order_04.wav   L: DC   401.8 AC  -58.5 dBFS   R: DC   -35.1 AC  -81.6 dBFS   -> mic on L
+  order_05.wav   L: DC   400.3 AC  -58.8 dBFS   R: DC   -36.3 AC  -81.5 dBFS   -> mic on L
+  order_06.wav   L: DC   404.2 AC  -58.8 dBFS   R: DC   -36.3 AC  -81.7 dBFS   -> mic on L
+  order_07.wav   L: DC   398.9 AC  -59.2 dBFS   R: DC   -35.4 AC  -81.7 dBFS   -> mic on L
+  order_08.wav   L: DC   401.1 AC  -59.0 dBFS   R: DC   -35.4 AC  -81.7 dBFS   -> mic on L
+  order_09.wav   L: DC   395.9 AC  -59.1 dBFS   R: DC   -35.2 AC  -81.7 dBFS   -> mic on L
+  order_10.wav   L: DC   397.5 AC  -58.5 dBFS   R: DC   -35.5 AC  -81.6 dBFS   -> mic on L
+  order_11.wav   L: DC   398.7 AC  -59.1 dBFS   R: DC   -36.2 AC  -81.6 dBFS   -> mic on L
+  order_12.wav   L: DC   399.7 AC  -59.0 dBFS   R: DC   -35.2 AC  -81.7 dBFS   -> mic on L
+
+count:
+     12 L
+
+--- TALK clip, 4 s: count aloud close to the tablet - starts in 3 s ---
+>>> RECORDING
+>>> stop
+  order_talk.wav L: DC   409.6 AC  -40.4 dBFS   R: DC   -35.4 AC  -81.5 dBFS   -> mic on L
+(the voice should be on the channel with the DC offset: its AC level is far above the other one)
+
+--- restore mixer ---
+mixer restored
+
+=== done ===

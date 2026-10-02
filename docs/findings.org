@@ -195,6 +195,11 @@
     The same can happen to ~$~: ~H=$(...)~ arrived as ~H=(...)~ (a bash
     syntax error, nothing ran). For critical files give the literal
     values, no shell variables.
+  - Measure against a control. ~test_15~ recorded "talk now" clips
+    without a silent reference and got noise; it looked like a dead
+    mic, and a theory (no bias, LDO9) was built on it. ~test_16~
+    recorded QUIET and TALK pairs and showed +37 dB: the mic had worked
+    all along. Recording tests now always record a quiet/talk pair.
   - Everything that writes to a disk checks first that the target is a
     removable/USB disk, and verifies by checksum afterwards
     (~CARD-SHA256SUMS~ on ~P25TBOOT~).
