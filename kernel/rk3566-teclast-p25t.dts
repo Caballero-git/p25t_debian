@@ -767,9 +767,8 @@
 	 * which with these flags gives out = (rawY, -rawX, rawZ), i.e. the
 	 * matrix below. NOT verified against the real Android driver source
 	 * (proprietary, unavailable) - only against the four flag values
-	 * themselves. Treat screen-rotation/orientation behaviour as
-	 * unconfirmed until checked against real tilt tests; see
-	 * hardware.org/todo.org.
+	 * themselves. It turned out wrong; the matrix in the node is the
+	 * measured one (patch 0026).
 	 */
 	accelerometer@19 {
 		compatible = "silan,sc7a20";
@@ -780,9 +779,17 @@
 		 * IRQ the pin fired 100000 times at boot ("irq 61: nobody
 		 * cared", tests/result_11_speaker2.txt). Polled sysfs reads work.
 		 */
-		mount-matrix = "0", "1", "0",
-				"-1", "0", "0",
-				"0", "0", "1";
+		/*
+		 * Measured 2026-10-03 (tests/test_19.sh, 4 poses; the stock-flag
+		 * translation above was wrong in all four): screen-out = +raw y,
+		 * landscape top = -raw z, landscape left = +raw x. Matrix for the
+		 * natural (landscape, rotation = 90) frame: x right, y up, z out
+		 * of the screen. Determinant -1: the SC7A20 reports a left-handed
+		 * frame, as on the PineTab2 (rk3566-pinetab2.dtsi, same chip).
+		 */
+		mount-matrix = "-1", "0", "0",
+				"0", "0", "-1",
+				"0", "1", "0";
 	};
 };
 

@@ -338,6 +338,8 @@
   | ~test_16.sh~ | microphone: QUIET vs TALK pair (~apply~ = LDO9 on; never needed)  | ~sudo bash~ |
   | ~test_17.sh~ | microphone channel order: 12 short clips + one talk clip         | ~sudo bash~ |
   | ~test_18.sh~ | display edges: coloured bars at each panel edge (~black~/~blue~: plain fields) | ~sudo bash~ |
+  | ~test_19.sh~ | accelerometer direction: 4 poses, checks the mount-matrix (no sudo) | ~bash~ |
+  | ~set_accel_matrix.sh~ | accelerometer mount-matrix in the DTB on the card (~show~ / ~set~ 9 values / ~restore~) | ~sudo bash~ |
   | ~tune_panel.sh~ | panel line timing in the DTB on the card (~show~ / ~set <HFP> <HBP>~ / ~restore~) | ~sudo bash~ (needs device-tree-compiler) |
   ~test_06~-~test_08~ talk to the chips over I2C; they find each bus by its
   controller's hardware address, never by bus number (address 0x40 is the

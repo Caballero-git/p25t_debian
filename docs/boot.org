@@ -183,6 +183,8 @@
   space, readable from the PC); older backups go to
   ~/home/jose/boot-backups/old/~. Before a deploy, check ~df -h
   /boot/firmware~: a new ~Image~ is ~33 MB.
+  Patch 0026 (2026-10-03) changed only the DTBs: the 0025 role DTBs
+  are kept as ~*.pre-0026-backup~ (small); ~Image~ is unchanged.
   State 2026-10-02 (after the 0024/0025 deploy): ~Image~ (patches up to
   0025) with both role DTBs; ~Image.pre-0024-backup~ (0023) with both
   role DTBs as ~*.pre-0024-backup~; ~Image.pre-0023-backup~ (0022) with

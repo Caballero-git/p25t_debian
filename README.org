@@ -30,7 +30,7 @@
   | Audio RK817 codec                 | works   | headphones, speaker, jack detect, volume buttons (0015, 0021, ~p25t-audio-keys.sh~); mic on the left channel |
   | Torch (rear camera LED)           | works   | ~/sys/class/leds/white:flash~ (patch 0022)          |
   | Cameras GC5035 / GC02M2           | open    | identified; no mainline sensor drivers yet         |
-  | Accelerometer SC7A20              | works   | patch 0013, polled (0021); mount-matrix orientation unverified |
+  | Accelerometer SC7A20              | works   | patch 0013, polled (0021); mount-matrix measured (0026) |
   | CPU frequency / GPU (Panfrost)    | works   | DVFS with real vdd_cpu (SYR837) and vdd_gpu (patches 0011, 0014) |
   | SoC temperature (tsadc)           | works   | patch 0016                                         |
   | Console on screen, tty1-tty6      | works   | fixed by masking the ttyGS0 getty (see findings)   |

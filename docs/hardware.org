@@ -44,7 +44,7 @@
   | Panel             | Jadard JD9365, 800×1280, 135×216 mm        | enable GPIO3_B1 (act. high), reset GPIO3_C3 (act. low)        | works, ~panel-jadard-jd9365da-h3~ + our table; mounted portrait, used landscape (~rotation = <90>~, patch 0023); line timing 21/18/15 (0025) |
   | Backlight         | ~pwm-backlight~ PWM14 (~fe700020~)         | period 25 µs (40 kHz), stock default 77/255                   | works                                 |
   | Touchscreen       | Silead GSL3673 @ i2c1 0x40                 | IRQ GPIO0_B0 (level-low), power/reset GPIO0_C2 (act. high)    | works (patches 0017–0020, confirmed 2026-09-30); firmware from the stock kernel |
-  | Accelerometer     | SC7A20 @ i2c1 0x19 (DA223 @ 0x27 not present)| polled, no IRQ (GPIO3_A2 is the speaker amp); swap_xy, revert_y | works (patch 0013, IRQ dropped in 0021); mount-matrix orientation unverified |
+  | Accelerometer     | SC7A20 @ i2c1 0x19 (DA223 @ 0x27 not present)| polled, no IRQ (GPIO3_A2 is the speaker amp); screen-out = +y, landscape top = -z, landscape left = +x; left-handed frame | works (patch 0013, IRQ dropped in 0021); mount-matrix measured (0026) |
   | Volume keys       | ~adc-keys~ on SARADC ch0                   | idle ≈ 1.8 V (raw 1023); raw < 900 = a key is held            | works                                 |
   | Power key         | RK817 pwrkey                               |                                                               | todo (needs RK817 node)               |
   | USB-C             | DWC3 ~fcc00000~, HS only, OTG              | USB2 PHY0 ~fe8a0000~; stock quirks + PHY tuning needed        | gadget works, intermittently          |

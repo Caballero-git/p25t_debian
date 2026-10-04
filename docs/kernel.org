@@ -28,6 +28,12 @@
     | 0018 | silead: tolerate a missing ACK on the soft-reset command       |
     | 0019 | DT: touchscreen orientation, range and confirmed pins          |
     | 0020 | add the GSL3673 firmware for ~CONFIG_EXTRA_FIRMWARE~ (binary)  |
+    | 0021 | DT: built-in speaker amplifier, headphone detect, polled accel |
+    | 0022 | DT: camera IO bank supply (LDO8/vccio6), vcc_camera, torch     |
+    | 0023 | DT: landscape orientation for the panel (rotation 90)          |
+    | 0024 | jadard: take the mode from an optional panel-timing node       |
+    | 0025 | DT: panel timing node, active line 3 px earlier (21/18/15)     |
+    | 0026 | DT: measured accelerometer mount-matrix                        |
   - Also needs a kernel *config* change (not a DT patch): ~CONFIG_USB_XHCI_HCD=y~
     and ~CONFIG_USB_XHCI_PLATFORM=y~, both already set in
     ~kernel/p25t-kernel.config~. Without them the ~dwc3~ glue driver still
@@ -833,6 +839,22 @@
   - Rejected on the way (kernel builds, one each): continuous DSI clock
     + negative sync -> black panel; negative sync alone -> colour
     channels rotated, ~20 px wrap.
+
+* Accelerometer mount-matrix, measured (patch 0026) — working
+  - Confirmed 2026-10-03 (~tests/test_19.sh~: flat screen up, landscape
+    upright, landscape upside down, portrait): all four poses right.
+  - The 0013 matrix (translated from the stock flags ~swap_xy~,
+    ~revert_y~) was wrong in all four. Measured axes: screen-out = +raw
+    y, landscape top = -raw z, landscape left = +raw x.
+  - Frame: the tablet's natural orientation, landscape (panel rotation
+    90): x right, y up, z out of the screen. Matrix ~"-1","0","0",
+    "0","0","-1", "0","1","0"~, determinant -1: the SC7A20 reports a
+    left-handed frame - the PineTab2 (same chip, ~rk3566-pinetab2.dtsi~)
+    has a det -1 matrix too.
+  - Raw y has a ~-0.17 g offset (flat reads 0.85 g): harmless for
+    orientation; a compositor uses directions, not exact values.
+  - Tried first without a build: ~tests/set_accel_matrix.sh~ edits the
+    matrix in the DTB on the card (~fdtput~), like ~tune_panel.sh~.
 
 * AIC8800 Wi-Fi/Bluetooth driver (out of tree)
   Source: [[https://github.com/radxa-pkg/aic8800][radxa-pkg/aic8800]], commit ~516e3b0~

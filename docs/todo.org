@@ -447,10 +447,19 @@
     rebuilt ~Image~ (DTBs unaffected), deployed, re-tested - *working*:
     clean probe, IIO device ~sc7a20~ present, raw axis values respond
     to the tablet being moved. See [[file:kernel.org][kernel]] for the full writeup.
-  - Still open (low priority): the mount-matrix's *orientation* is a
-    best-effort guess (see kernel.org) - confirmed the values move,
-    not yet confirmed they move the *correct* way. Revisit once there
-    is an actual consumer to test against (e.g. screen rotation).
+  - DONE 2026-10-03 (patch 0026): mount-matrix measured with
+    ~tests/test_19.sh~; the old guess was wrong in all four poses. See
+    kernel.org. History:
+  - 2026-10-03, ~tests/test_19.sh~ (4 poses) + a flat check: the DT
+    matrix is wrong in all 4 poses. Raw axes: screen-out = +raw y, the
+    landscape top = -raw z, the landscape left = +raw x. In the landscape
+    frame (the tablet's natural orientation since 0023) the matrix is
+    ~"-1","0","0", "0","0","-1", "0","1","0"~ - determinant -1: the
+    SC7A20 reports a left-handed frame, as on the PineTab2
+    (~rk3566-pinetab2.dtsi~, same chip, also det -1). Raw y has a
+    ~-0.17 g offset (flat reads 0.85 g) - harmless for orientation.
+    Tried with ~tests/set_accel_matrix.sh~: 4 x OK; now in the DTS
+    (patch 0026).
 
 * DONE Power button doesn't wake it from off unless USB cable is plugged in
   - *Closed 2026-10-01, not reproducible*: under Android, without any
