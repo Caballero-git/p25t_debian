@@ -1,0 +1,25 @@
+=== touchscreen boot delay (test_20) ===
+Mon  5 Oct 09:36:16 CEST 2026
+#8 SMP PREEMPT Fri Oct  2 14:42:44 CEST 2026
+
+--- i2c1 (fe5a0000) bus speed in the running DT ---
+clock-frequency = 400000 Hz
+
+--- kernel log around the touchscreen probe ---
+259-[    0.508667] silead_ts 1-0040: Silead chip ID: 0x50910000
+260-[    1.404412] random: crng init done
+261:[    1.580893] input: silead_ts as /devices/platform/fe5a0000.i2c/i2c-1/1-0040/input/input1
+262-[    1.620981] device-mapper: ioctl: 4.50.0-ioctl (2025-04-28) initialised: dm-devel@lists.linux.dev
+gap before the touchscreen line: 0.18 s  (previous line at 1.40 s, touchscreen at 1.58 s)
+
+--- boot time ---
+Startup finished in 5.758s (kernel) + 36.067s (userspace) = 41.825s 
+graphical.target reached after 36.065s in userspace.
+
+--- same bus still fine? ---
+accelerometer: x=48 y=224 z=-864
+N: Name="silead_ts"
+H: Handlers=event1 
+Touch the screen once while this prints, then check that the touch works as usual.
+
+=== done ===

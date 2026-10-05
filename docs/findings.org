@@ -180,6 +180,20 @@
     (over Wi-Fi when USB isn't seen) gave the fitted sensors, their
     resolutions and the headphone IRQ pin without root.
 
+* Boot time: a mail server and a gadget wait (2026-10-05)
+  - ~systemd-analyze critical-chain~ shows what the boot really waited
+    for; ~blame~ alone lists units that run in parallel and mislead.
+  - A Recommends chain (emacs-nox → mailutils → a mail server) installed
+    ~exim4~, which pulls in ~network-online.target~: every boot waited for
+    Wi-Fi. Boot times of 17, 21 and 36 s were all the same cause, varying
+    with the Wi-Fi. Check ~systemctl list-dependencies --reverse
+    network-online.target~ after installing packages.
+  - Our own ~p25t-gadget~ cost 20 s in host mode (waiting for a UDC that
+    cannot appear). Scripts that wait for hardware must first check
+    whether the hardware can exist in this configuration.
+  - Capping the journal did not shorten its flush; measure before
+    assuming size is the cost.
+
 * Practical lessons
   - When the kernel log can't say *which* step failed, replay the
     driver's I2C sequence by hand with i2c-tools. Find the bus by its
@@ -221,6 +235,9 @@
     The same can happen to ~$~: ~H=$(...)~ arrived as ~H=(...)~ (a bash
     syntax error, nothing ran). For critical files give the literal
     values, no shell variables.
+    Again 2026-10-04: a ~for d in ...; do udevadm info "$d"~ loop arrived
+    as ~"d"~. Anything with variables or loops goes into a script file
+    in the repo, not into a command to paste.
   - Measure against a control. ~test_15~ recorded "talk now" clips
     without a silent reference and got noise; it looked like a dead
     mic, and a theory (no bias, LDO9) was built on it. ~test_16~

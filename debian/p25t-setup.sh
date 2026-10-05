@@ -67,6 +67,11 @@ cat > /usr/local/sbin/p25t-gadget <<'EOF'
 #!/bin/sh
 # Set up the USB-C port as a composite USB device: serial console + network.
 G=/sys/kernel/config/usb_gadget/p25t
+# Host mode (usbhost DTB, see set-usb-role.sh): the port is a USB host and
+# there is no device controller (UDC). Without this check the loop below
+# waits 20 s for one and fails, and the boot waits with it (2026-10-05).
+M=$(tr -d '\0' < /proc/device-tree/usb@fcc00000/dr_mode 2>/dev/null)
+[ "$M" = host ] && { echo "USB-C port in host mode: no gadget"; exit 0; }
 [ -d $G ] && exit 0
 mkdir -p $G
 echo 0x1d6b > $G/idVendor

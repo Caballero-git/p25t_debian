@@ -1,0 +1,36 @@
+#!/bin/sh
+# Set up the USB-C port as a composite USB device: serial console + network.
+G=/sys/kernel/config/usb_gadget/p25t
+# Host mode (usbhost DTB, see set-usb-role.sh): the port is a USB host and
+# there is no device controller (UDC). Without this check the loop below
+# waits 20 s for one and fails, and the boot waits with it (2026-10-05).
+M=$(tr -d '\0' < /proc/device-tree/usb@fcc00000/dr_mode 2>/dev/null)
+[ "$M" = host ] && { echo "USB-C port in host mode: no gadget"; exit 0; }
+[ -d $G ] && exit 0
+mkdir -p $G
+echo 0x1d6b > $G/idVendor
+echo 0x0104 > $G/idProduct
+echo 0x0100 > $G/bcdDevice
+echo 0x0200 > $G/bcdUSB
+mkdir -p $G/strings/0x409
+echo "p25t0001"          > $G/strings/0x409/serialnumber
+echo "Teclast"           > $G/strings/0x409/manufacturer
+echo "P25T Debian"       > $G/strings/0x409/product
+mkdir -p $G/configs/c.1/strings/0x409
+echo "ACM+NCM" > $G/configs/c.1/strings/0x409/configuration
+echo 250 > $G/configs/c.1/MaxPower
+mkdir -p $G/functions/acm.usb0 $G/functions/ncm.usb0
+# fixed addresses, so the PC always sees the same network device
+echo 02:25:54:00:00:01 > $G/functions/ncm.usb0/dev_addr
+echo 02:25:54:00:00:02 > $G/functions/ncm.usb0/host_addr
+ln -s $G/functions/acm.usb0 $G/configs/c.1/
+ln -s $G/functions/ncm.usb0 $G/configs/c.1/
+UDC=""
+for i in $(seq 1 20); do
+    UDC=$(ls /sys/class/udc 2>/dev/null | head -n 1)
+    [ -n "$UDC" ] && break
+    sleep 1
+done
+[ -n "$UDC" ] || { echo "no UDC"; exit 1; }
+echo "$UDC" > $G/UDC
+echo "gadget bound to $UDC"

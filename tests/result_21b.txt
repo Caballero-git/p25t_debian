@@ -1,0 +1,117 @@
+=== userspace boot time (test_21) ===
+lun 05 oct 2026 10:46:38 CEST
+#8 SMP PREEMPT Fri Oct  2 14:42:44 CEST 2026
+ 10:46:38 up 9 min,  1 user,  load average: 1,97, 1,82, 1,03
+
+--- this boot ---
+Startup finished in 6.325s (kernel) + 11.488s (userspace) = 17.813s 
+graphical.target reached after 11.476s in userspace.
+default target: graphical.target
+
+--- earlier boots (from the journal; none if it is not kept) ---
+oct 04 19:29:45 p25t systemd[1]: Startup finished in 7.661s (kernel) + 21.134s (userspace) = 28.795s.
+oct 05 08:17:20 p25t systemd[1]: Startup finished in 8.635s (kernel) + 17.102s (userspace) = 25.737s.
+oct 05 08:32:55 p25t systemd[1]: Startup finished in 8.352s (kernel) + 36.093s (userspace) = 44.446s.
+oct 05 09:34:52 p25t systemd[1]: Startup finished in 5.758s (kernel) + 36.067s (userspace) = 41.825s.
+oct 05 10:02:36 p25t systemd[1]: Startup finished in 5.680s (kernel) + 21.475s (userspace) = 27.155s.
+oct 05 10:37:43 p25t systemd[1]: Startup finished in 6.325s (kernel) + 11.488s (userspace) = 17.813s.
+
+--- failed units ---
+
+--- blame: slowest 25 units ---
+5.981s dev-mmcblk1p5.device
+5.652s systemd-journal-flush.service
+4.410s p25t-bootlog.service
+3.959s systemd-resolved.service
+3.168s systemd-networkd.service
+1.949s e2scrub_reap.service
+1.398s systemd-timesyncd.service
+1.350s user@1000.service
+1.341s systemd-modules-load.service
+1.334s systemd-udevd.service
+1.080s systemd-udev-trigger.service
+ 931ms systemd-fsck@dev-disk-by\x2dlabel-P25TBOOT.service
+ 931ms ssh.service
+ 900ms systemd-rfkill.service
+ 886ms systemd-remount-fs.service
+ 884ms avahi-daemon.service
+ 830ms systemd-random-seed.service
+ 825ms systemd-sysctl.service
+ 798ms dbus.service
+ 788ms systemd-hostnamed.service
+ 762ms console-setup.service
+ 753ms systemd-backlight@backlight:backlight.service
+ 640ms boot-firmware.mount
+ 586ms lm-sensors.service
+ 497ms bluetooth.service
+
+--- critical chain of the default target ---
+The time when unit became active or started is printed after the "@" character.
+The time the unit took to start is printed after the "+" character.
+
+graphical.target @11.476s
+└─multi-user.target @11.469s
+  └─ssh.service @10.416s +931ms
+    └─network.target @10.392s
+      └─wpa_supplicant.service @10.292s +91ms
+        └─dbus.service @9.470s +798ms
+          └─basic.target @9.436s
+            └─sockets.target @9.434s
+              └─triggerhappy.socket @9.434s
+                └─sysinit.target @9.401s
+                  └─systemd-tmpfiles-setup.service @9.021s +371ms
+                    └─systemd-journal-flush.service @3.351s +5.652s
+                      └─systemd-remount-fs.service @2.442s +886ms
+                        └─systemd-fsck-root.service @1.938s +489ms
+                          └─systemd-journald.socket @1.744s
+                            └─system.slice @1.541s
+                              └─-.slice @1.540s
+
+--- network-online.target: who wants it, who provides it ---
+network-online.target
+systemd-networkd-wait-online.service: enabled / inactive
+NetworkManager-wait-online.service: not-found / inactive
+ExecStart={ path=/usr/lib/systemd/systemd-networkd-wait-online ; argv[]=/usr/lib/systemd/systemd-networkd-wait-online ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }
+
+--- network links (networkd) ---
+IDX LINK  TYPE     OPERATIONAL SETUP
+  1 lo    loopback carrier     unmanaged
+  2 sit0  sit      off         unmanaged
+  3 wlan0 wlan     routable    configured
+  4 usb0  gadget   no-carrier  configured
+
+4 links listed.
+
+--- largest pauses in the first 60 s of this boot's journal (>= 1 s) ---
+ 11.71 s pause
+   before [  26.344] p25t kernel: rockchip-pm-domain fdd90000.power-management:power-controller: sync_state() pending due to fdee0000.video-codec
+   after  [  38.054] p25t sshd-session[542]: Accepted publickey for jose from 192.168.1.186 port 44090 ssh2: ED25519 SHA256:lAeIzV6JMaRe5tqu9MljQ6WgjfLHFBkzHTLE6FJBgnw
+  9.53 s pause
+   before [  39.780] p25t systemd[549]: Started dbus.service - D-Bus User Message Bus.
+   after  [  49.314] p25t systemd[1]: systemd-hostnamed.service: Deactivated successfully.
+  5.55 s pause
+   before [   9.775] p25t systemd-journald[252]: System Journal (/var/log/journal/cf26acb3911e4387b4efa01f5c5f15a4) is 387.2M, max 1.3G, 1004.3M free.
+   after  [  15.321] p25t systemd-journald[252]: Received client request to flush runtime journal.
+  5.09 s pause
+   before [  21.254] p25t systemd[1]: systemd-rfkill.service: Deactivated successfully.
+   after  [  26.340] p25t kernel: rockchip-pm-domain fdd90000.power-management:power-controller: sync_state() pending due to fdea0000.video-codec
+  1.59 s pause
+   before [  11.929] p25t systemd-timesyncd[315]: Network configuration changed, trying to establish connection.
+   after  [  13.520] p25t systemd[1]: Found device dev-ttyS2.device - /dev/ttyS2.
+  1.42 s pause
+   before [  49.314] p25t systemd[1]: systemd-hostnamed.service: Deactivated successfully.
+   after  [  50.738] p25t systemd-resolved[325]: Clock change detected. Flushing caches.
+  1.20 s pause
+   before [  50.739] p25t systemd-timesyncd[315]: Initial clock synchronization to Mon 2026-10-05 10:38:15.791824 CEST.
+   after  [  51.938] p25t kernel: rwnx_reg_notifier Enter
+  1.17 s pause
+   before [  19.219] p25t polkitd[529]: Acquired the name org.freedesktop.PolicyKit1 on the system bus
+   after  [  20.385] p25t systemd-networkd[337]: wlan0: Gained IPv6LL
+
+--- timeouts and waits mentioned in this boot ---
+[    8.611173] p25t kernel: arm-scmi arm-scmi.7.auto: SCMI max-rx-timeout: 30ms / max-msg-size: 104bytes / max-msg: 20
+
+--- boot chart ---
+written: /home/jose/tests/boot_21.svg (162838 bytes)
+
+=== done ===

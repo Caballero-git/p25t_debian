@@ -1,0 +1,131 @@
+=== userspace boot time (test_21) ===
+lun 05 oct 2026 10:18:29 CEST
+#8 SMP PREEMPT Fri Oct  2 14:42:44 CEST 2026
+ 10:18:30 up 16 min,  1 user,  load average: 2,44, 2,19, 1,53
+
+--- this boot ---
+Startup finished in 5.680s (kernel) + 21.475s (userspace) = 27.155s 
+graphical.target reached after 21.473s in userspace.
+default target: graphical.target
+
+--- earlier boots (from the journal; none if it is not kept) ---
+oct 04 18:34:28 p25t systemd[1797]: Startup finished in 627ms.
+oct 04 19:29:45 p25t systemd[1]: Startup finished in 7.661s (kernel) + 21.134s (userspace) = 28.795s.
+oct 05 08:20:43 p25t systemd[816]: Startup finished in 609ms.
+oct 05 08:33:03 p25t systemd[889]: Startup finished in 1.215s.
+oct 05 09:35:31 p25t systemd[915]: Startup finished in 627ms.
+oct 05 10:03:18 p25t systemd[806]: Startup finished in 796ms.
+
+--- failed units ---
+
+--- blame: slowest 25 units ---
+9.516s dev-mmcblk1p5.device
+7.521s systemd-journal-flush.service
+5.783s systemd-resolved.service
+5.710s systemd-udevd.service
+5.577s systemd-networkd-wait-online.service
+5.284s polkit.service
+4.287s exim4.service
+3.740s p25t-bootlog.service
+2.742s systemd-modules-load.service
+2.552s e2scrub_reap.service
+1.927s systemd-fsck@dev-disk-by\x2dlabel-P25TBOOT.service
+1.476s systemd-random-seed.service
+1.421s systemd-timesyncd.service
+1.257s avahi-daemon.service
+1.180s dbus.service
+1.040s systemd-udev-trigger.service
+1.011s lm-sensors.service
+ 906ms triggerhappy.service
+ 894ms user@1000.service
+ 850ms systemd-remount-fs.service
+ 802ms p25t-gadget.service
+ 756ms systemd-logind.service
+ 745ms console-setup.service
+ 733ms systemd-hostnamed.service
+ 573ms bluetooth.service
+
+--- critical chain of the default target ---
+The time when unit became active or started is printed after the "@" character.
+The time the unit took to start is printed after the "+" character.
+
+graphical.target @21.473s
+└─multi-user.target @21.473s
+  └─exim4.service @17.183s +4.287s
+    └─network-online.target @16.721s
+      └─systemd-networkd-wait-online.service @11.131s +5.577s
+        └─systemd-networkd.service @10.522s +487ms
+          └─systemd-udevd.service @4.786s +5.710s
+            └─systemd-tmpfiles-setup-dev.service @3.391s +62ms
+              └─systemd-tmpfiles-setup-dev-early.service @2.196s +319ms
+                └─kmod-static-nodes.service @1.941s +197ms
+                  └─systemd-journald.socket @1.804s
+                    └─-.mount @1.591s
+                      └─-.slice @1.591s
+
+--- network-online.target: who wants it, who provides it ---
+network-online.target
+  exim4.service
+systemd-networkd-wait-online.service: enabled / active
+NetworkManager-wait-online.service: not-found
+absent / inactive
+ExecStart={ path=/usr/lib/systemd/systemd-networkd-wait-online ; argv[]=/usr/lib/systemd/systemd-networkd-wait-online ; ignore_errors=no ; start_time=[Mon 2026-10-05 10:02:26 CEST] ; stop_time=[Mon 2026-10-05 10:02:31 CEST] ; pid=369 ; code=exited ; status=0 }
+
+--- network links (networkd) ---
+IDX LINK  TYPE     OPERATIONAL SETUP
+  1 lo    loopback carrier     unmanaged
+  2 sit0  sit      off         unmanaged
+  3 wlan0 wlan     routable    configured
+  4 usb0  gadget   no-carrier  configured
+
+4 links listed.
+
+--- largest pauses in this boot's journal (>= 1 s) ---
+218.25 s pause
+   before [ 621.388] p25t kernel: done=1 retry_required=0 sw_retry_required=0 acknowledged=1
+   after  [ 839.640] p25t systemd[1]: Starting p25t-bootlog.service - P25T status report onto the SD card...
+132.85 s pause
+   before [ 436.784] p25t systemd-logind[395]: Removed session 3.
+   after  [ 569.638] p25t systemd[1]: Starting p25t-bootlog.service - P25T status report onto the SD card...
+ 93.15 s pause
+   before [ 342.756] p25t sudo[907]: pam_unix(sudo:session): session closed for user root
+   after  [ 435.910] p25t sshd-session[942]: Accepted publickey for jose from 192.168.1.186 port 34832 ssh2: ED25519 SHA256:lAeIzV6JMaRe5tqu9MljQ6WgjfLHFBkzHTLE6FJBgnw
+ 86.30 s pause
+   before [ 223.334] p25t sudo[858]: pam_unix(sudo:session): session closed for user root
+   after  [ 309.637] p25t systemd[1]: Starting p25t-bootlog.service - P25T status report onto the SD card...
+ 63.57 s pause
+   before [  80.908] p25t systemd[1]: p25t-bootlog.service: Consumed 617ms CPU time, 73.7M memory peak.
+   after  [ 144.480] p25t sudo[844]:     jose : TTY=pts/0 ; PWD=/home/jose ; USER=root ; COMMAND=/usr/bin/bash /home/jose/tests/set_i2c1_speed.sh show
+ 63.30 s pause
+   before [ 144.536] p25t sudo[844]: pam_unix(sudo:session): session closed for user root
+   after  [ 207.835] p25t sudo[854]:     jose : TTY=pts/0 ; PWD=/home/jose ; USER=root ; COMMAND=/usr/bin/bash test_20.sh
+ 58.26 s pause
+   before [ 921.393] p25t kernel: done=1 retry_required=0 sw_retry_required=0 acknowledged=1
+   after  [ 979.654] p25t sudo[1007]:     jose : TTY=pts/0 ; PWD=/home/jose/tests ; USER=root ; COMMAND=/usr/bin/bash test_21.sh
+ 48.63 s pause
+   before [ 572.760] p25t systemd[1]: Finished p25t-bootlog.service - P25T status report onto the SD card.
+   after  [ 621.388] p25t kernel: done=1 retry_required=0 sw_retry_required=0 acknowledged=1
+ 41.12 s pause
+   before [ 843.383] p25t systemd[1]: Finished p25t-bootlog.service - P25T status report onto the SD card.
+   after  [ 884.504] p25t sshd-session[988]: Accepted publickey for jose from 192.168.1.186 port 46278 ssh2: ED25519 SHA256:lAeIzV6JMaRe5tqu9MljQ6WgjfLHFBkzHTLE6FJBgnw
+ 34.70 s pause
+   before [ 884.938] p25t systemd-logind[395]: Removed session 4.
+   after  [ 919.634] p25t systemd[1]: Starting systemd-tmpfiles-clean.service - Cleanup of Temporary Directories...
+ 20.99 s pause
+   before [  33.766] p25t kernel: otg_switch: disabling
+   after  [  54.752] p25t kernel: rwnx_reg_notifier Enter
+ 14.87 s pause
+   before [ 321.389] p25t kernel: done=1 retry_required=0 sw_retry_required=0 acknowledged=1
+   after  [ 336.263] p25t sudo[907]:     jose : TTY=pts/0 ; PWD=/home/jose/tests ; USER=root ; COMMAND=/usr/bin/bash test_20.sh
+
+--- timeouts and waits mentioned in this boot ---
+[    8.048093] p25t kernel: arm-scmi arm-scmi.7.auto: SCMI max-rx-timeout: 30ms / max-msg-size: 104bytes / max-msg: 20
+[   16.812801] p25t systemd[1]: Starting systemd-networkd-wait-online.service - Wait for Network to be Configured...
+[   22.389935] p25t systemd[1]: Finished systemd-networkd-wait-online.service - Wait for Network to be Configured.
+[  436.778381] p25t systemd-logind[395]: Session 3 logged out. Waiting for processes to exit.
+[  884.931042] p25t systemd-logind[395]: Session 4 logged out. Waiting for processes to exit.
+
+--- boot chart ---
+written: /home/jose/tests/boot_21.svg (173468 bytes)
+
+=== done ===

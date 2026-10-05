@@ -185,6 +185,8 @@
   /boot/firmware~: a new ~Image~ is ~33 MB.
   Patch 0026 (2026-10-03) changed only the DTBs: the 0025 role DTBs
   are kept as ~*.pre-0026-backup~ (small); ~Image~ is unchanged.
+  Patch 0027 (2026-10-05), DTB only as well: the 0026 role DTBs are
+  kept as ~*.pre-0027-backup~.
   State 2026-10-02 (after the 0024/0025 deploy): ~Image~ (patches up to
   0025) with both role DTBs; ~Image.pre-0024-backup~ (0023) with both
   role DTBs as ~*.pre-0024-backup~; ~Image.pre-0023-backup~ (0022) with

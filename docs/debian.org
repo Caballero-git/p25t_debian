@@ -219,6 +219,30 @@
   comfortable backlight: 80. More than 16 colours would need a
   framebuffer terminal such as ~fbterm~ (256 colours) - not tried.
 
+* Console mouse and touch (consolation)
+  - ~sudo apt install consolation~: left button = select (that is the
+    copy; double click = word, triple = line), right button = extend the
+    selection, middle button = paste (the kernel types the text into the
+    console). The wheel does nothing useful: the framebuffer console has
+    no scrollback since kernel 5.9. Works with USB and Bluetooth mice.
+  - Programs that ask for mouse clicks (mc, aptitude, htop, emacs with
+    mouse support) get the clicks instead, so there consolation does
+    not select or paste. ~sudo bash debian/p25t-consolation.sh always~
+    adds ~--disable-mouse-reporting~ (select/paste everywhere, those
+    programs lose the mouse); ~apps~ goes back to the default; ~show~
+    shows the setting. Options live in ~/etc/default/consolation~
+    (~DAEMON_OPTS~). Jose's choice (2026-10-05): ~always~. Tested: triple
+    click + middle click copies a line to the shell prompt and into nano.
+    In emacs it is a plain "typed" paste, not emacs' own kill ring.
+  - Touchscreen: the kernel reports touch in the panel's portrait frame
+    (kept on purpose for a future sway card, see todo.org), so on the
+    landscape console every touch landed 90 degrees clockwise ahead of
+    the finger. Fixed in user space, this card only:
+    | ~sudo bash debian/p25t-touch-landscape.sh install~ | udev rule with ~LIBINPUT_CALIBRATION_MATRIX="0 1 0 -1 0 1"~ for ~silead_ts~, applied at once |
+    | ~... check~  | shows the property on the touchscreen's event device |
+    | ~... remove~ | deletes the rule |
+    The rule file is ~/etc/udev/rules.d/99-p25t-touch-landscape.rules~.
+
 * USB host-mode test (trying a USB wireless keyboard/mouse receiver)
   Stage 6 item, only needed while the Bluetooth keyboard is unavailable
   or you want to compare it against a USB receiver. See
@@ -248,6 +272,44 @@
   #+begin_src sh
   bash ~/set-usb-role.sh normal
   #+end_src
+
+* Boot time (2026-10-05)
+  Measured with ~tests/test_21.sh~ (~result_21~ to ~21e~). Userspace went
+  from 17-36 s to 10-14 s, in both USB-C roles; kernel ~6 s.
+  - *exim4 removed.* ~emacs-nox~ → ~emacs-bin-common~ (Recommends
+    ~mailutils~) → ~mailutils~ (Recommends a mail server) brought in
+    ~exim4~, the only unit that wanted ~network-online.target~. The boot
+    then waited for Wi-Fi association and DHCP (5-20 s, varying) plus
+    exim4 itself (4 s). Without Wi-Fi it would wait up to wait-online's
+    2 min timeout. Removed with:
+    #+begin_src sh
+    sudo apt purge exim4-base exim4-config exim4-daemon-light
+    #+end_src
+    ~mailutils~ stays. Nothing waits for the network at boot now; Wi-Fi
+    still comes up in the background. When installing more packages,
+    watch apt's list for a mail server (~exim4~, ~postfix~); or use
+    ~--no-install-recommends~.
+  - *Journal capped at 100 MB* (it was 387 MB, allowed 1.3 GB):
+    #+begin_src sh
+    sudo mkdir -p /etc/systemd/journald.conf.d
+    printf '[Journal]\nSystemMaxUse=100M\n' | sudo tee /etc/systemd/journald.conf.d/p25t-size.conf
+    sudo journalctl --vacuum-size=100M
+    #+end_src
+    This saves card space but not time: ~systemd-journal-flush~ (3-8 s,
+    the longest step left on the critical chain) depends on the SD card
+    and the busy CPU. The journal stays persistent: test_21 reads earlier
+    boots from it.
+  - *Gadget service in host mode.* ~p25t-gadget~ waited 20 s for a USB
+    device controller that host mode does not have, then failed, and the
+    boot waited with it (32 s). The script now reads ~dr_mode~ from the
+    running DT and exits at once in host mode. Installed on this card
+    with:
+    #+begin_src sh
+    sudo cp -p /usr/local/sbin/p25t-gadget /usr/local/sbin/p25t-gadget.orig
+    sudo install -m 755 debian/p25t-gadget /usr/local/sbin/p25t-gadget
+    #+end_src
+    (~debian/p25t-gadget~ is a copy of the script that ~p25t-setup.sh~
+    writes; keep the two the same.)
 
 * Sound and torch
   - *Volume buttons and automatic speaker mute* (2026-10-01): installed
@@ -340,6 +402,9 @@
   | ~test_18.sh~ | display edges: coloured bars at each panel edge (~black~/~blue~: plain fields) | ~sudo bash~ |
   | ~test_19.sh~ | accelerometer direction: 4 poses, checks the mount-matrix (no sudo) | ~bash~ |
   | ~set_accel_matrix.sh~ | accelerometer mount-matrix in the DTB on the card (~show~ / ~set~ 9 values / ~restore~) | ~sudo bash~ |
+  | ~test_20.sh~ | touchscreen boot delay: i2c1 speed, when touch is ready, ~systemd-analyze~ | ~sudo bash~ |
+  | ~set_i2c1_speed.sh~ | i2c1 bus speed in the DTB on the card (~show~ / ~set <HZ>~ / ~restore~) | ~sudo bash~ |
+  | ~test_21.sh~ | userspace boot time: ~systemd-analyze~ blame and critical chain, earlier boots, USB-C role, journal pauses, ~boot_21.svg~ chart | ~sudo bash~ |
   | ~tune_panel.sh~ | panel line timing in the DTB on the card (~show~ / ~set <HFP> <HBP>~ / ~restore~) | ~sudo bash~ (needs device-tree-compiler) |
   ~test_06~-~test_08~ talk to the chips over I2C; they find each bus by its
   controller's hardware address, never by bus number (address 0x40 is the

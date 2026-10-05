@@ -155,6 +155,17 @@
       100 kHz (the vendor driver defines ~WRITE_I2C_SPEED 350000~). Try
       ~clock-frequency = <400000>~ on ~&i2c1~ (shared with the
       accelerometer), or asynchronous probing.
+      2026-10-05: firmware 37224 bytes = 4653 writes of 4 bytes, each a
+      separate I2C transaction - ~3 s at 100 kHz, ~1.3 s expected at
+      400 kHz (the PineTab2 runs its SC7A20 bus at 400 kHz). Measure with
+      ~tests/test_20.sh~, try with ~tests/set_i2c1_speed.sh set 400000~
+      (DTB on the card), measure again. Further option: asynchronous
+      probe for silead (driver ~probe_type~), which would take the upload
+      off the boot path entirely - a kernel build.
+      DONE 2026-10-05 (patch 0027, 400 kHz): touch ready at 1.6 s
+      instead of 4.1 s, kernel boot 8.4 s -> 5.8 s. Async probe (~1.1 s
+      more) not done. Userspace then took 17-36 s; fixed the same day, now
+      10-14 s (see "Boot time" below).
     - DONE 2026-09-30: ~/lib/firmware/silead/gsl3673-p25t.fw.54shady~
       removed from the tablet; the correct ~gsl3673-p25t.fw~ stays there
       as a fallback (unused: built-in firmware takes precedence).
@@ -679,9 +690,13 @@
   - ~rotation = <90>~ on the panel + ~CONFIG_FRAMEBUFFER_CONSOLE_ROTATION~;
     console 128x40, confirmed 2026-10-01. Runtime override:
     ~/sys/class/graphics/fbcon/rotate_all~ (see kernel.org).
-  - Still to do for a graphical session: rotate the touchscreen to
-    match (DT ~touchscreen-swapped-x-y~ / ~touchscreen-inverted-x/y~, or a
-    libinput calibration matrix) - test it once a compositor runs.
+  - Touchscreen rotation - decided 2026-10-03: the kernel keeps
+    reporting touch in the panel's own (portrait) frame, on purpose. A
+    Wayland compositor (sway) rotates the output from the panel
+    orientation and maps touch with it; rotating in the DT as well would
+    rotate twice. If a console tool needs landscape touch, rotate in
+    user space on this card only (udev ~LIBINPUT_CALIBRATION_MATRIX="0 1
+    0 -1 0 1"~ for libinput-based tools) - see "Console mouse" below.
 
 * DONE Console edges in landscape (patches 0024, 0025)
   - Fixed 2026-10-02: panel line timing hfp 21 / hsync 18 / hbp 15
@@ -765,6 +780,79 @@
     36. First try ~set 21 15~ (hfp 21, hbp 15: data 3 px earlier), then
     adjust until test_18 shows 4 green bars at the top and none at the
     bottom; then the values go into the DTS.
+
+* DONE Console mouse: consolation (2026-10-03)
+  - Done 2026-10-04: consolation works with a mouse, and with the
+    touchscreen after ~debian/p25t-touch-landscape.sh install~ (udev
+    calibration matrix ~0 1 0 -1 0 1~). Without it every touch landed
+    90 degrees clockwise ahead of the finger. See debian.org.
+  - ~sudo apt install consolation~ (libinput based; copy/paste and
+    scrolling on the console). Test with a USB/Bluetooth mouse first,
+    then with a finger: it may ignore touchscreens (libinput reports
+    them as touch, not pointer events). ~gpm~ is the older alternative
+    for mice only.
+  - Only if touch works but lands in the wrong place: the udev
+    calibration matrix above (user space, this card only).
+
+* Later, separate project: graphical session (sway + foot)
+  - Jose's plan (2026-10-03): this card stays a shell tool; maybe in a
+    few weeks a second card with a small Wayland session.
+  - Why it fits: Panfrost GPU works; sway is light; foot is a fast
+    Wayland terminal with true colour and scalable fonts (helps the eye
+    strain the 16-colour console causes); touch, mouse and on-screen
+    rotation are handled by the compositor; the accelerometer
+    mount-matrix (0026) is ready for auto-rotation (iio-sensor-proxy).
+  - Kernel side is already right for it: panel ~rotation = <90>~
+    (0023), touch in panel frame (see above), accelerometer in the
+    landscape frame. Expect: sway reads the panel orientation and turns
+    the output; ~input type:touch map_to_output DSI-1~ in the sway
+    config ties touch to the panel.
+
+* DONE Boot time: userspace 21-36 s → 10-14 s (2026-10-05)
+  CLOSED: [2026-10-05 Mon]
+  - ~systemd-analyze~: kernel 5.7 s + userspace 21.5 s (one boot showed 36 s).
+  - test_21 (2026-10-05, ~tests/result_21.txt~, ~boot_21.svg~), critical chain:
+    udevd starts at 4.8 s and takes 5.7 s; networkd at 10.5 s;
+    ~systemd-networkd-wait-online~ 11.1 s +5.6 s (Wi-Fi association and
+    DHCP); ~network-online.target~ 16.7 s; ~exim4~ 17.2 s +4.3 s;
+    ~multi-user.target~ 21.5 s.
+  - ~exim4~ (a mail server) is the only unit that wants
+    ~network-online.target~. Without it the wait for Wi-Fi drops out of the
+    boot: expected ~multi-user~ at ~11-12 s. Without Wi-Fi (away from the
+    home network) wait-online would hold the boot up to its 2 min timeout.
+  - Step 1 DONE 2026-10-05: exim4 came in as emacs-nox -> emacs-bin-common
+    (Recommends mailutils) -> mailutils (Recommends a mail transport).
+    ~sudo systemctl disable --now exim4.service~: userspace 21.5 s ->
+    11.5 s (~tests/result_21b.txt~). Nothing wants ~network-online.target~
+    now, so wait-online no longer runs at boot.
+    Journal history (Startup finished): 17.1, 36.1, 36.1, 21.1, 21.5 s
+    with exim4; 11.5 s without.
+  - New critical chain: ~systemd-journal-flush~ 3.4 s +5.7 s (persistent
+    journal 387 MB, max 1.3 G, on the SD card) -> tmpfiles -> sysinit ->
+    dbus -> wpa_supplicant -> network.target -> ssh 10.4 s +0.9 s ->
+    multi-user 11.5 s. Step 2: cap the journal (SystemMaxUse) and vacuum.
+  - exim4 purged (2026-10-05): ~apt purge exim4-base exim4-config
+    exim4-daemon-light~; mailutils stays.
+  - Step 2 (journal capped at 100 MB, ~/etc/systemd/journald.conf.d/p25t-size.conf~,
+    ~tests/result_21c.txt~): no gain. Userspace 14.3 s; flush 8.0 s
+    (5.7 s before). The flush time is set by the SD card and the busy CPU,
+    not by the journal size. Cap kept (frees ~290 MB). Flush stays the
+    longest step on the chain; a volatile journal would remove it but
+    loses the logs of earlier boots, which we rely on. Left as is.
+  - Host mode (~tests/result_21d.txt~): userspace 32.3 s, 18 s more than
+    normal. Cause: ~p25t-gadget.service~ waited 20 s for a USB device
+    controller that host mode does not have, then failed ("no UDC");
+    multi-user waits for it. Fix: the gadget script reads ~dr_mode~ from
+    the running DT and exits at once in host mode (~debian/p25t-gadget~,
+    same in ~p25t-setup.sh~). Result (~tests/result_21e.txt~): host mode
+    10.2 s, no failed unit; normal mode still binds the gadget.
+  - Left: the journal flush (3-8 s). Kernel ~6 s; optional async probe for
+    the touchscreen would save ~1 s more.
+  - Then: udevd's 5.7 s start and the slow units off the critical path
+    (journal flush 7.5 s, resolved 5.8 s, polkit 5.3 s) compete for the
+    CPU and the SD card; look at them after exim4.
+  - The default target is ~graphical.target~ (no graphical session
+    installed); harmless, it just follows ~multi-user.target~.
 
 * TODO Repository
   - Publish this folder as a git repository. A web search on 2026-09-25

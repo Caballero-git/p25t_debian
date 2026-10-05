@@ -34,6 +34,7 @@
     | 0024 | jadard: take the mode from an optional panel-timing node       |
     | 0025 | DT: panel timing node, active line 3 px earlier (21/18/15)     |
     | 0026 | DT: measured accelerometer mount-matrix                        |
+    | 0027 | DT: i2c1 at 400 kHz (touch firmware upload ~3 s -> ~1.1 s)     |
   - Also needs a kernel *config* change (not a DT patch): ~CONFIG_USB_XHCI_HCD=y~
     and ~CONFIG_USB_XHCI_PLATFORM=y~, both already set in
     ~kernel/p25t-kernel.config~. Without them the ~dwc3~ glue driver still
@@ -855,6 +856,21 @@
     orientation; a compositor uses directions, not exact values.
   - Tried first without a build: ~tests/set_accel_matrix.sh~ edits the
     matrix in the DTB on the card (~fdtput~), like ~tune_panel.sh~.
+
+* i2c1 at 400 kHz (patch 0027) — working
+  - Confirmed 2026-10-05 (~tests/test_20.sh~ before/after): touchscreen
+    ready at 1.58 s instead of 4.12 s; ~systemd-analyze~ kernel time
+    8.35 s -> 5.76 s. Touch and accelerometer unchanged.
+  - Why: the built-in ~silead_ts~ uploads its firmware during kernel
+    start-up and the boot waits. 37224 bytes = 4653 writes of 4 bytes,
+    each its own I2C transaction; at the default 100 kHz ~3 s.
+  - ~clock-frequency = <400000>~ on ~&i2c1~ (I2C fast mode, the limit for
+    both chips; stock Android used 350 kHz; the PineTab2 runs its
+    SC7A20 bus at 400 kHz). Tried first on the card with
+    ~tests/set_i2c1_speed.sh~.
+  - Left: ~1.1 s. An asynchronous probe for silead (driver ~probe_type
+    = PROBE_PREFER_ASYNCHRONOUS~) would move it off the boot path - a
+    one-line kernel patch and an Image build, not done.
 
 * AIC8800 Wi-Fi/Bluetooth driver (out of tree)
   Source: [[https://github.com/radxa-pkg/aic8800][radxa-pkg/aic8800]], commit ~516e3b0~
