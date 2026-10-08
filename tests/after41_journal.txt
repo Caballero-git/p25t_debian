@@ -1,0 +1,80 @@
+Oct 07 19:52:09 p25t polkitd[533]: Error opening rules directory: Error opening directory “/run/polkit-1/rules.d”: No such file or directory (g-file-error-quark, 4)
+Oct 07 19:52:09 p25t polkitd[533]: Loading rules from directory /usr/local/share/polkit-1/rules.d
+Oct 07 19:52:09 p25t polkitd[533]: Error opening rules directory: Error opening directory “/usr/local/share/polkit-1/rules.d”: No such file or directory (g-file-error-quark, 4)
+Oct 07 19:52:09 p25t polkitd[533]: Loading rules from directory /usr/share/polkit-1/rules.d
+Oct 07 19:52:09 p25t polkitd[533]: Finished loading, compiling and executing 2 rules
+Oct 07 19:52:09 p25t systemd[1]: Started polkit.service - Authorization Manager.
+Oct 07 19:52:09 p25t dbus-daemon[367]: [system] Successfully activated service 'org.freedesktop.PolicyKit1'
+Oct 07 19:52:09 p25t polkitd[533]: Acquired the name org.freedesktop.PolicyKit1 on the system bus
+Oct 07 19:52:09 p25t avahi-daemon[364]: Joining mDNS multicast group on interface wlan0.IPv6 with address fe80::8e35:92ff:fef2:b545.
+Oct 07 19:52:09 p25t systemd-networkd[342]: wlan0: Gained IPv6LL
+Oct 07 19:52:09 p25t avahi-daemon[364]: New relevant interface wlan0.IPv6 for mDNS.
+Oct 07 19:52:09 p25t systemd-timesyncd[314]: Network configuration changed, trying to establish connection.
+Oct 07 19:52:09 p25t avahi-daemon[364]: Registering new address record for fe80::8e35:92ff:fef2:b545 on wlan0.*.
+Oct 07 19:52:11 p25t systemd[1]: systemd-rfkill.service: Deactivated successfully.
+Oct 07 19:52:15 p25t kernel: rockchip-pm-domain fdd90000.power-management:power-controller: sync_state() pending due to fdea0000.video-codec
+Oct 07 19:52:15 p25t kernel: rockchip-pm-domain fdd90000.power-management:power-controller: sync_state() pending due to fdeb0000.rga
+Oct 07 19:52:15 p25t kernel: rockchip-pm-domain fdd90000.power-management:power-controller: sync_state() pending due to fdee0000.video-codec
+Oct 07 19:52:39 p25t systemd[1]: systemd-hostnamed.service: Deactivated successfully.
+Oct 07 19:52:40 p25t systemd-timesyncd[314]: Contacted time server 195.95.153.59:123 (2.debian.pool.ntp.org).
+Oct 07 19:52:40 p25t systemd-timesyncd[314]: Initial clock synchronization to Wed 2026-10-07 19:52:40.536229 CEST.
+Oct 07 19:52:41 p25t kernel: rwnx_reg_notifier Enter
+Oct 07 19:52:41 p25t kernel: rwnx_reg_notifier Enter
+Oct 07 19:53:08 p25t systemd[1]: Starting p25t-bootlog.service - P25T status report onto the SD card...
+Oct 07 19:53:15 p25t systemd[1]: p25t-bootlog.service: Deactivated successfully.
+Oct 07 19:53:15 p25t systemd[1]: Finished p25t-bootlog.service - P25T status report onto the SD card.
+Oct 07 19:57:09 p25t kernel: done=1 retry_required=0 sw_retry_required=0 acknowledged=1
+Oct 07 19:57:09 p25t systemd[1]: Starting p25t-bootlog.service - P25T status report onto the SD card...
+Oct 07 19:57:14 p25t systemd[1]: p25t-bootlog.service: Deactivated successfully.
+Oct 07 19:57:14 p25t systemd[1]: Finished p25t-bootlog.service - P25T status report onto the SD card.
+Oct 07 19:57:34 p25t sshd-session[588]: Accepted publickey for jose from 192.168.7.12 port 49602 ssh2: ED25519 SHA256:lAeIzV6JMaRe5tqu9MljQ6WgjfLHFBkzHTLE6FJBgnw
+Oct 07 19:57:34 p25t sshd-session[588]: pam_unix(sshd:session): session opened for user jose(uid=1000) by jose(uid=0)
+Oct 07 19:57:34 p25t systemd-logind[376]: New session 1 of user jose.
+Oct 07 19:57:34 p25t systemd[1]: Created slice user-1000.slice - User Slice of UID 1000.
+Oct 07 19:57:34 p25t systemd[1]: Starting user-runtime-dir@1000.service - User Runtime Directory /run/user/1000...
+Oct 07 19:57:34 p25t systemd[1]: Finished user-runtime-dir@1000.service - User Runtime Directory /run/user/1000.
+Oct 07 19:57:34 p25t systemd[1]: Starting user@1000.service - User Manager for UID 1000...
+Oct 07 19:57:34 p25t (systemd)[594]: pam_unix(systemd-user:session): session opened for user jose(uid=1000) by jose(uid=0)
+Oct 07 19:57:34 p25t systemd-logind[376]: New session 2 of user jose.
+Oct 07 19:57:35 p25t systemd[594]: Queued start job for default target default.target.
+Oct 07 19:57:35 p25t systemd[594]: Created slice app.slice - User Application Slice.
+Oct 07 19:57:35 p25t systemd[594]: Reached target paths.target - Paths.
+Oct 07 19:57:35 p25t systemd[594]: Reached target timers.target - Timers.
+Oct 07 19:57:35 p25t systemd[594]: Starting dbus.socket - D-Bus User Message Bus Socket...
+Oct 07 19:57:35 p25t systemd[594]: Starting ssh-agent.socket - OpenSSH Agent socket...
+Oct 07 19:57:35 p25t systemd[594]: Listening on dbus.socket - D-Bus User Message Bus Socket.
+Oct 07 19:57:35 p25t systemd[594]: Listening on ssh-agent.socket - OpenSSH Agent socket.
+Oct 07 19:57:35 p25t systemd[594]: Reached target sockets.target - Sockets.
+Oct 07 19:57:35 p25t systemd[594]: Reached target basic.target - Basic System.
+Oct 07 19:57:35 p25t systemd[1]: Started user@1000.service - User Manager for UID 1000.
+Oct 07 19:57:35 p25t systemd[594]: Started mpris-proxy.service - Bluetooth mpris proxy.
+Oct 07 19:57:35 p25t systemd[594]: Reached target default.target - Main User Target.
+Oct 07 19:57:35 p25t systemd[594]: Startup finished in 630ms.
+Oct 07 19:57:35 p25t systemd[1]: Started session-1.scope - Session 1 of User jose.
+Oct 07 19:57:35 p25t systemd[594]: Created slice session.slice - User Core Session Slice.
+Oct 07 19:57:35 p25t systemd[594]: Starting dbus.service - D-Bus User Message Bus...
+Oct 07 19:57:35 p25t systemd[594]: Started dbus.service - D-Bus User Message Bus.
+Oct 07 19:58:24 p25t sudo[621]:     jose : TTY=pts/0 ; PWD=/home/jose/tests ; USER=root ; COMMAND=/usr/bin/bash test_40.sh
+Oct 07 19:58:24 p25t sudo[621]: pam_unix(sudo:session): session opened for user root(uid=0) by jose(uid=1000)
+Oct 07 19:58:24 p25t sudo[621]: pam_unix(sudo:session): session closed for user root
+Oct 07 20:00:17 p25t wpa_supplicant[470]: wlan0: WPA: Group rekeying completed with 5c:e9:31:b3:92:58 [GTK=CCMP]
+Oct 07 20:01:11 p25t systemd[1]: Starting p25t-bootlog.service - P25T status report onto the SD card...
+Oct 07 20:01:15 p25t systemd[1]: p25t-bootlog.service: Deactivated successfully.
+Oct 07 20:01:15 p25t systemd[1]: Finished p25t-bootlog.service - P25T status report onto the SD card.
+Oct 07 20:02:09 p25t kernel: done=1 retry_required=0 sw_retry_required=0 acknowledged=1
+Oct 07 20:06:11 p25t systemd[1]: Starting p25t-bootlog.service - P25T status report onto the SD card...
+Oct 07 20:06:18 p25t systemd[1]: p25t-bootlog.service: Deactivated successfully.
+Oct 07 20:06:18 p25t systemd[1]: Finished p25t-bootlog.service - P25T status report onto the SD card.
+Oct 07 20:07:09 p25t kernel: done=1 retry_required=0 sw_retry_required=0 acknowledged=1
+Oct 07 20:07:09 p25t systemd[1]: Starting systemd-tmpfiles-clean.service - Cleanup of Temporary Directories...
+Oct 07 20:07:09 p25t systemd-tmpfiles[745]: /usr/lib/tmpfiles.d/legacy.conf:14: Duplicate line for path "/run/lock", ignoring.
+Oct 07 20:07:09 p25t systemd[1]: systemd-tmpfiles-clean.service: Deactivated successfully.
+Oct 07 20:07:09 p25t systemd[1]: Finished systemd-tmpfiles-clean.service - Cleanup of Temporary Directories.
+Oct 07 20:08:22 p25t systemd[1]: Starting man-db.service - Daily man-db regeneration...
+Oct 07 20:08:30 p25t systemd[1]: man-db.service: Deactivated successfully.
+Oct 07 20:08:30 p25t systemd[1]: Finished man-db.service - Daily man-db regeneration.
+Oct 07 20:08:30 p25t systemd[1]: man-db.service: Consumed 1.037s CPU time, 17.6M memory peak.
+Oct 07 20:11:01 p25t systemd[1]: Starting p25t-bootlog.service - P25T status report onto the SD card...
+Oct 07 20:11:05 p25t systemd[1]: p25t-bootlog.service: Deactivated successfully.
+Oct 07 20:11:05 p25t systemd[1]: Finished p25t-bootlog.service - P25T status report onto the SD card.
+Oct 07 20:12:09 p25t kernel: done=1 retry_required=0 sw_retry_required=0 acknowledged=1

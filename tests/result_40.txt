@@ -1,0 +1,17 @@
+=== RK817 rails vs Android (test_40, read-only) ===
+mié 07 oct 2026 19:58:24 CEST
+#9 SMP PREEMPT Tue Oct  6 22:34:13 CEST 2026
+RK817 on bus 0, chip id 0x81 0x74
+enable registers: 0xB2 = 0x0f (LDO1-4), 0xB3 = 0x0f (LDO5-8), 0xB4 = 0x01 (LDO9)
+
+rail   stock name     on   ours mV  stock mV  
+LDO1   vcca1v8_pmu    yes  1800     1800        (reg 0xcc = 0x30)
+LDO2   vdda_0v9       yes  900      1200      <-- DIFFERS  (reg 0xce = 0x0c)
+LDO3   vdda0v9_pmu    yes  900      900         (reg 0xd0 = 0x0c)
+LDO4   vccio_acodec   yes  3300     3300        (reg 0xd2 = 0x6c)
+LDO5   vccio_sd       yes  3300     1800      <-- DIFFERS  (reg 0xd4 = 0x6c)
+LDO6   vcc3v3_pmu     yes  3300     3300        (reg 0xd6 = 0x6c)
+LDO7   vcc_1v8        yes  1800     1800        (reg 0xd8 = 0x30)
+LDO8   vcc1v8_dvp     yes  1800     1800        (reg 0xda = 0x30)
+LDO9   vcc2v8_dvp     yes  2800     2800        (reg 0xdc = 0x58)
+=== done (nothing written) ===

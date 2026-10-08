@@ -1,0 +1,12 @@
+=== rear camera first frames, 0xfc = 0x8f (test_38) ===
+mié 07 oct 2026 12:38:05 CEST
+#9 SMP PREEMPT Tue Oct  6 22:34:13 CEST 2026
+
+--- capture in the background ---
+runtime PM: active
+capture exit 0 (124 = timeout)
+cam38.raw: 7558272 bytes (3 frames = 7558272)
+--- v4l2-ctl output ---
+<<<
+--- kernel log ---
+=== done ===

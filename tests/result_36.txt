@@ -1,0 +1,26 @@
+=== rear camera register lock bisection (test_36) ===
+mié 07 oct 2026 12:26:25 CEST
+#9 SMP PREEMPT Tue Oct  6 22:34:13 CEST 2026
+
+--- capture in the background ---
+runtime PM: active
+1. state now
+  now                      f0-ff: 50 35 40 00 40 e4 14 11 49 10 01 6e 8e 00 00 00
+as the driver left it        -> locked
+2. unlock attempts
+soft reset fe=80 x3          -> locked
+  after soft reset         f0-ff: 50 35 40 00 40 e4 14 11 49 10 01 6e 8e 00 00 00
+powerdown pulse 100 ms       -> locked
+  after powerdown pulse    f0-ff: 50 35 40 00 40 e4 14 11 49 10 01 6e 8e 00 00 00
+camera clock pulse 50 ms     -> locked
+  after clock pulse        f0-ff: 50 35 40 00 40 e4 14 11 49 10 01 6e 8e 00 00 00
+3. driver table, one write at a time (255 writes); state flips:
+  start: locked
+  write #  0  0xfc = 0x01  (page 0)  -> OPEN
+  write # 18  0xfc = 0x8e  (page 3)  -> locked
+  write #163  0xfc = 0x01  (page 0)  -> OPEN
+  write #181  0xfc = 0x8e  (page 3)  -> locked
+  end: locked, 4 flips
+  end                      f0-ff: 50 35 40 00 40 e4 14 11 49 10 01 6e 8e 00 01 00
+PHY_STATE 0x6f0 HS clock off
+=== done ===

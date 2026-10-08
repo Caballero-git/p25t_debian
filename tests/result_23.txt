@@ -1,0 +1,87 @@
+=== rear camera first frames (test_23) ===
+mié 07 oct 2026 10:02:42 CEST
+#9 SMP PREEMPT Tue Oct  6 22:34:13 CEST 2026
+sensor subdev: /dev/v4l-subdev2   capture node: /dev/video0
+
+--- formats on every pad ---
+- entity 4: rkcif-mipi0 (2 pads, 5 links, 0 routes)
+            type V4L2 subdev subtype Unknown flags 0
+		[stream:0 fmt:SGRBG10_1X10/1296x972 field:none]
+		<- "dw-mipi-csi2rx fdfb0000.csi":1 [ENABLED]
+		[stream:0 fmt:SGRBG10_1X10/1296x972 field:none
+		 crop.bounds:(0,0)/1296x972
+- entity 7: rkcif-mipi0-id0 (1 pad, 1 link)
+            type Node subtype V4L flags 0
+- entity 13: rkcif-mipi0-id1 (1 pad, 1 link)
+             type Node subtype V4L flags 0
+- entity 19: rkcif-mipi0-id2 (1 pad, 1 link)
+             type Node subtype V4L flags 0
+- entity 25: rkcif-mipi0-id3 (1 pad, 1 link)
+             type Node subtype V4L flags 0
+- entity 31: dw-mipi-csi2rx fdfb0000.csi (2 pads, 2 links, 0 routes)
+             type V4L2 subdev subtype Unknown flags 0
+		[stream:0 fmt:SGRBG10_1X10/1296x972 field:none]
+		<- "gc5035 2-0037":0 [ENABLED]
+		[stream:0 fmt:SGRBG10_1X10/1296x972 field:none]
+		-> "rkcif-mipi0":0 [ENABLED]
+- entity 36: gc5035 2-0037 (1 pad, 1 link, 0 routes)
+             type V4L2 subdev subtype Sensor flags 0
+		[stream:0 fmt:SGRBG10_1X10/1296x972 field:none]
+		-> "dw-mipi-csi2rx fdfb0000.csi":0 [ENABLED]
+Format Video Capture Multiplanar:
+	Width/Height      : 1296/972
+	Pixel Format      : 'BA10' (10-bit Bayer GRGR/BGBG)
+	Field             : None
+	Number of planes  : 1
+	Flags             : 
+	Colorspace        : Default
+	Transfer Function : Default
+	YCbCr/HSV Encoding: Default
+	Quantization      : Default
+	Plane 0           :
+	   Bytes per Line : 2592
+	   Size Image     : 2519424
+
+--- sensor controls ---
+
+User Controls
+
+                       exposure 0x00980911 (int)    : min=4 max=1992 step=1 default=600 value=600 flags=has-min-max
+
+Image Source Controls
+
+              vertical_blanking 0x009e0901 (int)    : min=1036 max=15411 step=1 default=1036 value=1036 flags=has-min-max
+            horizontal_blanking 0x009e0902 (int)    : min=164 max=164 step=1 default=164 value=164 flags=read-only, has-min-max
+                  analogue_gain 0x009e0903 (int)    : min=256 max=4096 step=1 default=256 value=256 flags=has-min-max
+
+Image Processing Controls
+
+                 link_frequency 0x009f0901 (intmenu): min=0 max=0 default=0 value=0 (438000000 0x1a1b5980) flags=read-only, has-min-max
+                     pixel_rate 0x009f0902 (int64)  : min=0 max=175200000 step=1 default=175200000 value=175200000 flags=read-only, has-min-max
+                   test_pattern 0x009f0903 (menu)   : min=0 max=1 default=0 value=0 (Disabled) flags=has-min-max
+                   digital_gain 0x009f0905 (int)    : min=0 max=1023 step=1 default=1023 value=1023 flags=has-min-max
+
+--- capture cam23_bars ---
+		VIDIOC_G_FMT returned 0 (Success)
+		VIDIOC_QBUF returned 0 (Success)
+		VIDIOC_QBUF returned 0 (Success)
+		VIDIOC_QBUF returned 0 (Success)
+		VIDIOC_QBUF returned 0 (Success)
+		VIDIOC_STREAMON returned 0 (Success)
+exit 124 (124 = timeout: no frames) ; file: 0 bytes (one frame = 2519424)
+kernel log during the capture:
+[ 3620.193061] done=1 retry_required=0 sw_retry_required=0 acknowledged=1
+
+--- capture cam23_scene ---
+		VIDIOC_G_FMT returned 0 (Success)
+		VIDIOC_QBUF returned 0 (Success)
+		VIDIOC_QBUF returned 0 (Success)
+		VIDIOC_QBUF returned 0 (Success)
+		VIDIOC_QBUF returned 0 (Success)
+		VIDIOC_STREAMON returned 0 (Success)
+exit 124 (124 = timeout: no frames) ; file: 0 bytes (one frame = 2519424)
+kernel log during the capture:
+
+-rw-r--r-- 1 jose jose 0 oct  7 10:02 cam23_bars.raw
+-rw-r--r-- 1 jose jose 0 oct  7 10:02 cam23_scene.raw
+=== done ===

@@ -183,6 +183,30 @@
   space, readable from the PC); older backups go to
   ~/home/jose/boot-backups/old/~. Before a deploy, check ~df -h
   /boot/firmware~: a new ~Image~ is ~33 MB.
+
+  Since 2026-10-07 two scripts do this (in ~tools/~, copies in
+  ~/home/jose/tests/~ on the tablet):
+  | when                          | command                                                  |
+  |-------------------------------+----------------------------------------------------------|
+  | new build on the tablet       | ~sudo bash deploy_kernel.sh <TAG> <DIR>~                  |
+  | new kernel booted and works   | ~sudo python3 prune_boot_backups.py~ (dry run), then ~--apply~ |
+  - ~deploy_kernel.sh~: checks the new files, keeps the USB role, backs
+    up the outgoing ~Image~ and both role DTBs (card: ~*.pre-<TAG>-backup~;
+    ext4: same names in ~boot-backups/~), copies the new ones, updates
+    ~CARD-SHA256SUMS~. Deletes nothing. Between deploy and prune the card
+    holds 4 kernels.
+  - ~prune_boot_backups.py~: keeps on the card the 2 newest
+    ~Image.pre-NNNN-backup~ with the role DTBs of the same tag, plus DTB
+    backups *newer* than the newest Image backup (DTB-only deploys on the
+    running kernel, their rollback). Everything else with a 4-digit tag
+    moves to ~boot-backups/old/~ (copy, compare, remove). ~boot-backups/~
+    mirrors what the card keeps: missing copies are added, copies no
+    longer kept on the card move to ~old/~. Names without a 4-digit tag
+    (~pre-accel~, ~stage4~, ...) are left alone. Lines of moved files leave
+    ~CARD-SHA256SUMS~; the list is checked afterwards.
+  - DTB-only changes (like 0026, 0027) have no ~Image~ to rename, so they
+    are still done by hand or with the fdtput tools; their role DTB
+    backups follow the same naming and prune keeps or moves them by tag.
   Patch 0026 (2026-10-03) changed only the DTBs: the 0025 role DTBs
   are kept as ~*.pre-0026-backup~ (small); ~Image~ is unchanged.
   Patch 0027 (2026-10-05), DTB only as well: the 0026 role DTBs are

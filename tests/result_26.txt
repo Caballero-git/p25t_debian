@@ -1,0 +1,42 @@
+=== rear camera awake check (test_26) ===
+mié 07 oct 2026 10:27:15 CEST
+#9 SMP PREEMPT Tue Oct  6 22:34:13 CEST 2026
+
+--- idle (sensor suspended) ---
+runtime PM: suspended
+clk_cif_out: enable_count=0 rate=24000000 parent=xin24m
+pin mux (GPIO4_C0 = cif_clkout, GPIO4_B2 = powerdown):
+  pin 138 (gpio4-10): 2-0037 gpio4:650 function camera group gc5035-pwdn
+  pin 144 (gpio4-16): 2-0037 (GPIO UNCLAIMED) function cif group cif-clk
+GPIO4 bank (fe770000) lines in use (debugfs):
+  gpiochip4: 32 GPIOs, parent: platform/fe770000.gpio, gpio4:
+   gpio-6   (                    |white:flash         ) out lo 
+   gpio-7   (                    |regulator-vcc-camera) out hi 
+   gpio-10  (                    |powerdown           ) out lo ACTIVE LOW
+supply vcc1v8_dvp: enabled
+supply vcc2v8_dvp: enabled
+supply vcc_camera: enabled
+
+--- start stream in the background ---
+
+--- while streaming ---
+runtime PM: active
+clk_cif_out: enable_count=2 rate=24000000 parent=xin24m
+pin mux (GPIO4_C0 = cif_clkout, GPIO4_B2 = powerdown):
+  pin 138 (gpio4-10): 2-0037 gpio4:650 function camera group gc5035-pwdn
+  pin 144 (gpio4-16): 2-0037 (GPIO UNCLAIMED) function cif group cif-clk
+GPIO4 bank (fe770000) lines in use (debugfs):
+  gpiochip4: 32 GPIOs, parent: platform/fe770000.gpio, gpio4:
+   gpio-6   (                    |white:flash         ) out lo 
+   gpio-7   (                    |regulator-vcc-camera) out hi 
+   gpio-10  (                    |powerdown           ) out hi ACTIVE LOW
+supply vcc1v8_dvp: enabled
+supply vcc2v8_dvp: enabled
+supply vcc_camera: enabled
+sensor 0xf0/0xf1: 0x50 0x35
+sensor 0xfc (clock/analog enable, driver writes 0x8e): 0x8e
+write test: 0x41 = 0x07 (page 0)
+read back 0x41: 0x00   (0x07 = registers work)
+
+--- kernel log ---
+=== done ===

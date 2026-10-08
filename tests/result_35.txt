@@ -1,0 +1,17 @@
+=== rear camera stream-on reset check (test_35) ===
+mié 07 oct 2026 12:20:10 CEST
+#9 SMP PREEMPT Tue Oct  6 22:34:13 CEST 2026
+
+--- capture in the background ---
+runtime PM: active
+as the driver left it  p0.05=00 p0.06=00 p0.46=00 p1.41=80 p3.01=00 p3.23=00 | 0/6 markers hold the driver value | PHY_STATE 0x6f0 HS clock off | f0=50 fc=8e
+1. driver table written by hand: 255 writes, 0 failed
+right after            p0.05=00 p0.06=00 p0.46=00 p1.41=80 p3.01=00 p3.23=00 | 0/6 markers hold the driver value | PHY_STATE 0x6f0 HS clock off | f0=50 fc=8e
+after 300 ms           p0.05=00 p0.06=00 p0.46=00 p1.41=80 p3.01=00 p3.23=00 | 0/6 markers hold the driver value | PHY_STATE 0x6f0 HS clock off | f0=50 fc=8e
+2. stream on: 0xfe=00, 0x3e=0x91
+stream on +   7 ms     p0.05=00 p0.06=00 p0.46=00 p1.41=80 p3.01=00 p3.23=00 | 0/6 markers hold the driver value | PHY_STATE 0x6f0 HS clock off | f0=50 fc=8e
+  (stream on: 1 distinct states in 1.0 s)
+3. rewrite table, then 0x3e=0x01 (stream bit off)
+3e=01 +   6 ms         p0.05=00 p0.06=00 p0.46=00 p1.41=80 p3.01=00 p3.23=00 | 0/6 markers hold the driver value | PHY_STATE 0x6f0 HS clock off | f0=50 fc=8e
+  (3e=01: 1 distinct states in 1.0 s)
+=== done ===

@@ -1,0 +1,6 @@
+=== rear camera, RK817 LDO2 1.2 V (test_41, mode: check) ===
+Wed  7 Oct 20:28:43 CEST 2026
+#9 SMP PREEMPT Tue Oct  6 22:34:13 CEST 2026
+RK817 on bus 0, chip id 0x81 0x74
+LDO2: on, 0xCE = 0x0c -> 900 mV
+=== check done - nothing was written ===

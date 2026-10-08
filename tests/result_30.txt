@@ -1,0 +1,23 @@
+=== rear camera D-PHY routing (test_30) ===
+mié 07 oct 2026 11:13:21 CEST
+#9 SMP PREEMPT Tue Oct  6 22:34:13 CEST 2026
+
+--- capture in the background (test pattern on) ---
+as found                   VI_CON0=0x0130 VI_CON1=0x0000 (mode full, CIF<-0-1, ISP<-0-1) | PHY_STATE 0x6f0 HS clock off | ERR1 0x0 ERR2 0x0 | VICAP INTSTAT 0x0
+as found +0                VI_CON0=0x0130 VI_CON1=0x0000 (mode full, CIF<-0-1, ISP<-0-1) | PHY_STATE 0x6f0 HS clock off | ERR1 0x0 ERR2 0x0 | VICAP INTSTAT 0x0
+as found +1                VI_CON0=0x0130 VI_CON1=0x0000 (mode full, CIF<-0-1, ISP<-0-1) | PHY_STATE 0x6f0 HS clock off | ERR1 0x0 ERR2 0x0 | VICAP INTSTAT 0x0
+as found +2                VI_CON0=0x0130 VI_CON1=0x0000 (mode full, CIF<-0-1, ISP<-0-1) | PHY_STATE 0x6f0 HS clock off | ERR1 0x0 ERR2 0x0 | VICAP INTSTAT 0x0
+FULL mode +0               VI_CON0=0x0130 VI_CON1=0x0000 (mode full, CIF<-0-1, ISP<-0-1) | PHY_STATE 0x6f0 HS clock off | ERR1 0x0 ERR2 0x0 | VICAP INTSTAT 0x0
+FULL mode +1               VI_CON0=0x0130 VI_CON1=0x0000 (mode full, CIF<-0-1, ISP<-0-1) | PHY_STATE 0x6f0 HS clock off | ERR1 0x0 ERR2 0x0 | VICAP INTSTAT 0x0
+FULL mode +2               VI_CON0=0x0130 VI_CON1=0x0000 (mode full, CIF<-0-1, ISP<-0-1) | PHY_STATE 0x6f0 HS clock off | ERR1 0x0 ERR2 0x0 | VICAP INTSTAT 0x0
+FULL mode +3               VI_CON0=0x0130 VI_CON1=0x0000 (mode full, CIF<-0-1, ISP<-0-1) | PHY_STATE 0x6f0 HS clock off | ERR1 0x0 ERR2 0x0 | VICAP INTSTAT 0x0
+SPLIT, CIF<-0-1 +0         VI_CON0=0x0130 VI_CON1=0x1080 (mode split, CIF<-0-1, ISP<-2-3) | PHY_STATE 0x630 HS clock off | ERR1 0x0 ERR2 0x0 | VICAP INTSTAT 0x0
+SPLIT, CIF<-0-1 +1         VI_CON0=0x0130 VI_CON1=0x1080 (mode split, CIF<-0-1, ISP<-2-3) | PHY_STATE 0x630 HS clock off | ERR1 0x0 ERR2 0x0 | VICAP INTSTAT 0x0
+SPLIT, CIF<-0-1 +2         VI_CON0=0x0130 VI_CON1=0x1080 (mode split, CIF<-0-1, ISP<-2-3) | PHY_STATE 0x630 HS clock off | ERR1 0x0 ERR2 0x0 | VICAP INTSTAT 0x0
+SPLIT, CIF<-0-1 +3         VI_CON0=0x0130 VI_CON1=0x1080 (mode split, CIF<-0-1, ISP<-2-3) | PHY_STATE 0x630 HS clock off | ERR1 0x0 ERR2 0x0 | VICAP INTSTAT 0x0
+restored                   VI_CON0=0x0130 VI_CON1=0x0000 (mode full, CIF<-0-1, ISP<-0-1) | PHY_STATE 0x6f0 HS clock off | ERR1 0x0 ERR2 0x0 | VICAP INTSTAT 0x0
+
+capture exit 0 (124 = timeout); cam30.raw: 0 bytes (3 frames = 7558272)
+
+--- kernel log ---
+=== done ===

@@ -1,0 +1,33 @@
+[sudo] password for jose: 
+=== rear camera, LDO2 1.2 V, bars only (test_42) ===
+mié 07 oct 2026 20:55:36 CEST
+#9 SMP PREEMPT Tue Oct  6 22:34:13 CEST 2026
+1. LDO2 -> 1.2 V
+0xCE <- 0x18: read back 0x18 -> 1200 mV  (20:55:36)
+   alive +1 s
+   alive +2 s
+   alive +3 s
+   alive +4 s
+   alive +5 s
+2. colour-bar capture, driver only (20:55:41)
+Traceback (most recent call last):
+  File [35m"/tmp/p25t_open.py"[0m, line [35m9[0m, in [35m<module>[0m
+    [31mwr[0m[1;31m(0xfe, 1)[0m; old = rd(0x42); wr(0x42, 0xa5); x = rd(0x42); wr(0x42, old if old is not None else 0x21); wr(0xfe, 0)
+    [31m~~[0m[1;31m^^^^^^^^^[0m
+  File [35m"/tmp/p25t_open.py"[0m, line [35m4[0m, in [35mwr[0m
+    def wr(r, v): [31mos.write[0m[1;31m(i2c, bytes((r, v)))[0m
+                  [31m~~~~~~~~[0m[1;31m^^^^^^^^^^^^^^^^^^^^[0m
+[1;35mOSError[0m: [35m[Errno 6] No such device or address[0m
+   capture exit 0 (124 = timeout); cam42_bars.raw: 7558272 bytes (3 frames = 7558272)
+3. LDO2 back to 0.9 V
+0xCE <- 0x0c: read back 0x0c -> 900 mV  (20:55:47)
+--- kernel log ---
+[   29.864748] get_txpwr_max:txpwr_max:0 
+[   64.199682] rwnx_reg_notifier Enter
+[   64.200440] rwnx_reg_notifier Enter
+[  450.959589] hid-generic 0005:056E:1050.0001: unknown main item tag 0x0
+[  452.029873] input: 1byone Keyboard as /devices/virtual/misc/uhid/0005:056E:1050.0001/input/input4
+[  452.090035] input: 1byone Keyboard Mouse as /devices/virtual/misc/uhid/0005:056E:1050.0001/input/input5
+[  452.090340] hid-generic 0005:056E:1050.0001: input: BLUETOOTH HID v0.19 Keyboard [1byone Keyboard] on 8c:35:92:f2:b5:46
+[  472.069153] systemd-journald[259]: File /var/log/journal/cf26acb3911e4387b4efa01f5c5f15a4/user-1000.journal corrupted or uncleanly shut down, renaming and replacing.
+=== done ===

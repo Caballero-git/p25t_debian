@@ -1,0 +1,30 @@
+[sudo] password for jose: 
+=== rear camera, LDO2 1.2 V, first picture (test_45) ===
+mié 07 oct 2026 21:38:51 CEST
+#9 SMP PREEMPT Tue Oct  6 22:34:13 CEST 2026
+VICAP /sys/bus/platform/devices/fdfe0000.video-capture: power/control auto -> on, runtime_status active
+IOMMU before any capture:
+   IOMMU: DTE_ADDR 0xf1751100 STATUS 0x00000019 (paging ON, idle yes, page fault no) | VICAP MIPI INTSTAT 0x00000000
+LDO2 -> 1.2 V
+0xCE <- 0x18: read back 0x18 -> 1200 mV  (21:38:54)
+   alive
+exposure: 1992
+analogue_gain: 1024
+digital_gain: 1023
+capture, 20 frames  (start 21:38:55.069)
+   exit 0 (124 = timeout); cam45_all.raw: 50388480 bytes (20 frames = 50388480)  (end 21:39:03.627)
+   kept the last 2 frames: cam45_scene.raw 5038848 bytes
+   IOMMU: DTE_ADDR 0xf1751100 STATUS 0x00000019 (paging ON, idle yes, page fault no) | VICAP MIPI INTSTAT 0x00000000
+LDO2 back to 0.9 V
+0xCE <- 0x0c: read back 0x0c -> 900 mV  (21:39:10)
+VICAP power/control back to auto
+--- kernel log ---
+[   24.108760] Bluetooth: RFCOMM ver 1.11
+[   24.828101] Bluetooth: hci0: Bad flag given (0x1) vs supported (0x6)
+[   25.551223] rwnx_send_sm_connect_req drv_vif_index:0 connect to CAMPINARED_TP-Link_9258(23) channel:2417 auth_type:0
+[   25.678113] get_txpwr_max:txpwr_max:0 
+[   27.746739] systemd-journald[256]: Time jumped backwards, rotating.
+[   28.409340] systemd-journald[256]: Failed to read journal file /var/log/journal/cf26acb3911e4387b4efa01f5c5f15a4/user-1000.journal for rotation, trying to move it out of the way: Device or resource busy
+[   58.856847] rwnx_reg_notifier Enter
+[   58.857327] rwnx_reg_notifier Enter
+=== done ===

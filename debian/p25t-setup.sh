@@ -175,6 +175,17 @@ OnUnitActiveSec=240
 WantedBy=timers.target
 EOF
 
+echo "--- camera: keep the VICAP powered (udev)"
+cat > /etc/udev/rules.d/99-p25t-vicap.rules <<'EOF'
+# /etc/udev/rules.d/99-p25t-vicap.rules - keep the camera capture block
+# (VICAP, fdfe0000) powered. Mainline rkcif pulses the VICAP resets on
+# every runtime suspend, which also wipes its IOMMU: the next capture then
+# DMAs through a dead IOMMU and the tablet freezes hard (tests 41/43).
+# With runtime PM off for this device it never suspends (test_44: three
+# captures in a row, IOMMU intact). Remove once the driver is fixed.
+ACTION=="add", SUBSYSTEM=="platform", KERNEL=="fdfe0000.video-capture", ATTR{power/control}="on"
+EOF
+
 echo "--- enable services"
 # Only getty@tty1 is enabled; logind starts tty2-tty6 on demand
 # (NAutoVTs=6), as on any Debian.

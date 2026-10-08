@@ -1,0 +1,1 @@
+-rw-rw-r-- 1 jose jose 0 Oct  7 20:14 result_41.txt

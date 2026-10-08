@@ -685,6 +685,44 @@
     the pipeline in the DT (sensor -> csi2-dphy -> mipi-csi2 -> vicap),
     capture a raw frame. The supplies (LDO8, vcc_camera) are already on
     since patch 0022; check LDO9 ~vcc2v8_dvp~ (2.8 V, likely AVDD).
+  - Survey 2026-10-06 (stock DT + kernel tree 7.3-rc4 + web):
+    - Stock wiring: both sensors on i2c2 (pins i2c2m1, GPIO4_B4/B5); MCLK
+      = ~CLK_CIF_OUT~ on GPIO4_C0 (pin group ~cif_clk~, 24 MHz); sensor
+      nodes list no supplies (always-on rails). The CSI D-PHY runs in
+      *split mode*: rear GC5035 on D-PHY lanes 0-1 (~csi2-dphy1~), front
+      GC02M2 on lanes 2-3 (~csi2-dphy2~); both go straight into the ISP
+      (~rkisp-vir~). The CSI-2 host ~fdfb0000~ and VICAP are disabled
+      in stock.
+    - Mainline 7.3: VICAP ~rkcif~ with RK3568 MIPI capture, the CSI-2
+      receiver (~dw-mipi-csi2rx~, ~rockchip,rk3568-mipi-csi2~) and the
+      CSI D-PHY driver (full mode only, no split mode) are in the tree.
+      ~rk356x-base.dtsi~ has VICAP and ~csi_dphy~ nodes but no CSI-2
+      host node (to add in our DTS, binding example has it). No ISP for
+      RK3568 (rkisp1 = RK3399/PX30/i.MX8MP only): raw Bayer frames
+      only, colour processing in software.
+    - Our config: ~CONFIG_MEDIA_SUPPORT~ is off; i2c2 not enabled.
+    - GC5035: never merged. Best start: Tomasz Figa's v4 series (Sept
+      2020, Chromebook, mainline style, 2 lanes, 2592x1944/1296x972/
+      1280x720, OTP). Rockchip BSP driver as second reference.
+    - GC02M2: only the Rockchip BSP driver; a PineTab2 port attempt
+      (github.com/cringeops/gc02m2, 2024, kernel 6.6) never powered up.
+      Needs D-PHY split mode as well -> much harder; later.
+    - Open: LDO9 ~vcc2v8_dvp~ (2.8 V) is probably the sensors' analogue
+      supply; switching it on is an RK817 write (Jose's OK needed).
+  - Step 1 DONE 2026-10-07 (patches 0028/0029, ~tests/result_22.txt~):
+    GC5035 detected, full media graph to ~/dev/video0~. LDO9 always-on
+    (Jose's OK 2026-10-06).
+  - Step 2 DONE 2026-10-07: first real picture (~tests/cam45_scene.png~)
+    after tests 23-45. Needed RK817 LDO2 at 1.2 V (patch 0030, Jose's OK)
+    and the VICAP kept powered (udev rule ~debian/99-p25t-vicap.rules~).
+    See findings.org "Rear camera: the core supply".
+  - Next:
+    - deploy patch 0030 (DTB only) + install the udev rule, then
+      ~tests/test_23.sh~ again with no LDO2 poking;
+    - driver: report RGGB instead of GRBG; a proper fix for the rkcif
+      runtime-suspend reset (instead of the udev rule);
+    - 2592x1944, a small capture script for everyday use (exposure/gain,
+      keep last frames, raw2png), DW9714 focus node.
 
 * DONE Landscape console (patch 0023)
   - ~rotation = <90>~ on the panel + ~CONFIG_FRAMEBUFFER_CONSOLE_ROTATION~;

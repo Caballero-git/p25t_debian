@@ -35,6 +35,8 @@
     | 0025 | DT: panel timing node, active line 3 px earlier (21/18/15)     |
     | 0026 | DT: measured accelerometer mount-matrix                        |
     | 0027 | DT: i2c1 at 400 kHz (touch firmware upload ~3 s -> ~1.1 s)     |
+    | 0028 | media: GalaxyCore GC5035 sensor driver (P25T port)             |
+    | 0029 | DT: rear camera pipeline (GC5035 -> CSI-2 -> VICAP), LDO9      |
   - Also needs a kernel *config* change (not a DT patch): ~CONFIG_USB_XHCI_HCD=y~
     and ~CONFIG_USB_XHCI_PLATFORM=y~, both already set in
     ~kernel/p25t-kernel.config~. Without them the ~dwc3~ glue driver still
@@ -871,6 +873,67 @@
   - Left: ~1.1 s. An asynchronous probe for silead (driver ~probe_type
     = PROBE_PREFER_ASYNCHRONOUS~) would move it off the boot path - a
     one-line kernel patch and an Image build, not done.
+
+* Rear camera GC5035 (patches 0028, 0029, 0030 + config) — working (raw frames)
+  - Step 1 of the camera plan (docs/todo.org): probe only. Success = the
+    driver reads the chip ID and ~media-ctl -p~ shows sensor -> CSI-2
+    receiver -> VICAP. Test: ~tests/test_22.sh~.
+  - 0028 ~drivers/media/i2c/gc5035.c~: port of the driver in
+    intel/ipu6-drivers (github), itself the v4 mainline series by Tomasz
+    Figa, Hao He, Xingyu Wu (Sept 2020, never merged). Modes 2592x1944,
+    1296x972, 1280x720, 2 lanes, link 438 MHz, MCLK 24 MHz, 10-bit
+    Bayer (GRBG as these register tables set it up - to be checked on a
+    real frame), OTP handling kept. ACPI power control replaced by DT
+    power control (MCLK, avdd/dovdd/dvdd, powerdown/reset GPIOs; power
+    sequence from Rockchip's BSP driver ~gc5035.c~); runtime PM.
+  - 0029 DT: LDO_REG9 ~vcc2v8_dvp~ 2.8 V always-on (stock values, Jose's
+    OK 2026-10-06); ~csi@fdfb0000~ CSI-2 host node added (the SoC dtsi
+    lacks it; copied from the binding example); ~&csi_dphy~, ~&vicap~,
+    ~&vicap_mmu~ enabled; ~&i2c2~ on pins i2c2m1 with the sensor at 0x37:
+    MCLK ~CLK_CIF_OUT~ 24 MHz on pin group ~cif_clk~ (GPIO4_C0), powerdown
+    GPIO4_B2 (active low: high = running, as stock), power domain PD_VI,
+    supplies avdd = LDO9, dovdd = LDO8, dvdd = ~vcc_camera~.
+  - Config: ~MEDIA_SUPPORT~ (camera + platform only, filter on),
+    ~VIDEO_ROCKCHIP_CIF~, ~VIDEO_DW_MIPI_CSI2RX~,
+    ~PHY_ROCKCHIP_INNO_CSIDPHY~, ~VIDEO_GC5035~, ~VIDEO_DW9714~, all
+    built in. No module changes.
+  - Deploy with ~tools/deploy_kernel.sh~ (backups, checksums, role).
+  - Step 1 result 2026-10-07 (~tests/result_22.txt~, kernel #9 built
+    2026-10-06): "GC5035 detected, mclk 24000000 Hz" at 2.4 s; LDO9 on at
+    2.8 V; no deferred probe; ~/dev/media0~ graph: ~gc5035 2-0037~ ->
+    ~dw-mipi-csi2rx fdfb0000.csi~ -> ~rkcif-mipi0~ -> ~/dev/video0~
+    (~rkcif-mipi0-id0~; id1-id3 are the other CSI-2 virtual channels).
+    Sensor idles runtime-suspended. Wi-Fi, touch and the rest unchanged.
+    Harmless boot notes: "Fixed dependency cycle(s)" between the CSI-2
+    host, the sensor and VICAP (normal for graph endpoints).
+  - Step 2: ~tests/test_23.sh~ sets 1296x972 SGRBG10 on all pads and
+    captures the sensor's colour-bar test pattern and a real frame with
+    ~v4l2-ctl~ (pixel format BA10, 16 bit per pixel); ~tools/raw2png.py~
+    turns a frame into a half-size PNG (2x2 binning, black 64, grey-world
+    white balance, gamma 2.2).
+  - 0030 DT: RK817 ~LDO_REG2~ "vdda_0v9" at *1.2 V*, always-on (stock
+    values verbatim; Jose's OK 2026-10-07). This was the missing piece:
+    at the reset value 0.9 V the sensor answers on I2C and runs from its
+    24 MHz input, but its logic freezes when it switches to its PLL
+    (~0xfc = 0x8e~), so it never streams. Tests 23-45, summary in
+    findings.org ("Rear camera: the core supply"). Only a DTB change.
+  - Capture-block freeze: mainline ~rkcif~ pulses the VICAP resets in
+    runtime suspend, which also wipes its IOMMU; the next capture then
+    freezes the tablet hard (tests 41/43). Workaround until a driver fix:
+    udev rule ~debian/99-p25t-vicap.rules~ (~power/control = on~ for
+    ~fdfe0000.video-capture~), test_44 proved it.
+  - Result 2026-10-07 (~tests/result_42/44/45.txt~): clean colour bars,
+    three captures in a row, and a real picture (~tests/cam45_scene.png~).
+    Real Bayer order is *RGGB* (~raw2png.py --order RGGB~); the driver
+    still reports GRBG.
+  - Capture by hand (1296x972, 10 bit in 16):
+    #+begin_src sh
+    v4l2-ctl -d /dev/v4l-subdevX --set-ctrl=exposure=1992 --set-ctrl=analogue_gain=1024
+    v4l2-ctl -d /dev/videoY --stream-mmap --stream-count=20 --stream-to=all.raw
+    #+end_src
+    ~X~, ~Y~ are placeholders: ~media-ctl -e "gc5035 2-0037"~ and
+    ~media-ctl -e "rkcif-mipi0-id0"~ print the real nodes. The first
+    frames after stream-on are dark: keep the last ones.
 
 * AIC8800 Wi-Fi/Bluetooth driver (out of tree)
   Source: [[https://github.com/radxa-pkg/aic8800][radxa-pkg/aic8800]], commit ~516e3b0~

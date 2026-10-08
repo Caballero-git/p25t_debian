@@ -1,0 +1,38 @@
+[sudo] password for jose: 
+=== rear camera, LDO2 1.2 V, VICAP kept on (test_44) ===
+mié 07 oct 2026 21:30:04 CEST
+#9 SMP PREEMPT Tue Oct  6 22:34:13 CEST 2026
+VICAP /sys/bus/platform/devices/fdfe0000.video-capture: power/control auto -> on, runtime_status active
+IOMMU before any capture:
+   IOMMU: DTE_ADDR 0xf1751100 STATUS 0x00000019 (paging ON, idle yes, page fault no) | VICAP MIPI INTSTAT 0x00000000
+LDO2 -> 1.2 V
+0xCE <- 0x18: read back 0x18 -> 1200 mV  (21:30:05)
+   alive
+1. capture, test pattern 1 -> cam44_bars1.raw  (start 21:30:06.074)
+   exit 0 (124 = timeout); cam44_bars1.raw: 7558272 bytes  (end 21:30:10.442)
+   IOMMU: DTE_ADDR 0xf1751100 STATUS 0x00000019 (paging ON, idle yes, page fault no) | VICAP MIPI INTSTAT 0x00000000
+   alive +1 s
+   alive +2 s
+2. capture, test pattern 1 -> cam44_bars2.raw  (start 21:30:12.623)
+   exit 0 (124 = timeout); cam44_bars2.raw: 7558272 bytes  (end 21:30:17.532)
+   IOMMU: DTE_ADDR 0xf1751100 STATUS 0x00000019 (paging ON, idle yes, page fault no) | VICAP MIPI INTSTAT 0x00000000
+   alive +1 s
+   alive +2 s
+3. capture, test pattern 0 -> cam44_scene.raw  (start 21:30:20.971)
+   exit 0 (124 = timeout); cam44_scene.raw: 7558272 bytes  (end 21:30:24.462)
+   IOMMU: DTE_ADDR 0xf1751100 STATUS 0x00000019 (paging ON, idle yes, page fault no) | VICAP MIPI INTSTAT 0x00000000
+   alive +1 s
+   alive +2 s
+LDO2 back to 0.9 V
+0xCE <- 0x0c: read back 0x0c -> 900 mV  (21:30:26)
+VICAP power/control back to auto
+--- kernel log ---
+[   24.108760] Bluetooth: RFCOMM ver 1.11
+[   24.828101] Bluetooth: hci0: Bad flag given (0x1) vs supported (0x6)
+[   25.551223] rwnx_send_sm_connect_req drv_vif_index:0 connect to CAMPINARED_TP-Link_9258(23) channel:2417 auth_type:0
+[   25.678113] get_txpwr_max:txpwr_max:0 
+[   27.746739] systemd-journald[256]: Time jumped backwards, rotating.
+[   28.409340] systemd-journald[256]: Failed to read journal file /var/log/journal/cf26acb3911e4387b4efa01f5c5f15a4/user-1000.journal for rotation, trying to move it out of the way: Device or resource busy
+[   58.856847] rwnx_reg_notifier Enter
+[   58.857327] rwnx_reg_notifier Enter
+=== done ===

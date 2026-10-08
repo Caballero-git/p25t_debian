@@ -1,0 +1,23 @@
+[sudo] password for jose: 
+=== rear camera, permanent setup (test_46) ===
+jue 08 oct 2026 08:15:43 CEST
+#9 SMP PREEMPT Tue Oct  6 22:34:13 CEST 2026
+RK817 LDO2: 0xCE = 0x18 -> 1200 mV (read only)
+regulator vdda_0v9: 1200000 uV, enabled
+VICAP /sys/bus/platform/devices/fdfe0000.video-capture: power/control on, runtime_status active
+1. colour bars, 3 frames (08:15:44)
+   exit 0 (124 = timeout); cam46_bars.raw: 7558272 bytes (7558272 expected)
+   alive
+2. scene, 20 frames (08:15:50)
+   exit 0 (124 = timeout); cam46_all.raw: 50388480 bytes (50388480 expected)
+   alive
+--- kernel log ---
+[   17.210256] get_txpwr_max:txpwr_max:0 
+[   17.302884] Bluetooth: hci0: Bad flag given (0x1) vs supported (0x6)
+[   19.689180] rockchip-pm-domain fdd90000.power-management:power-controller: sync_state() pending due to fdea0000.video-codec
+[   19.689256] rockchip-pm-domain fdd90000.power-management:power-controller: sync_state() pending due to fdeb0000.rga
+[   19.689279] rockchip-pm-domain fdd90000.power-management:power-controller: sync_state() pending due to fdee0000.video-codec
+[   51.944908] rwnx_reg_notifier Enter
+[   51.945479] rwnx_reg_notifier Enter
+[   58.840982] systemd-journald[253]: Time jumped backwards, rotating.
+=== done ===

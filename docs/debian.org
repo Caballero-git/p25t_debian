@@ -405,6 +405,8 @@
   | ~test_20.sh~ | touchscreen boot delay: i2c1 speed, when touch is ready, ~systemd-analyze~ | ~sudo bash~ |
   | ~set_i2c1_speed.sh~ | i2c1 bus speed in the DTB on the card (~show~ / ~set <HZ>~ / ~restore~) | ~sudo bash~ |
   | ~test_21.sh~ | userspace boot time: ~systemd-analyze~ blame and critical chain, earlier boots, USB-C role, journal pauses, ~boot_21.svg~ chart | ~sudo bash~ |
+  | ~test_22.sh~ | rear camera step 1: supplies, probe log, deferred probes, ~media-ctl -p~ (needs ~v4l-utils~) | ~sudo bash~ |
+  | ~test_23.sh~ | rear camera step 2: formats on all pads, colour-bar and real frame as ~cam23_*.raw~ (PNG with ~tools/raw2png.py~ on the PC) | ~sudo bash~ |
   | ~tune_panel.sh~ | panel line timing in the DTB on the card (~show~ / ~set <HFP> <HBP>~ / ~restore~) | ~sudo bash~ (needs device-tree-compiler) |
   ~test_06~-~test_08~ talk to the chips over I2C; they find each bus by its
   controller's hardware address, never by bus number (address 0x40 is the

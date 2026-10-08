@@ -1,0 +1,21 @@
+=== rear camera MCLK pin check (test_29) ===
+mié 07 oct 2026 10:54:49 CEST
+#9 SMP PREEMPT Tue Oct  6 22:34:13 CEST 2026
+
+--- idle (sensor suspended, MCLK expected off) ---
+CRU CLKGATE_CON19 = 0x00000110  bit 8 = 1 (0 = clock running, 1 = gated off)
+EXT_PORT GPIO4_C0 (bit 16, MCLK): 0 of 20000 samples high -> STATIC (no clock on the pad)
+EXT_PORT GPIO4_B2 (bit 10, powerdown, control): 0 of 20000 high
+
+--- start stream in the background ---
+runtime PM: active
+CRU CLKSEL_CON35  = 0x0000c001  clk_cif_out source bits[15:14]=3 (0 gpll, 1 usb480m, 2 xin24m), divider bits[13:8]=0 (+1)
+CRU CLKGATE_CON19 = 0x00000000  bit 8 = 0 (0 = clock running, 1 = gated off)
+GRF GPIO4C_IOMUX_L = 0x00000001  GPIO4_C0 function bits[2:0] = 1 (1 = cif_clkout)
+PMU_GRF IO_VSEL @+0x140 = 0x00000050
+PMU_GRF IO_VSEL @+0x144 = 0x000000af
+PMU_GRF IO_VSEL @+0x148 = 0x00000030
+GPIO4 SWPORT_DDR_H = 0x00000000 (C0 = bit 0: 1 = output as GPIO)
+EXT_PORT GPIO4_C0 (bit 16, MCLK): 9631 of 20000 samples high -> TOGGLING (clock present)
+EXT_PORT GPIO4_B2 (bit 10, powerdown, control): 20000 of 20000 high
+=== done ===

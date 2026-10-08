@@ -1,0 +1,12 @@
+● p25t-gadget.service - P25T USB gadget (serial console + network)
+     Loaded: loaded (/etc/systemd/system/p25t-gadget.service; enabled; preset: enabled)
+     Active: active (exited) since Wed 2026-10-07 20:18:12 CEST; 18min ago
+ Invocation: 670e4101c7974d389c3c95b6f760187a
+    Process: 394 ExecStart=/usr/local/sbin/p25t-gadget (code=exited, status=0/SUCCESS)
+   Main PID: 394 (code=exited, status=0/SUCCESS)
+   Mem peak: 1.8M
+        CPU: 90ms
+
+Oct 07 20:18:11 p25t systemd[1]: Starting p25t-gadget.service - P25T USB gadget (serial console + network)...
+Oct 07 20:18:12 p25t p25t-gadget[394]: gadget bound to fcc00000.usb
+Oct 07 20:18:12 p25t systemd[1]: Finished p25t-gadget.service - P25T USB gadget (serial console + network).

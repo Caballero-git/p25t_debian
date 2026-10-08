@@ -1,0 +1,124 @@
+=== rear camera probe (test_22) ===
+mié 07 oct 2026 09:08:00 CEST
+#9 SMP PREEMPT Tue Oct  6 22:34:13 CEST 2026
+
+--- camera supplies ---
+vcc1v8_dvp: state=enabled uV=1800000
+vcc2v8_dvp: state=enabled uV=2800000
+vcc_camera: state=enabled uV=-
+
+--- kernel log: camera path ---
+[    0.130791] /csi@fdfb0000: Fixed dependency cycle(s) with /i2c@fe5b0000/camera-sensor@37
+[    0.131621] /i2c@fe5b0000/camera-sensor@37: Fixed dependency cycle(s) with /csi@fdfb0000
+[    0.132563] /csi@fdfb0000: Fixed dependency cycle(s) with /video-capture@fdfe0000
+[    0.133330] /video-capture@fdfe0000: Fixed dependency cycle(s) with /csi@fdfb0000
+[    0.153712] mc: Linux media interface: v0.10
+[    0.283042] platform fdfe0000.video-capture: Adding to iommu group 2
+[    1.609747] rockchip-cif fdfe0000.video-capture: registered rkcif-mipi0-id0 as /dev/video0
+[    1.609998] rockchip-cif fdfe0000.video-capture: registered rkcif-mipi0-id1 as /dev/video1
+[    1.610202] rockchip-cif fdfe0000.video-capture: registered rkcif-mipi0-id2 as /dev/video2
+[    1.610389] rockchip-cif fdfe0000.video-capture: registered rkcif-mipi0-id3 as /dev/video3
+[    2.406254] gc5035 2-0037: GC5035 detected, mclk 24000000 Hz
+
+--- sensor on i2c2 ---
+device: gc5035  driver: gc5035
+runtime PM: suspended
+
+--- deferred probes ---
+
+--- camera clock ---
+    clk_cif_out                      0       1        0        24000000    0          0     50000      N      2-0037                          no_connection_id         
+                pclk_mipicsiphy      0       1        0        50000000    0          0     50000      Y                  fe870000.phy                    pclk                     
+             dclk_vicap              0       1        0        300000000   0          0     50000      N               fdfe0000.video-capture          dclk                     
+                aclk_vicap           0       3        0        400000000   0          0     50000      N                  fdfe0000.video-capture          aclk                     
+                   pclk_csi2host1    0       1        0        100000000   0          0     50000      Y                     csi@fdfb0000                    no_connection_id         
+
+--- device nodes ---
+crw-rw---- 1 root video 246, 0 oct  7 09:02 /dev/media0
+crw-rw---- 1 root video  81, 4 oct  7 09:02 /dev/v4l-subdev0
+crw-rw---- 1 root video  81, 5 oct  7 09:02 /dev/v4l-subdev1
+crw-rw---- 1 root video  81, 6 oct  7 09:02 /dev/v4l-subdev2
+crw-rw---- 1 root video  81, 0 oct  7 09:02 /dev/video0
+crw-rw---- 1 root video  81, 1 oct  7 09:02 /dev/video1
+crw-rw---- 1 root video  81, 2 oct  7 09:02 /dev/video2
+crw-rw---- 1 root video  81, 3 oct  7 09:02 /dev/video3
+
+--- media graph ---
+## /dev/media0
+Media controller API version 7.3.0
+
+Media device information
+------------------------
+driver          rockchip-cif
+model           rockchip-cif
+serial          
+bus info        platform:fdfe0000.video-capture
+hw revision     0x0
+driver version  7.3.0
+
+Device topology
+- entity 4: rkcif-mipi0 (2 pads, 5 links, 0 routes)
+            type V4L2 subdev subtype Unknown flags 0
+            device node name /dev/v4l-subdev0
+	pad0: SINK,MUST_CONNECT
+		[stream:0 fmt:SRGGB10_1X10/3840x2160 field:none colorspace:raw xfer:none ycbcr:601 quantization:full-range]
+		<- "dw-mipi-csi2rx fdfb0000.csi":1 [ENABLED]
+	pad1: SOURCE
+		[stream:0 fmt:SRGGB10_1X10/3840x2160 field:none colorspace:raw xfer:none ycbcr:601 quantization:full-range
+		 crop.bounds:(0,0)/3840x2160
+		 crop:(0,0)/0x0]
+		-> "rkcif-mipi0-id0":0 [ENABLED]
+		-> "rkcif-mipi0-id1":0 []
+		-> "rkcif-mipi0-id2":0 []
+		-> "rkcif-mipi0-id3":0 []
+
+- entity 7: rkcif-mipi0-id0 (1 pad, 1 link)
+            type Node subtype V4L flags 0
+            device node name /dev/video0
+	pad0: SINK,MUST_CONNECT
+		<- "rkcif-mipi0":1 [ENABLED]
+
+- entity 13: rkcif-mipi0-id1 (1 pad, 1 link)
+             type Node subtype V4L flags 0
+             device node name /dev/video1
+	pad0: SINK,MUST_CONNECT
+		<- "rkcif-mipi0":1 []
+
+- entity 19: rkcif-mipi0-id2 (1 pad, 1 link)
+             type Node subtype V4L flags 0
+             device node name /dev/video2
+	pad0: SINK,MUST_CONNECT
+		<- "rkcif-mipi0":1 []
+
+- entity 25: rkcif-mipi0-id3 (1 pad, 1 link)
+             type Node subtype V4L flags 0
+             device node name /dev/video3
+	pad0: SINK,MUST_CONNECT
+		<- "rkcif-mipi0":1 []
+
+- entity 31: dw-mipi-csi2rx fdfb0000.csi (2 pads, 2 links, 0 routes)
+             type V4L2 subdev subtype Unknown flags 0
+             device node name /dev/v4l-subdev1
+	pad0: SINK,MUST_CONNECT
+		[stream:0 fmt:SRGGB10_1X10/3840x2160 field:none colorspace:raw xfer:none ycbcr:601 quantization:full-range]
+		<- "gc5035 2-0037":0 [ENABLED]
+	pad1: SOURCE
+		[stream:0 fmt:SRGGB10_1X10/3840x2160 field:none colorspace:raw xfer:none ycbcr:601 quantization:full-range]
+		-> "rkcif-mipi0":0 [ENABLED]
+
+- entity 36: gc5035 2-0037 (1 pad, 1 link, 0 routes)
+             type V4L2 subdev subtype Sensor flags 0
+             device node name /dev/v4l-subdev2
+	pad0: SOURCE
+		[stream:0 fmt:SGRBG10_1X10/2592x1944 field:none]
+		-> "dw-mipi-csi2rx fdfb0000.csi":0 [ENABLED]
+
+
+rockchip-cif (platform:fdfe0000.video-capture):
+	/dev/video0
+	/dev/video1
+	/dev/video2
+	/dev/video3
+	/dev/media0
+
+=== done ===

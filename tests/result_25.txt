@@ -1,0 +1,37 @@
+=== rear camera manual stream-on (test_25) ===
+mié 07 oct 2026 10:22:19 CEST
+#9 SMP PREEMPT Tue Oct  6 22:34:13 CEST 2026
+
+--- start stream in the background ---
+
+--- 1. as the driver left it ---
+runtime PM: active
+  reg 0xfe = 0x00
+  reg 0xf0 = 0x50
+  reg 0xf1 = 0x35
+  reg 0x3e = 0x00
+  reg 0x41 = 0x00
+  reg 0x42 = 0x00
+CSI PHY_STATE 0x6f0: HS clock off, data lanes in stop state 0xf, clock lane stop 1
+CSI ERR1 0x00000000 ERR2 0x00000000
+VICAP MIPI INTSTAT (+0x128) 0x00000000, frame status (+0x0c4..) not decoded
+
+--- 2. stream-on by hand: page 0, 0x3e = 0x91 ---
+  reg 0xfe = 0x00
+  reg 0xf0 = 0x50
+  reg 0xf1 = 0x35
+  reg 0x3e = 0x00
+  reg 0x41 = 0x00
+  reg 0x42 = 0x00
+CSI PHY_STATE 0x6f0: HS clock off, data lanes in stop state 0xf, clock lane stop 1
+CSI ERR1 0x00000000 ERR2 0x00000000
+VICAP MIPI INTSTAT (+0x128) 0x00000000, frame status (+0x0c4..) not decoded
+CSI PHY_STATE 0x6f0: HS clock off, data lanes in stop state 0xf, clock lane stop 1
+CSI ERR1 0x00000000 ERR2 0x00000000
+VICAP MIPI INTSTAT (+0x128) 0x00000000, frame status (+0x0c4..) not decoded
+
+--- capture: v4l2-ctl exit 0 (124 = timeout) ---
+cam25.raw: 0 bytes (3 frames = 7558272)
+
+--- kernel log ---
+=== done ===

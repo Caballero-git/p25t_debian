@@ -1,0 +1,32 @@
+=== rear camera second-pin test (test_27) ===
+mié 07 oct 2026 10:35:54 CEST
+#9 SMP PREEMPT Tue Oct  6 22:34:13 CEST 2026
+gpioset (libgpiod) v2.2.1
+GPIO4 bank is gpiochip4
+
+--- start stream in the background ---
+runtime PM: active
+  baseline (B0, B3 untouched):
+    0x41 after writing 0x07: 0x00   0xf0/0xf1: 0x50 0x35
+
+--- GPIO4_B0 = line 8 (front reset in stock) ---
+  line 8 = 1:
+    0x41 after writing 0x07: 0x00   0xf0/0xf1: 0x50 0x35
+  line 8 = 0:
+    0x41 after writing 0x07: 0x00   0xf0/0xf1: 0x50 0x35
+
+--- GPIO4_B3 = line 11 (front powerdown in stock) ---
+  line 11 = 1:
+    0x41 after writing 0x07: 0x00   0xf0/0xf1: 0x50 0x35
+  line 11 = 0:
+    0x41 after writing 0x07: 0x00   0xf0/0xf1: 0x50 0x35
+
+--- both high ---
+    0x41 after writing 0x07: 0x00   0xf0/0xf1: 0x50 0x35
+
+--- GPIO4 lines after the test (should be released) ---
+gpiochip4: 32 GPIOs, parent: platform/fe770000.gpio, gpio4:
+ gpio-6   (                    |white:flash         ) out lo 
+ gpio-7   (                    |regulator-vcc-camera) out hi 
+ gpio-10  (                    |powerdown           ) out lo ACTIVE LOW
+=== done ===

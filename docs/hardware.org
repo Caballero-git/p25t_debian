@@ -49,7 +49,7 @@
   | Power key         | RK817 pwrkey                               |                                                               | todo (needs RK817 node)               |
   | USB-C             | DWC3 ~fcc00000~, HS only, OTG              | USB2 PHY0 ~fe8a0000~; stock quirks + PHY tuning needed        | gadget works, intermittently          |
   | HDMI              | enabled in stock DT                        | not wired on this tablet                                      | ignored                               |
-  | Rear camera       | GalaxyCore GC5035, 5 MP (2592x1944, RGGB) @ i2c2 0x37 | 2 MIPI lanes, pwdn GPIO4_B2; focus DW9714 @ 0x0c; module KYT-4877-V01 | not yet: no mainline sensor driver; VICAP/CSI-2 present, no RK3568 ISP |
+  | Rear camera       | GalaxyCore GC5035, 5 MP (2592x1944, RGGB) @ i2c2 0x37 | 2 MIPI lanes, pwdn GPIO4_B2; focus DW9714 @ 0x0c; module KYT-4877-V01 | raw frames work (patches 0028-0030, 2026-10-07); needs LDO2 1.2 V; Bayer RGGB; no RK3568 ISP |
   | Front camera      | GalaxyCore GC02M2, 2 MP (1600x1200) @ i2c2 0x10 | 1 MIPI lane, reset GPIO4_B0, pwdn GPIO4_B3 (act. low)       | not yet: no mainline sensor driver    |
   | Torch (rear)      | GPIO LED, enable GPIO4_A6 (act. high)      | needs LDO8 (vccio6) and vcc_camera (GPIO4_A7)                 | works (patch 0022, confirmed 2026-10-01) |
 
@@ -59,10 +59,12 @@
     only LDO8.
   - 32 kHz clock output for Wi-Fi is already on at boot (RK817 register
     ~0xF2~ bit 7). No write needed.
-  - Rails that Android keeps always-on but our boot leaves at reset default:
+  - Rails that Android keeps always-on but our boot leaves at reset default
+    (off, or - LDO2 - at another voltage; tests/test_40.sh reads them all):
     | RK817 rail | stock name   | stock V     | stock user       | state in our boot            |
     |------------+--------------+-------------+------------------+-------------------------------|
-    | LDO9       | vcc2v8_dvp   | 2.8 V       | none listed      | off                           |
+    | LDO2       | vdda_0v9     | *1.2 V*     | none listed      | 0.9 V (reset); 1.2 V since patch 0030 - camera core |
+    | LDO9       | vcc2v8_dvp   | 2.8 V       | none listed      | on since patch 0029 (camera AVDD) |
     | LDO8       | vcc1v8_dvp   | 1.8 V       | IO domain vccio6 | on since patch 0022 (always-on, as stock) |
     | LDO4       | vccio_acodec | 3.3 V       | IO domain vccio1 | on since patch 0015           |
     | BOOST      | boost        | 4.9–5.4 V   | feeds OTG_SWITCH | host-mode DTB only (patch 0010) |

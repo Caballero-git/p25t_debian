@@ -1,0 +1,20 @@
+=== rear camera PWDN polarity (test_31) ===
+mié 07 oct 2026 11:19:29 CEST
+#9 SMP PREEMPT Tue Oct  6 22:34:13 CEST 2026
+
+--- capture in the background ---
+as the driver left it          B2=1 | id 5035 0xfc=8e 0x3e=00 0x41=00 | PHY_STATE 0x6f0 HS clock off | ERR1 0x0
+A. B2 LOW
+B2 low, 50 ms                  B2=0 | id ---- 0xfc=-- 0x3e=-- 0x41=-- | PHY_STATE 0x6f0 HS clock off | ERR1 0x0
+  A: sequence written with I2C ERRORS
+A stream on +0                 B2=0 | id ---- 0xfc=-- 0x3e=-- 0x41=-- | PHY_STATE 0x6f0 HS clock off | ERR1 0x0
+A stream on +1                 B2=0 | id ---- 0xfc=-- 0x3e=-- 0x41=-- | PHY_STATE 0x6f0 HS clock off | ERR1 0x0
+A stream on +2                 B2=0 | id ---- 0xfc=-- 0x3e=-- 0x41=-- | PHY_STATE 0x6f0 HS clock off | ERR1 0x0
+B. B2 HIGH again (fresh edge)
+B2 high, 50 ms                 B2=1 | id 5035 0xfc=8e 0x3e=00 0x41=00 | PHY_STATE 0x6f0 HS clock off | ERR1 0x0
+  B: sequence written OK
+B stream on +0                 B2=1 | id 5035 0xfc=8e 0x3e=00 0x41=00 | PHY_STATE 0x6f0 HS clock off | ERR1 0x0
+B stream on +1                 B2=1 | id 5035 0xfc=8e 0x3e=00 0x41=00 | PHY_STATE 0x6f0 HS clock off | ERR1 0x0
+B stream on +2                 B2=1 | id 5035 0xfc=8e 0x3e=00 0x41=00 | PHY_STATE 0x6f0 HS clock off | ERR1 0x0
+cam31.raw: 0 bytes
+=== done ===

@@ -194,6 +194,39 @@
   - Capping the journal did not shorten its flush; measure before
     assuming size is the cost.
 
+* Rear camera: the core supply, and a capture-block reset (2026-10-07)
+  - Symptom (tests 22-37): the GC5035 probes, answers on I2C, the media
+    graph works, STREAMON succeeds - but no MIPI high-speed clock, no
+    frames. Ruled out one by one: supplies on, MCLK 24 MHz on the pad,
+    PWDN polarity, D-PHY routing (full/split), Rockchip's own register
+    sequence, the I2C read method.
+  - test_36 found the switch: register ~0xfc~. With bit 0 set the
+    sensor's logic runs from the raw 24 MHz input and its registers
+    work; the table's final ~0xfc = 0x8e~ (bit 0 clear) moves it onto its
+    PLL - and from then on every paged register write is lost. With
+    ~0x8f~ (test_38/39) frames flowed but contained no image.
+  - Logic that works slowly but dies when clocked fast = core supply too
+    low. Stock DT: RK817 ~LDO_REG2~ is *named* "vdda_0v9" but *set* to
+    1.2 V, always-on; our boot left it at 0.9 V (test_40). With LDO2 at
+    1.2 V (test_42) the unchanged driver gives perfect colour bars.
+    Fix: patch 0030. Lesson: compare the rails' *voltages* with stock,
+    not only on/off - and don't trust a regulator's name.
+  - Second trap, only visible once real frames flowed: the tablet froze
+    hard (no kernel message) at the start of the *second* capture
+    (test_41, test_43). Mainline ~rkcif~ resets the VICAP on runtime
+    suspend, and that reset also hits its IOMMU; the next capture's DMA
+    then goes wild. Keeping the VICAP runtime-active (~power/control =
+    on~) fixes it (test_44: three captures, IOMMU paging on, no fault).
+    Workaround: udev rule ~debian/99-p25t-vicap.rules~.
+  - Small ones: frame 1 after stream-on is empty and the next ones are
+    dark (keep the last frames of a longer capture); the real Bayer
+    order is RGGB, not the GRBG the driver reports; a Python poke at
+    receiver registers after the capture ended gives "Bus error"
+    (block powered down) - harmless.
+  - When a test may freeze the tablet: run it over ssh with ~| tee~ on
+    the PC and ~sync~ after every step, or its output never reaches the
+    disk (test_41 left an empty result file).
+
 * Practical lessons
   - When the kernel log can't say *which* step failed, replay the
     driver's I2C sequence by hand with i2c-tools. Find the bus by its

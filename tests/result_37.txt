@@ -1,0 +1,21 @@
+=== rear camera PLL check (test_37) ===
+mié 07 oct 2026 12:33:44 CEST
+#9 SMP PREEMPT Tue Oct  6 22:34:13 CEST 2026
+
+--- capture in the background ---
+runtime PM: active
+as the driver left it      markers 0/6 | locked | fc=8e | PHY_STATE 0x6f0 HS clock off
+A. table with 0xfc bit 0 kept set (8e -> 8f), stream on
+A table written            markers 6/6 | OPEN   | fc=8f | PHY_STATE 0x6f0 HS clock off
+A stream on +250 ms        markers 6/6 | OPEN   | fc=8f | PHY_STATE 0x6f0 HS clock off
+A stream on +500 ms        markers 6/6 | OPEN   | fc=8f | PHY_STATE 0x6f0 HS clock off
+A stream on +750 ms        markers 6/6 | OPEN   | fc=8f | PHY_STATE 0x6f0 HS clock off
+A stream on +1000 ms       markers 6/6 | OPEN   | fc=8f | PHY_STATE 0x3f0 HS clock ACTIVE
+B. table as the driver has it, 100 ms after PLL on before each fc=8e
+B table written            markers 0/6 | locked | fc=8e | PHY_STATE 0x6f0 HS clock off
+B stream on +250 ms        markers 0/6 | locked | fc=8e | PHY_STATE 0x6f0 HS clock off
+B stream on +500 ms        markers 0/6 | locked | fc=8e | PHY_STATE 0x6f0 HS clock off
+B stream on +750 ms        markers 0/6 | locked | fc=8e | PHY_STATE 0x6f0 HS clock off
+B stream on +1000 ms       markers 0/6 | locked | fc=8e | PHY_STATE 0x6f0 HS clock off
+cam37.raw: 0 bytes (3 frames = 7558272)
+=== done ===

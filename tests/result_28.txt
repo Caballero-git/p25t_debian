@@ -1,0 +1,21 @@
+=== rear camera BSP sequence by hand (test_28) ===
+mié 07 oct 2026 10:43:59 CEST
+#9 SMP PREEMPT Tue Oct  6 22:34:13 CEST 2026
+
+--- start stream in the background (keeps the sensor powered) ---
+runtime PM: active
+sequence: 159 writes, last ['8c=10', 'fe=00', '3e=01']
+before                       0xfc=8e 0x3e=00 0x41=00 0x42=00 | PHY_STATE 0x6f0 (HS clock off, data stop 0xf) ERR1 0x0 ERR2 0x0
+after BSP sequence           0xfc=8e 0x3e=00 0x41=00 0x42=00 | PHY_STATE 0x6f0 (HS clock off, data stop 0xf) ERR1 0x0 ERR2 0x0
+stream on +250 ms            0xfc=8e 0x3e=00 0x41=00 0x42=00 | PHY_STATE 0x6f0 (HS clock off, data stop 0xf) ERR1 0x0 ERR2 0x0
+stream on +500 ms            0xfc=8e 0x3e=00 0x41=00 0x42=00 | PHY_STATE 0x6f0 (HS clock off, data stop 0xf) ERR1 0x0 ERR2 0x0
+stream on +750 ms            0xfc=8e 0x3e=00 0x41=00 0x42=00 | PHY_STATE 0x6f0 (HS clock off, data stop 0xf) ERR1 0x0 ERR2 0x0
+stream on +1000 ms           0xfc=8e 0x3e=00 0x41=00 0x42=00 | PHY_STATE 0x6f0 (HS clock off, data stop 0xf) ERR1 0x0 ERR2 0x0
+
+--- kernel log ---
+[ 4820.210429] done=1 retry_required=0 sw_retry_required=0 acknowledged=1
+[ 5120.205597] done=1 retry_required=0 sw_retry_required=0 acknowledged=1
+[ 5420.215157] done=1 retry_required=0 sw_retry_required=0 acknowledged=1
+[ 5720.221330] done=1 retry_required=0 sw_retry_required=0 acknowledged=1
+[ 6020.225138] done=1 retry_required=0 sw_retry_required=0 acknowledged=1
+=== done ===
