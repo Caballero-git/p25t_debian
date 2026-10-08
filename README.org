@@ -29,7 +29,8 @@
   | Touchscreen GSL3673               | works   | multi-touch, from boot; firmware from the stock kernel (patches 0017–0020); i2c1 at 400 kHz (0027) |
   | Audio RK817 codec                 | works   | headphones, speaker, jack detect, volume buttons (0015, 0021, ~p25t-audio-keys.sh~); mic on the left channel |
   | Torch (rear camera LED)           | works   | ~/sys/class/leds/white:flash~ (patch 0022)          |
-  | Cameras GC5035 / GC02M2           | open    | identified; no mainline sensor drivers yet         |
+  | Rear camera GC5035                | works   | raw 1296x972, ~rear-snap~ photo tool (0028-0030, LDO2 1.2 V, udev rule) |
+  | Front camera GC02M2               | open    | no mainline driver; needs D-PHY split mode         |
   | Accelerometer SC7A20              | works   | patch 0013, polled (0021); mount-matrix measured (0026) |
   | CPU frequency / GPU (Panfrost)    | works   | DVFS with real vdd_cpu (SYR837) and vdd_gpu (patches 0011, 0014) |
   | SoC temperature (tsadc)           | works   | patch 0016                                         |

@@ -721,8 +721,10 @@
       ~tests/test_23.sh~ again with no LDO2 poking;
     - driver: report RGGB instead of GRBG; a proper fix for the rkcif
       runtime-suspend reset (instead of the udev rule);
-    - 2592x1944, a small capture script for everyday use (exposure/gain,
-      keep last frames, raw2png), DW9714 focus node.
+    - DONE 2026-10-08: everyday photo tool ~tools/rear-snap.sh~
+      (~rear-snap photo_{now}.png~; exposure/gain, last of 20 frames,
+      RGGB PNG, rotation from the accelerometer; ~tests/cam46a_landscape.png~).
+    - 2592x1944, DW9714 focus node, a simple auto-exposure for rear-snap.
 
 * DONE Landscape console (patch 0023)
   - ~rotation = <90>~ on the panel + ~CONFIG_FRAMEBUFFER_CONSOLE_ROTATION~;

@@ -407,6 +407,30 @@
   | ~test_21.sh~ | userspace boot time: ~systemd-analyze~ blame and critical chain, earlier boots, USB-C role, journal pauses, ~boot_21.svg~ chart | ~sudo bash~ |
   | ~test_22.sh~ | rear camera step 1: supplies, probe log, deferred probes, ~media-ctl -p~ (needs ~v4l-utils~) | ~sudo bash~ |
   | ~test_23.sh~ | rear camera step 2: formats on all pads, colour-bar and real frame as ~cam23_*.raw~ (PNG with ~tools/raw2png.py~ on the PC) | ~sudo bash~ |
+  | ~test_24.sh~ | rear camera: sensor registers and CSI-2/VICAP state while streaming | ~sudo bash~ |
+  | ~test_25.sh~ | rear camera: stream-on by hand, receiver state | ~sudo bash~ |
+  | ~test_26.sh~ | rear camera: clock, pins, supplies, one register write | ~sudo bash~ |
+  | ~test_27.sh~ | rear camera: GPIO4_B0/B3 as a hidden reset | ~sudo bash~ |
+  | ~test_28.sh~ | rear camera: Rockchip's register sequence written by hand | ~sudo bash~ |
+  | ~test_29.sh~ | rear camera: MCLK on the GPIO4_C0 pad (CRU, mux, pad sampling) | ~sudo bash~ |
+  | ~test_30.sh~ | rear camera: D-PHY routing, full vs split mode (GRF VI_CON1) | ~sudo bash~ |
+  | ~test_31.sh~ | rear camera: powerdown polarity | ~sudo bash~ |
+  | ~test_32.sh~ | rear camera: do register writes stick? (with/without MCLK) | ~sudo bash~ |
+  | ~test_33.sh~ | rear camera: all four register pages vs the driver's table | ~sudo bash~ |
+  | ~test_34.sh~ | rear camera: split vs combined I2C reads | ~sudo bash~ |
+  | ~test_35.sh~ | rear camera: driver table by hand, does stream-on reset it? | ~sudo bash~ |
+  | ~test_36.sh~ | rear camera: which write locks the registers (found 0xfc) | ~sudo bash~ |
+  | ~test_37.sh~ | rear camera: 0xfc bit 0 kept set - first MIPI HS clock | ~sudo bash~ |
+  | ~test_38.sh~ | rear camera: first frames with 0xfc = 0x8f (no image yet) | ~sudo bash~ |
+  | ~test_39.sh~ | rear camera: colour bars + scene with 0x8f (stripes) | ~sudo bash~ |
+  | ~test_40.sh~ | RK817 rails vs Android, read-only (found LDO2 0.9 V vs 1.2 V) | ~sudo bash~ |
+  | ~test_41.sh~ | LDO2 1.2 V check/apply/restore + 2 captures (power-chip write; froze on capture 2) | ~sudo bash~ |
+  | ~test_42.sh~ | LDO2 1.2 V, bars only, LDO2 back (first clean bars) | from the PC: ~ssh -t ... | tee~ |
+  | ~test_43.sh~ | LDO2 1.2 V, three captures (froze at the restart) | from the PC |
+  | ~test_44.sh~ | same with the VICAP kept powered (no freeze) | from the PC |
+  | ~test_45.sh~ | first real picture: 20 frames, exposure/gain up | from the PC |
+  | ~test_46.sh~ | permanent setup check (0030 + udev rule), read-only, 2 captures | from the PC |
+  | ~tools/rear-snap.sh~ | photo tool: ~rear-snap photo_{now}.png~ (installed as ~/usr/local/bin/rear-snap~ + ~/usr/local/lib/p25t/raw2png.py~; ~-h~ for options; rotation from the accelerometer) | ~sudo~ or group ~video~ |
   | ~tune_panel.sh~ | panel line timing in the DTB on the card (~show~ / ~set <HFP> <HBP>~ / ~restore~) | ~sudo bash~ (needs device-tree-compiler) |
   ~test_06~-~test_08~ talk to the chips over I2C; they find each bus by its
   controller's hardware address, never by bus number (address 0x40 is the

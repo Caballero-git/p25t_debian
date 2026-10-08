@@ -37,6 +37,7 @@
     | 0027 | DT: i2c1 at 400 kHz (touch firmware upload ~3 s -> ~1.1 s)     |
     | 0028 | media: GalaxyCore GC5035 sensor driver (P25T port)             |
     | 0029 | DT: rear camera pipeline (GC5035 -> CSI-2 -> VICAP), LDO9      |
+    | 0030 | DT: RK817 LDO2 at 1.2 V (camera core supply, as stock)         |
   - Also needs a kernel *config* change (not a DT patch): ~CONFIG_USB_XHCI_HCD=y~
     and ~CONFIG_USB_XHCI_PLATFORM=y~, both already set in
     ~kernel/p25t-kernel.config~. Without them the ~dwc3~ glue driver still
